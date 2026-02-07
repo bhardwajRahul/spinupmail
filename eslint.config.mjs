@@ -1,59 +1,107 @@
-import path from "node:path";
-import { fileURLToPath } from "node:url";
 import js from "@eslint/js";
+import eslintConfigPrettier from "eslint-config-prettier/flat";
+import reactHooks from "eslint-plugin-react-hooks";
+import reactRefresh from "eslint-plugin-react-refresh";
+import reactYouMightNotNeedAnEffect from "eslint-plugin-react-you-might-not-need-an-effect";
 import globals from "globals";
 import tseslint from "typescript-eslint";
-import { defineConfig } from "eslint/config";
-import reactPlugin from "eslint-plugin-react";
-import reactHooks from "eslint-plugin-react-hooks";
+import { fileURLToPath } from "node:url";
+import path from "node:path";
 
-const tsconfigRootDir = path.dirname(fileURLToPath(import.meta.url));
+const rootDir = path.dirname(fileURLToPath(import.meta.url));
+const backendFiles = ["packages/backend/**/*.{js,mjs,cjs,ts}"];
+const frontendFiles = ["packages/frontend/**/*.{ts,tsx}"];
+const configFiles = ["**/*.config.{js,mjs,cjs,ts}"];
+const backendScope = { files: backendFiles, ignores: configFiles };
+const frontendScope = { files: frontendFiles, ignores: configFiles };
 
-export default defineConfig([
+export default [
   {
-    ignores: ["**/node_modules/**", "**/dist/**", ".wrangler/**"],
+    ignores: [
+      "**/dist/**",
+      "**/node_modules/**",
+      "packages/backend/.wrangler/**",
+      "packages/backend/drizzle/**",
+    ],
   },
   {
-    files: ["**/*.{js,mjs,cjs,ts,mts,cts}"],
-    plugins: { js },
-    extends: ["js/recommended"],
-    languageOptions: { globals: globals.node },
+    ...backendScope,
+    languageOptions: {
+      globals: globals.node,
+      parserOptions: {
+        tsconfigRootDir: path.join(rootDir, "packages/backend"),
+      },
+    },
+  },
+  {
+    ...backendScope,
+    ...js.configs.recommended,
   },
   ...tseslint.configs.recommended.map(config => ({
     ...config,
-    languageOptions: {
-      ...config.languageOptions,
-      parserOptions: {
-        ...config.languageOptions?.parserOptions,
-        tsconfigRootDir,
-      },
-    },
+    ...backendScope,
   })),
   {
-    files: ["packages/frontend/**/*.{js,jsx,ts,tsx}"],
-    plugins: {
-      react: reactPlugin,
-      "react-hooks": reactHooks,
-    },
-    languageOptions: {
-      globals: globals.browser,
-    },
-    settings: {
-      react: { version: "detect" },
-    },
+    ...backendScope,
     rules: {
-      ...reactPlugin.configs.recommended.rules,
-      ...reactPlugin.configs["jsx-runtime"].rules,
-      ...reactHooks.configs.recommended.rules,
+      quotes: ["error", "single"],
+      "@typescript-eslint/no-unused-vars": [
+        "warn",
+        { argsIgnorePattern: "^_" },
+      ],
+      semi: ["error", "always"],
+      eqeqeq: ["error", "always"],
+      "object-curly-spacing": ["error", "always"],
+      "no-trailing-spaces": ["error"],
+      "no-multi-spaces": ["error"],
+      "no-multiple-empty-lines": ["error", { max: 1 }],
+      "space-in-parens": ["error", "never"],
     },
   },
   {
-    files: ["packages/backend/**/*.{js,ts}"],
+    ...frontendScope,
     languageOptions: {
-      globals: {
-        ...globals.serviceworker,
-        ...globals.node,
+      ecmaVersion: 2020,
+      globals: globals.browser,
+      parserOptions: {
+        tsconfigRootDir: path.join(rootDir, "packages/frontend"),
       },
     },
+    plugins: {
+      "react-hooks": reactHooks,
+      "react-refresh": reactRefresh,
+      "react-you-might-not-need-an-effect": reactYouMightNotNeedAnEffect,
+    },
   },
-]);
+  {
+    ...frontendScope,
+    ...js.configs.recommended,
+  },
+  ...tseslint.configs.recommended.map(config => ({
+    ...config,
+    ...frontendScope,
+  })),
+  {
+    ...frontendScope,
+    rules: {
+      ...reactHooks.configs.recommended.rules,
+      ...reactRefresh.configs.vite.rules,
+      ...reactYouMightNotNeedAnEffect.configs.recommended.rules,
+      "@typescript-eslint/no-unused-vars": [
+        "error",
+        {
+          argsIgnorePattern: "^_",
+          varsIgnorePattern: "^_",
+        },
+      ],
+    },
+  },
+  {
+    files: configFiles,
+    ...js.configs.recommended,
+    languageOptions: {
+      globals: globals.node,
+    },
+  },
+  eslintConfigPrettier,
+];
