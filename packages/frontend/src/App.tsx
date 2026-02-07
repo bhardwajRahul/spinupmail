@@ -37,6 +37,37 @@ type ApiKeyRow = {
   createdAt: string | null;
 };
 
+const buildEmailPreview = (html: string) => {
+  const safeHtml = html.trim();
+  return `<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data:; style-src 'unsafe-inline'" />
+    <style>
+      :root { color-scheme: light; }
+      body {
+        margin: 0;
+        padding: 16px;
+        font-family: "Geist Variable", "Geist", ui-sans-serif, system-ui, -apple-system, sans-serif;
+        font-size: 14px;
+        line-height: 1.5;
+        color: #0f172a;
+        background: #ffffff;
+        word-wrap: break-word;
+      }
+      img { max-width: 100%; height: auto; }
+      a { color: #2563eb; text-decoration: underline; }
+      pre, code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; white-space: pre-wrap; }
+      table { border-collapse: collapse; width: 100%; }
+      th, td { border: 1px solid #e2e8f0; padding: 6px 8px; vertical-align: top; }
+      blockquote { margin: 0; padding-left: 12px; border-left: 3px solid #e2e8f0; color: #475569; }
+    </style>
+  </head>
+  <body>${safeHtml}</body>
+</html>`;
+};
+
 const normalizeApiKeyRow = (row: {
   id: string;
   name?: string | null;
@@ -430,7 +461,9 @@ export function App() {
                               title="Email preview"
                               sandbox=""
                               className="h-80 w-full"
-                              srcDoc={selectedEmail.html}
+                              srcDoc={buildEmailPreview(selectedEmail.html)}
+                              referrerPolicy="no-referrer"
+                              loading="lazy"
                             />
                           </div>
                         ) : selectedEmail.text ? (

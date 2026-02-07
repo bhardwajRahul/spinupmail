@@ -20,10 +20,13 @@
     "better-auth": "^1.2.8",
     "better-auth-cloudflare": "latest",
     "drizzle-orm": "^0.44.5",
-    "hono": "^4.7.11"
+    "hono": "^4.7.11",
+    "postal-mime": "^2.7.3",
+    "sanitize-html": "^2.17.0"
   },
   "devDependencies": {
     "@types/node": "^22.15.30",
+    "@types/sanitize-html": "^2.16.0",
     "drizzle-kit": "^0.31.1",
     "typescript": "^5.8.3",
     "wrangler": "^4.4.0"

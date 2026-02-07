@@ -3,6 +3,8 @@ import type { MiddlewareHandler } from "hono";
 import { cors } from "hono/cors";
 import { drizzle } from "drizzle-orm/d1";
 import { and, asc, desc, eq, gte, lte } from "drizzle-orm";
+import sanitizeHtml from "sanitize-html";
+import PostalMime from "postal-mime";
 import { createAuth } from "./auth";
 import { emailAddresses, emails, schema } from "./db";
 import type {
@@ -93,6 +95,7 @@ const readRawWithLimit = async (
   let bytes = 0;
   let truncated = false;
   const parts: string[] = [];
+  const chunks: Uint8Array[] = [];
 
   while (true) {
     const { value, done } = await reader.read();
@@ -103,6 +106,7 @@ const readRawWithLimit = async (
       const slice = value.slice(0, Math.max(0, maxBytes - bytes));
       if (slice.length > 0) {
         parts.push(decoder.decode(slice, { stream: true }));
+        chunks.push(slice);
         bytes += slice.length;
       }
       truncated = true;
@@ -111,158 +115,110 @@ const readRawWithLimit = async (
     }
 
     parts.push(decoder.decode(value, { stream: true }));
+    chunks.push(value);
     bytes += value.length;
   }
 
   parts.push(decoder.decode());
 
+  const totalBytes = Math.min(bytes, maxBytes);
+  const rawBytes =
+    chunks.length === 1
+      ? chunks[0]
+      : (() => {
+          const buffer = new Uint8Array(totalBytes);
+          let offset = 0;
+          for (const chunk of chunks) {
+            buffer.set(chunk, offset);
+            offset += chunk.length;
+          }
+          return buffer;
+        })();
+
   return {
     raw: parts.join(""),
-    bytes: Math.min(bytes, maxBytes),
+    rawBytes,
+    bytes: totalBytes,
     truncated,
   };
 };
 
-const splitHeadersAndBody = (content: string) => {
-  const match = content.match(/\r?\n\r?\n/);
-  if (!match || match.index === undefined) {
-    return { headerText: "", body: content };
-  }
-  const index = match.index;
-  const separatorLength = match[0].length;
-  return {
-    headerText: content.slice(0, index),
-    body: content.slice(index + separatorLength),
-  };
-};
+const sanitizeEmailHtml = (html: string) =>
+  sanitizeHtml(html, {
+    allowedTags: [
+      "a",
+      "b",
+      "strong",
+      "i",
+      "em",
+      "u",
+      "s",
+      "br",
+      "p",
+      "div",
+      "span",
+      "pre",
+      "code",
+      "blockquote",
+      "ul",
+      "ol",
+      "li",
+      "table",
+      "thead",
+      "tbody",
+      "tfoot",
+      "tr",
+      "th",
+      "td",
+      "img",
+      "hr",
+      "h1",
+      "h2",
+      "h3",
+      "h4",
+      "h5",
+      "h6",
+    ],
+    allowedAttributes: {
+      a: ["href", "name", "target", "rel", "title"],
+      img: ["src", "alt", "title", "width", "height"],
+      "*": ["title", "style"],
+    },
+    allowedSchemes: ["http", "https", "mailto", "data"],
+    allowedSchemesByTag: {
+      img: ["data"],
+    },
+    allowProtocolRelative: false,
+    disallowedTagsMode: "discard",
+    transformTags: {
+      a: (_tagName, attribs) => ({
+        tagName: "a",
+        attribs: {
+          ...attribs,
+          rel: "noopener noreferrer nofollow",
+          target: "_blank",
+        },
+      }),
+    },
+  });
 
-const parseHeaderBlock = (headerText: string) => {
-  const headers: Record<string, string> = {};
-  const lines = headerText.replace(/\r\n/g, "\n").split("\n");
-  let currentName: string | null = null;
-
-  for (const line of lines) {
-    if (!line) continue;
-    if (/^\s/.test(line) && currentName) {
-      headers[currentName] = `${headers[currentName]} ${line.trim()}`.trim();
-      continue;
-    }
-    const separatorIndex = line.indexOf(":");
-    if (separatorIndex === -1) continue;
-    const name = line.slice(0, separatorIndex).trim().toLowerCase();
-    const value = line.slice(separatorIndex + 1).trim();
-    headers[name] = headers[name] ? `${headers[name]}, ${value}` : value;
-    currentName = name;
-  }
-
-  return headers;
-};
-
-const parseContentType = (value?: string | null) => {
-  if (!value)
-    return { mime: "", boundary: null as string | null, charset: null };
-  const [rawMime, ...params] = value.split(";").map(part => part.trim());
-  let boundary: string | null = null;
-  let charset: string | null = null;
-
-  for (const param of params) {
-    const [key, rawValue] = param.split("=");
-    if (!key || !rawValue) continue;
-    const normalizedKey = key.trim().toLowerCase();
-    const cleaned = rawValue.trim().replace(/^"|"$/g, "");
-    if (normalizedKey === "boundary") boundary = cleaned;
-    if (normalizedKey === "charset") charset = cleaned;
-  }
-
-  return { mime: rawMime.toLowerCase(), boundary, charset };
-};
-
-const decodeBase64 = (input: string) => {
-  const cleaned = input.replace(/\s+/g, "");
+const extractBodiesFromRaw = async (rawBytes: Uint8Array) => {
   try {
-    const binary = atob(cleaned);
-    const bytes = new Uint8Array(binary.length);
-    for (let i = 0; i < binary.length; i++) {
-      bytes[i] = binary.charCodeAt(i);
-    }
-    return new TextDecoder().decode(bytes);
+    const parser = new PostalMime();
+    const parsed = await parser.parse(rawBytes);
+    const html =
+      typeof parsed.html === "string" && parsed.html.trim().length > 0
+        ? parsed.html
+        : undefined;
+    const text =
+      typeof parsed.text === "string" && parsed.text.trim().length > 0
+        ? parsed.text
+        : undefined;
+
+    return { html, text };
   } catch {
-    return input;
-  }
-};
-
-const decodeQuotedPrintable = (input: string) => {
-  const cleaned = input.replace(/=\r?\n/g, "");
-  const bytes: number[] = [];
-  for (let i = 0; i < cleaned.length; i++) {
-    const char = cleaned[i];
-    if (
-      char === "=" &&
-      i + 2 < cleaned.length &&
-      /[0-9A-Fa-f]{2}/.test(cleaned.slice(i + 1, i + 3))
-    ) {
-      bytes.push(Number.parseInt(cleaned.slice(i + 1, i + 3), 16));
-      i += 2;
-      continue;
-    }
-    bytes.push(char.charCodeAt(0));
-  }
-  return new TextDecoder().decode(new Uint8Array(bytes));
-};
-
-const decodeBody = (input: string, encoding?: string | null) => {
-  const normalized = encoding?.toLowerCase().trim();
-  if (!normalized) return input;
-  if (normalized === "base64") return decodeBase64(input);
-  if (normalized === "quoted-printable") return decodeQuotedPrintable(input);
-  return input;
-};
-
-const extractBodiesFromRaw = (
-  raw: string,
-  contentTypeHeader?: string | null
-) => {
-  const { headerText, body } = splitHeadersAndBody(raw);
-  const topHeaders = parseHeaderBlock(headerText);
-  if (contentTypeHeader) {
-    topHeaders["content-type"] = contentTypeHeader;
-  }
-
-  const walkPart = (
-    headers: Record<string, string>,
-    partBody: string
-  ): { html?: string; text?: string } => {
-    const { mime, boundary } = parseContentType(headers["content-type"]);
-    const encoding = headers["content-transfer-encoding"];
-
-    if (mime.startsWith("text/html")) {
-      return { html: decodeBody(partBody, encoding).trim() };
-    }
-    if (mime.startsWith("text/plain")) {
-      return { text: decodeBody(partBody, encoding).trim() };
-    }
-    if (mime.startsWith("multipart/") && boundary) {
-      const delimiter = `--${boundary}`;
-      const sections = partBody.split(delimiter);
-      let fallbackText: string | undefined;
-      for (const section of sections) {
-        const cleaned = section.replace(/^\r?\n/, "").trim();
-        if (!cleaned || cleaned === "--") continue;
-        if (cleaned.startsWith("--")) continue;
-        const { headerText: innerHeaders, body: innerBody } =
-          splitHeadersAndBody(cleaned);
-        const parsedHeaders = parseHeaderBlock(innerHeaders);
-        const result = walkPart(parsedHeaders, innerBody);
-        if (result.html) return result;
-        if (result.text && !fallbackText) fallbackText = result.text;
-      }
-      return fallbackText ? { text: fallbackText } : {};
-    }
-
     return {};
-  };
-
-  return walkPart(topHeaders, body);
+  }
 };
 
 // CORS configuration for auth routes
@@ -660,11 +616,12 @@ const handleIncomingEmail = async (
     Number.isFinite(maxBytesRaw) && maxBytesRaw > 0
       ? maxBytesRaw
       : EMAIL_MAX_BYTES_DEFAULT;
-  const { raw, truncated } = await readRawWithLimit(message.raw, maxBytes);
-  const { html, text } = extractBodiesFromRaw(
-    raw,
-    message.headers.get("content-type")
+  const { raw, rawBytes, truncated } = await readRawWithLimit(
+    message.raw,
+    maxBytes
   );
+  const { html, text } = await extractBodiesFromRaw(rawBytes);
+  const sanitizedHtml = html ? sanitizeEmailHtml(html) : undefined;
 
   const headersPairs = [...message.headers];
   const headersJson =
@@ -681,7 +638,7 @@ const handleIncomingEmail = async (
       to: message.to,
       subject: message.headers.get("subject") ?? undefined,
       headers: headersJson,
-      bodyHtml: html || undefined,
+      bodyHtml: sanitizedHtml || undefined,
       bodyText: text || undefined,
       raw,
       rawSize: message.rawSize,
