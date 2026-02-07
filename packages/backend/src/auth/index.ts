@@ -4,7 +4,7 @@ import type {
 } from "@cloudflare/workers-types";
 import { betterAuth } from "better-auth";
 import { withCloudflare } from "better-auth-cloudflare";
-import { anonymous } from "better-auth/plugins";
+import { apiKey } from "better-auth/plugins";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { drizzle } from "drizzle-orm/d1";
 import { schema } from "../db";
@@ -41,7 +41,13 @@ function createAuth(
         emailAndPassword: {
           enabled: true,
         },
-        plugins: [anonymous()],
+        plugins: [
+          apiKey({
+            enableSessionForAPIKeys: true,
+            apiKeyHeaders: ["x-api-key"],
+            defaultPrefix: "spin_",
+          }),
+        ],
         rateLimit: {
           enabled: true,
         },

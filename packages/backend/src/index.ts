@@ -1,22 +1,135 @@
 import { Hono } from "hono";
+import type { MiddlewareHandler } from "hono";
 import { cors } from "hono/cors";
+import { drizzle } from "drizzle-orm/d1";
+import { and, asc, desc, eq, gte, lte } from "drizzle-orm";
 import { createAuth } from "./auth";
-import type { IncomingRequestCfProperties } from "@cloudflare/workers-types";
+import { emailAddresses, emails, schema } from "./db";
+import type {
+  ExecutionContext,
+  ForwardableEmailMessage,
+  IncomingRequestCfProperties,
+} from "@cloudflare/workers-types";
 import type { CloudflareBindings } from "./env";
+
+type CfReadableStream =
+  import("@cloudflare/workers-types").ReadableStream<Uint8Array>;
+
+type AuthSession = NonNullable<
+  Awaited<ReturnType<ReturnType<typeof createAuth>["api"]["getSession"]>>
+>;
 
 type Variables = {
   auth: ReturnType<typeof createAuth>;
+  session: AuthSession;
 };
 
 const app = new Hono<{ Bindings: CloudflareBindings; Variables: Variables }>();
 
+const EMAIL_LIST_LIMIT_DEFAULT = 20;
+const EMAIL_LIST_LIMIT_MAX = 100;
+const EMAIL_MAX_BYTES_DEFAULT = 512 * 1024;
+
+const getDb = (env: CloudflareBindings) => drizzle(env.SUM_DB, { schema });
+
+const normalizeAddress = (address: string) => address.trim().toLowerCase();
+
+const sanitizeLocalPart = (value: string) => {
+  const cleaned = value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9._+-]/g, "");
+  return cleaned.replace(/^\.+|\.+$/g, "").slice(0, 64);
+};
+
+const parseOptionalTimestamp = (value: string | null) => {
+  if (!value) return undefined;
+  const numeric = Number(value);
+  if (Number.isFinite(numeric)) return new Date(numeric);
+  const parsed = Date.parse(value);
+  if (Number.isNaN(parsed)) return undefined;
+  return new Date(parsed);
+};
+
+const clampNumber = (
+  value: string | null,
+  min: number,
+  max: number,
+  fallback: number
+) => {
+  if (value === null) return fallback;
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return fallback;
+  return Math.min(max, Math.max(min, parsed));
+};
+
+const requireAuth: MiddlewareHandler = async (c, next) => {
+  const auth = c.get("auth");
+  const session = await auth.api.getSession({
+    headers: c.req.raw.headers,
+  });
+  if (!session?.session || !session?.user) {
+    c.status(401);
+    return c.json({ error: "unauthorized" });
+  }
+  c.set("session", session as AuthSession);
+  await next();
+};
+
+const readJsonBody = async <T>(c: Parameters<MiddlewareHandler>[0]) => {
+  try {
+    return (await c.req.json()) as T;
+  } catch {
+    return {} as T;
+  }
+};
+
+const readRawWithLimit = async (
+  stream: ReadableStream<Uint8Array> | CfReadableStream,
+  maxBytes: number
+) => {
+  const reader = (stream as ReadableStream<Uint8Array>).getReader();
+  const decoder = new TextDecoder();
+  let bytes = 0;
+  let truncated = false;
+  const parts: string[] = [];
+
+  while (true) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    if (!value || value.length === 0) continue;
+
+    if (bytes + value.length > maxBytes) {
+      const slice = value.slice(0, Math.max(0, maxBytes - bytes));
+      if (slice.length > 0) {
+        parts.push(decoder.decode(slice, { stream: true }));
+        bytes += slice.length;
+      }
+      truncated = true;
+      await reader.cancel();
+      break;
+    }
+
+    parts.push(decoder.decode(value, { stream: true }));
+    bytes += value.length;
+  }
+
+  parts.push(decoder.decode());
+
+  return {
+    raw: parts.join(""),
+    bytes: Math.min(bytes, maxBytes),
+    truncated,
+  };
+};
+
 // CORS configuration for auth routes
 app.use(
-  "/api/auth/**",
+  "/api/**",
   cors({
     origin: "*", // In production, replace with your actual domain
-    allowHeaders: ["Content-Type", "Authorization"],
-    allowMethods: ["POST", "GET", "OPTIONS"],
+    allowHeaders: ["Content-Type", "Authorization", "X-API-Key"],
+    allowMethods: ["POST", "GET", "OPTIONS", "DELETE"],
     exposeHeaders: ["Content-Length"],
     maxAge: 600,
     credentials: true,
@@ -40,289 +153,406 @@ app.all("/api/auth/*", async c => {
   return auth.handler(c.req.raw);
 });
 
+app.use("/api/email-addresses", requireAuth);
+app.use("/api/email-addresses/*", requireAuth);
+app.use("/api/emails", requireAuth);
+app.use("/api/emails/*", requireAuth);
+
+app.get("/api/email-addresses", async c => {
+  const session = c.get("session");
+  const db = getDb(c.env);
+  const rows = await db
+    .select()
+    .from(emailAddresses)
+    .where(eq(emailAddresses.userId, session.user.id))
+    .orderBy(desc(emailAddresses.createdAt));
+
+  const items = rows.map(row => {
+    let parsedMeta: unknown = null;
+    if (row.meta) {
+      try {
+        parsedMeta = JSON.parse(row.meta);
+      } catch {
+        parsedMeta = row.meta;
+      }
+    }
+
+    return {
+      id: row.id,
+      address: row.address,
+      localPart: row.localPart,
+      domain: row.domain,
+      tag: row.tag,
+      meta: parsedMeta,
+      createdAt: row.createdAt ? row.createdAt.toISOString() : null,
+      createdAtMs: row.createdAt ? row.createdAt.getTime() : null,
+      expiresAt: row.expiresAt ? row.expiresAt.toISOString() : null,
+      expiresAtMs: row.expiresAt ? row.expiresAt.getTime() : null,
+      lastReceivedAt: row.lastReceivedAt
+        ? row.lastReceivedAt.toISOString()
+        : null,
+      lastReceivedAtMs: row.lastReceivedAt
+        ? row.lastReceivedAt.getTime()
+        : null,
+    };
+  });
+
+  return c.json({ items });
+});
+
+app.post("/api/email-addresses", async c => {
+  type CreateBody = {
+    localPart?: string;
+    prefix?: string;
+    tag?: string;
+    ttlMinutes?: number;
+    meta?: unknown;
+    domain?: string;
+  };
+
+  const session = c.get("session");
+  const body = await readJsonBody<CreateBody>(c);
+  const domainFromEnv = c.env.EMAIL_DOMAIN?.trim().toLowerCase();
+  const domainFromBody =
+    typeof body.domain === "string" && body.domain.trim().length > 0
+      ? body.domain.trim().toLowerCase()
+      : undefined;
+  const domain = domainFromBody ?? domainFromEnv;
+
+  if (!domain) {
+    c.status(400);
+    return c.json({ error: "EMAIL_DOMAIN is not configured" });
+  }
+
+  if (domainFromBody && domainFromEnv && domainFromBody !== domainFromEnv) {
+    c.status(400);
+    return c.json({ error: "domain is not allowed" });
+  }
+
+  const prefix =
+    typeof body.prefix === "string" && body.prefix.trim().length > 0
+      ? body.prefix
+      : "test";
+  const providedLocalPart =
+    typeof body.localPart === "string" ? body.localPart : "";
+  let localPart = sanitizeLocalPart(providedLocalPart);
+  if (!localPart) {
+    const safePrefix = sanitizeLocalPart(prefix) || "test";
+    const suffix = crypto.randomUUID().split("-")[0];
+    localPart = `${safePrefix}-${suffix}`;
+  }
+
+  const address = normalizeAddress(`${localPart}@${domain}`);
+  const now = Date.now();
+  const ttlMinutes =
+    typeof body.ttlMinutes === "number" ? body.ttlMinutes : undefined;
+  const expiresAtMs =
+    ttlMinutes && ttlMinutes > 0 ? now + ttlMinutes * 60 * 1000 : undefined;
+  const expiresAt = expiresAtMs ? new Date(expiresAtMs) : undefined;
+
+  let meta: string | undefined;
+  if (body.meta !== undefined) {
+    if (typeof body.meta === "string") {
+      meta = body.meta;
+    } else {
+      try {
+        meta = JSON.stringify(body.meta);
+      } catch {
+        meta = undefined;
+      }
+    }
+  }
+
+  const db = getDb(c.env);
+  const existing = await db
+    .select({ id: emailAddresses.id })
+    .from(emailAddresses)
+    .where(eq(emailAddresses.address, address))
+    .get();
+  if (existing) {
+    c.status(409);
+    return c.json({
+      error: "address already exists",
+      address,
+      id: existing.id,
+    });
+  }
+
+  const id = crypto.randomUUID();
+  await db
+    .insert(emailAddresses)
+    .values({
+      id,
+      userId: session.user.id,
+      address,
+      localPart,
+      domain,
+      tag: typeof body.tag === "string" ? body.tag : undefined,
+      meta,
+      expiresAt,
+      autoCreated: false,
+    })
+    .run();
+
+  return c.json({
+    id,
+    address,
+    localPart,
+    domain,
+    tag: typeof body.tag === "string" ? body.tag : undefined,
+    meta: body.meta ?? undefined,
+    createdAt: new Date(now).toISOString(),
+    createdAtMs: now,
+    expiresAt: expiresAt ? expiresAt.toISOString() : undefined,
+    expiresAtMs,
+  });
+});
+
+app.get("/api/emails", async c => {
+  const session = c.get("session");
+  const query = new URL(c.req.url).searchParams;
+  const addressParam = query.get("address");
+  const addressIdParam = query.get("addressId");
+  const limit = clampNumber(
+    query.get("limit"),
+    1,
+    EMAIL_LIST_LIMIT_MAX,
+    EMAIL_LIST_LIMIT_DEFAULT
+  );
+  const order = query.get("order") === "asc" ? "asc" : "desc";
+  const includeRaw = query.get("raw") !== "false" && query.get("raw") !== "0";
+
+  if (!addressParam && !addressIdParam) {
+    c.status(400);
+    return c.json({ error: "address or addressId is required" });
+  }
+
+  const db = getDb(c.env);
+  const addressRow = addressIdParam
+    ? await db
+        .select()
+        .from(emailAddresses)
+        .where(
+          and(
+            eq(emailAddresses.id, addressIdParam),
+            eq(emailAddresses.userId, session.user.id)
+          )
+        )
+        .get()
+    : await db
+        .select()
+        .from(emailAddresses)
+        .where(
+          and(
+            eq(emailAddresses.address, normalizeAddress(addressParam ?? "")),
+            eq(emailAddresses.userId, session.user.id)
+          )
+        )
+        .get();
+
+  if (!addressRow) {
+    c.status(404);
+    return c.json({ error: "address not found" });
+  }
+
+  const after = parseOptionalTimestamp(query.get("after"));
+  const before = parseOptionalTimestamp(query.get("before"));
+  const conditions = [eq(emails.addressId, addressRow.id)];
+
+  if (after !== undefined) {
+    conditions.push(gte(emails.receivedAt, after));
+  }
+  if (before !== undefined) {
+    conditions.push(lte(emails.receivedAt, before));
+  }
+
+  const whereClause =
+    conditions.length > 1 ? and(...conditions) : conditions[0];
+
+  const rows = await db
+    .select()
+    .from(emails)
+    .where(whereClause)
+    .orderBy(order === "asc" ? asc(emails.receivedAt) : desc(emails.receivedAt))
+    .limit(limit);
+
+  const items = rows.map(row => {
+    let parsedHeaders: unknown = [];
+    if (row.headers) {
+      try {
+        parsedHeaders = JSON.parse(row.headers);
+      } catch {
+        parsedHeaders = [];
+      }
+    }
+
+    const base = {
+      id: row.id,
+      addressId: row.addressId,
+      to: row.to,
+      from: row.from,
+      subject: row.subject,
+      messageId: row.messageId,
+      headers: parsedHeaders,
+      rawSize: row.rawSize,
+      rawTruncated: row.rawTruncated,
+      receivedAt: row.receivedAt ? row.receivedAt.toISOString() : null,
+      receivedAtMs: row.receivedAt ? row.receivedAt.getTime() : null,
+    };
+
+    return includeRaw ? { ...base, raw: row.raw } : base;
+  });
+
+  return c.json({
+    address: addressRow.address,
+    addressId: addressRow.id,
+    items,
+  });
+});
+
+app.get("/api/emails/:id", async c => {
+  const session = c.get("session");
+  const emailId = c.req.param("id");
+  const includeRaw =
+    c.req.query("raw") !== "false" && c.req.query("raw") !== "0";
+  const db = getDb(c.env);
+  const row = await db
+    .select()
+    .from(emails)
+    .where(eq(emails.id, emailId))
+    .get();
+
+  if (!row) {
+    c.status(404);
+    return c.json({ error: "email not found" });
+  }
+
+  const addressRow = await db
+    .select()
+    .from(emailAddresses)
+    .where(
+      and(
+        eq(emailAddresses.id, row.addressId),
+        eq(emailAddresses.userId, session.user.id)
+      )
+    )
+    .get();
+
+  if (!addressRow) {
+    c.status(404);
+    return c.json({ error: "email not found" });
+  }
+
+  let parsedHeaders: unknown = [];
+  if (row.headers) {
+    try {
+      parsedHeaders = JSON.parse(row.headers);
+    } catch {
+      parsedHeaders = [];
+    }
+  }
+
+  const base = {
+    id: row.id,
+    addressId: row.addressId,
+    address: addressRow?.address,
+    to: row.to,
+    from: row.from,
+    subject: row.subject,
+    messageId: row.messageId,
+    headers: parsedHeaders,
+    rawSize: row.rawSize,
+    rawTruncated: row.rawTruncated,
+    receivedAt: row.receivedAt ? row.receivedAt.toISOString() : null,
+    receivedAtMs: row.receivedAt ? row.receivedAt.getTime() : null,
+  };
+
+  return c.json(includeRaw ? { ...base, raw: row.raw } : base);
+});
+
 // Home page with anonymous login
-app.get("/", async c => {
-  const html = `
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Dashboard - Better Auth Cloudflare (Hono)</title>
-    <style>
-        body { font-family: system-ui, -apple-system, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; }
-        .card { border: 1px solid #e5e7eb; border-radius: 8px; padding: 24px; margin: 20px 0; }
-        .header { text-align: center; margin-bottom: 24px; }
-        .title { font-size: 2rem; font-weight: bold; margin: 0; }
-        .subtitle { color: #6b7280; font-size: 0.875rem; margin: 8px 0 0 0; }
-        .content { space-y: 16px; }
-        .info-row { margin: 12px 0; }
-        .info-row strong { display: inline-block; width: 120px; }
-        button { padding: 8px 16px; margin: 8px 4px; border: 1px solid #d1d5db; border-radius: 4px; cursor: pointer; }
-        .primary-btn { background: #3b82f6; color: white; border-color: #3b82f6; }
-        .danger-btn { background: #ef4444; color: white; border-color: #ef4444; }
-        footer { position: fixed; bottom: 0; left: 0; right: 0; text-align: center; padding: 16px; font-size: 0.875rem; color: #6b7280; background: white; border-top: 1px solid #e5e7eb; }
-        footer a { color: #3b82f6; text-decoration: underline; }
-    </style>
-</head>
-<body>
-    <div class="card">
-        <div class="header">
-            <h1 class="title">Dashboard - Hono</h1>
-            <p class="subtitle">Powered by better-auth-cloudflare</p>
-        </div>
-        
-        <div id="status">Loading...</div>
-        
-        <div id="not-logged-in" style="display:none;">
-            <button onclick="loginAnonymously()" class="primary-btn">Login Anonymously</button>
-        </div>
-        
-        <div id="logged-in" style="display:none;">
-            <div class="content">
-                <p>Welcome, <span id="user-name" style="font-weight: 600;"></span>!</p>
-                <div id="user-info"></div>
-                <div id="geolocation-info"></div>
-                <div style="margin-top: 24px;">
-                    <button onclick="tryProtectedRoute()" class="primary-btn">Try Protected Route</button>
-                    <button onclick="logout()">Logout</button>
-                </div>
-            </div>
-        </div>
-        
-        <div id="protected-result"></div>
-    </div>
-    
-    <footer>
-        Powered by 
-        <a href="https://github.com/zpg6/better-auth-cloudflare" target="_blank" rel="noopener noreferrer">better-auth-cloudflare</a>
-        | 
-        <a href="https://www.npmjs.com/package/better-auth-cloudflare" target="_blank" rel="noopener noreferrer">npm package</a>
-    </footer>
-
-    <script>
-        let currentUser = null;
-
-        async function checkStatus() {
-            try {
-                const response = await fetch('/api/auth/get-session', {
-                    credentials: 'include'
-                });
-                
-                if (!response.ok) {
-                    showNotLoggedIn();
-                    return;
-                }
-                
-                const text = await response.text();
-                
-                if (!text || text.trim() === '') {
-                    showNotLoggedIn();
-                    return;
-                }
-                
-                const result = JSON.parse(text);
-                
-                if (result?.session) {
-                    currentUser = result.user;
-                    await showLoggedIn();
-                } else {
-                    showNotLoggedIn();
-                }
-            } catch (error) {
-                console.error('Error checking status:', error);
-                showNotLoggedIn();
-            }
-        }
-
-        async function loginAnonymously() {
-            try {
-                // First check if already logged in
-                await checkStatus();
-                if (currentUser) {
-                    return;
-                }
-                
-                const response = await fetch('/api/auth/sign-in/anonymous', {
-                    method: 'POST',
-                    credentials: 'include',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({})
-                });
-                
-                const text = await response.text();
-                
-                if (!response.ok) {
-                    // Handle specific error for already anonymous
-                    if (text.includes('ANONYMOUS_USERS_CANNOT_SIGN_IN_AGAIN_ANONYMOUSLY')) {
-                        alert('You are already logged in anonymously!');
-                        await checkStatus(); // Refresh status
-                        return;
-                    }
-                    alert('Anonymous login failed: HTTP ' + response.status + ' - ' + text);
-                    return;
-                }
-                
-                const result = JSON.parse(text);
-                
-                if (result.user) {
-                    currentUser = result.user;
-                    await showLoggedIn();
-                } else {
-                    alert('Anonymous login failed: ' + (result.error?.message || 'Unknown error'));
-                }
-            } catch (error) {
-                console.error('Anonymous login error:', error);
-                alert('Anonymous login failed: ' + error.message);
-            }
-        }
-
-        async function logout() {
-            try {
-                await fetch('/api/auth/sign-out', {
-                    method: 'POST',
-                    credentials: 'include',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({})
-                });
-                currentUser = null;
-                showNotLoggedIn();
-                document.getElementById('protected-result').innerHTML = '';
-            } catch (error) {
-                alert('Logout failed: ' + error.message);
-            }
-        }
-
-        async function clearSession() {
-            try {
-                // Clear cookies by setting them to expire
-                document.cookie.split(";").forEach(function(c) { 
-                    document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/"); 
-                });
-                
-                // Force logout
-                await logout();
-                
-                // Refresh page to clear any cached state
-                window.location.reload();
-            } catch (error) {
-                console.error('Error clearing session:', error);
-                window.location.reload();
-            }
-        }
-
-        async function tryProtectedRoute() {
-            try {
-                const response = await fetch('/protected', {
-                    credentials: 'include'
-                });
-                const text = await response.text();
-                
-                document.getElementById('protected-result').innerHTML = 
-                    '<h3>Protected Route Result:</h3><div style="border:1px solid #ccc; padding:10px; margin:10px 0;">' + text + '</div>';
-            } catch (error) {
-                document.getElementById('protected-result').innerHTML = 
-                    '<h3>Protected Route Error:</h3><div style="border:1px solid red; padding:10px; margin:10px 0;">' + error.message + '</div>';
-            }
-        }
-
-        async function showLoggedIn() {
-            document.getElementById('status').innerHTML = 'Status: Logged In';
-            document.getElementById('not-logged-in').style.display = 'none';
-            document.getElementById('logged-in').style.display = 'block';
-            
-            if (currentUser) {
-                document.getElementById('user-name').textContent = currentUser.name || currentUser.email || 'User';
-                
-                document.getElementById('user-info').innerHTML = 
-                    '<div class="info-row"><strong>Email:</strong> ' + (currentUser.email || 'Anonymous') + '</div>' +
-                    '<div class="info-row"><strong>User ID:</strong> ' + currentUser.id + '</div>';
-                
-                // Fetch geolocation data
-                try {
-                    const geoResponse = await fetch('/api/auth/cloudflare/geolocation', {
-                        credentials: 'include'
-                    });
-                    
-                    if (geoResponse.ok) {
-                        const geoData = await geoResponse.json();
-                        document.getElementById('geolocation-info').innerHTML = 
-                            '<div class="info-row"><strong>Timezone:</strong> ' + (geoData.timezone || 'Unknown') + '</div>' +
-                            '<div class="info-row"><strong>City:</strong> ' + (geoData.city || 'Unknown') + '</div>' +
-                            '<div class="info-row"><strong>Country:</strong> ' + (geoData.country || 'Unknown') + '</div>' +
-                            '<div class="info-row"><strong>Region:</strong> ' + (geoData.region || 'Unknown') + '</div>' +
-                            '<div class="info-row"><strong>Region Code:</strong> ' + (geoData.regionCode || 'Unknown') + '</div>' +
-                            '<div class="info-row"><strong>Data Center:</strong> ' + (geoData.colo || 'Unknown') + '</div>' +
-                            (geoData.latitude ? '<div class="info-row"><strong>Latitude:</strong> ' + geoData.latitude + '</div>' : '') +
-                            (geoData.longitude ? '<div class="info-row"><strong>Longitude:</strong> ' + geoData.longitude + '</div>' : '');
-                    } else {
-                        document.getElementById('geolocation-info').innerHTML = '<div class="info-row"><strong>Geolocation:</strong> Unable to fetch</div>';
-                    }
-                } catch (error) {
-                    document.getElementById('geolocation-info').innerHTML = '<div class="info-row"><strong>Geolocation:</strong> Error fetching data</div>';
-                }
-            }
-        }
-
-        function showNotLoggedIn() {
-            document.getElementById('status').innerHTML = 'Status: Not Logged In';
-            document.getElementById('not-logged-in').style.display = 'block';
-            document.getElementById('logged-in').style.display = 'none';
-        }
-
-        // Check status on page load
-        checkStatus();
-    </script>
-</body>
-</html>
-  `;
-  return c.html(html);
+app.get("/", c => {
+  return c.json({
+    status: "ok",
+    message: "Spinupmail API is running. Use the frontend to manage inboxes.",
+  });
 });
 
 // Protected route that shows different content based on auth status
-app.get("/protected", async c => {
-  const auth = c.get("auth");
-
-  try {
-    const session = await auth.api.getSession({
-      headers: c.req.raw.headers,
-    });
-
-    if (session?.session && session?.user) {
-      return c.html(`
-                <h2>🔒 Protected Content - You're In!</h2>
-                <p>Welcome to the protected area!</p>
-                <p><strong>User ID:</strong> ${session.user.id}</p>
-                <p><strong>Session ID:</strong> ${session.session.id}</p>
-                <p><strong>Created At:</strong> ${new Date(session.user.createdAt).toLocaleString()}</p>
-                <p>This content is only visible to authenticated users (including anonymous ones)!</p>
-            `);
-    } else {
-      return c.html(
-        `
-                <h2>❌ Access Denied</h2>
-                <p>You need to be logged in to see this content.</p>
-                <p>Go back and login anonymously first!</p>
-            `,
-        401
-      );
-    }
-  } catch (error) {
-    return c.html(
-      `
-            <h2>❌ Error</h2>
-            <p>Error checking authentication: ${(error as Error).message}</p>
-        `,
-      500
-    );
-  }
-});
-
 // Simple health check
 app.get("/health", c => {
   return c.json({ status: "ok", timestamp: new Date().toISOString() });
 });
 
-export default app;
+const handleIncomingEmail = async (
+  message: ForwardableEmailMessage,
+  env: CloudflareBindings,
+  ctx: ExecutionContext
+) => {
+  const db = getDb(env);
+  const recipient = normalizeAddress(message.to);
+  const atIndex = recipient.lastIndexOf("@");
+
+  if (atIndex === -1) {
+    message.setReject("Invalid recipient address");
+    return;
+  }
+
+  const addressRow = await db
+    .select({ id: emailAddresses.id })
+    .from(emailAddresses)
+    .where(eq(emailAddresses.address, recipient))
+    .get();
+
+  if (!addressRow) {
+    message.setReject("Address not registered");
+    return;
+  }
+
+  const maxBytesRaw = Number(env.EMAIL_MAX_BYTES);
+  const maxBytes =
+    Number.isFinite(maxBytesRaw) && maxBytesRaw > 0
+      ? maxBytesRaw
+      : EMAIL_MAX_BYTES_DEFAULT;
+  const { raw, truncated } = await readRawWithLimit(message.raw, maxBytes);
+
+  const headersPairs = [...message.headers];
+  const headersJson =
+    headersPairs.length > 0 ? JSON.stringify(headersPairs) : undefined;
+  const receivedAt = new Date();
+
+  await db
+    .insert(emails)
+    .values({
+      id: crypto.randomUUID(),
+      addressId: addressRow.id,
+      messageId: message.headers.get("message-id") ?? undefined,
+      from: message.from,
+      to: message.to,
+      subject: message.headers.get("subject") ?? undefined,
+      headers: headersJson,
+      raw,
+      rawSize: message.rawSize,
+      rawTruncated: truncated,
+      receivedAt,
+    })
+    .run();
+
+  ctx.waitUntil(
+    db
+      .update(emailAddresses)
+      .set({ lastReceivedAt: receivedAt })
+      .where(eq(emailAddresses.id, addressRow.id))
+      .run()
+  );
+
+  const forwardTo = env.EMAIL_FORWARD_TO?.trim();
+  if (forwardTo) {
+    await message.forward(forwardTo);
+  }
+};
+
+export default {
+  fetch: app.fetch,
+  email: handleIncomingEmail,
+};

@@ -1,0 +1,81 @@
+import { relations, sql } from "drizzle-orm";
+import { sqliteTable, text, integer, index } from "drizzle-orm/sqlite-core";
+import { users } from "./auth.schema";
+
+export const emailAddresses = sqliteTable(
+  "email_addresses",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    address: text("address").notNull().unique(),
+    localPart: text("local_part").notNull(),
+    domain: text("domain").notNull(),
+    tag: text("tag"),
+    meta: text("meta"),
+    createdAt: integer("created_at", { mode: "timestamp_ms" })
+      .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+      .notNull(),
+    expiresAt: integer("expires_at", { mode: "timestamp_ms" }),
+    autoCreated: integer("auto_created", { mode: "boolean" })
+      .default(false)
+      .notNull(),
+    lastReceivedAt: integer("last_received_at", { mode: "timestamp_ms" }),
+  },
+  table => [
+    index("email_addresses_domain_idx").on(table.domain),
+    index("email_addresses_userId_idx").on(table.userId),
+  ]
+);
+
+export const emails = sqliteTable(
+  "emails",
+  {
+    id: text("id").primaryKey(),
+    addressId: text("address_id")
+      .notNull()
+      .references(() => emailAddresses.id, { onDelete: "cascade" }),
+    messageId: text("message_id"),
+    from: text("from").notNull(),
+    to: text("to").notNull(),
+    subject: text("subject"),
+    headers: text("headers"),
+    raw: text("raw"),
+    rawSize: integer("raw_size"),
+    rawTruncated: integer("raw_truncated", { mode: "boolean" })
+      .default(false)
+      .notNull(),
+    receivedAt: integer("received_at", { mode: "timestamp_ms" })
+      .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+      .notNull(),
+  },
+  table => [
+    index("emails_addressId_idx").on(table.addressId),
+    index("emails_receivedAt_idx").on(table.receivedAt),
+  ]
+);
+
+export const emailAddressesRelations = relations(
+  emailAddresses,
+  ({ many }) => ({
+    emails: many(emails),
+  })
+);
+
+export const emailAddressesUserRelations = relations(
+  emailAddresses,
+  ({ one }) => ({
+    user: one(users, {
+      fields: [emailAddresses.userId],
+      references: [users.id],
+    }),
+  })
+);
+
+export const emailsRelations = relations(emails, ({ one }) => ({
+  address: one(emailAddresses, {
+    fields: [emails.addressId],
+    references: [emailAddresses.id],
+  }),
+}));

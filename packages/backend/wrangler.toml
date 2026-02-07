@@ -15,13 +15,16 @@ mode = "smart"
 [[d1_databases]]
 binding = "SUM_DB"
 database_name = "SUM_DB"
-database_id = "c7b62c8c-fbfc-4047-b949-73553900bdad"
+database_id = "a5ed1fb3-600a-45bb-991f-ad8be7170c49"
 migrations_dir = "drizzle"
 
 [[kv_namespaces]]
 binding = "SUM_KV"
 id = "442502dbafb4409999092c94e7784fad"
 
+[vars]
+EMAIL_DOMAIN = "spinupmail.com"
+EMAIL_MAX_BYTES = "524288"
 
 # To protect the database id, kv id, we ignore this
 # file when committing to the repo by running once:
