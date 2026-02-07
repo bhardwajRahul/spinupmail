@@ -1,0 +1,30 @@
+{
+  "name": "spinupmail",
+  "private": true,
+  "scripts": {
+    "dev:backend": "pnpm -C packages/backend dev",
+    "build:backend": "pnpm -C packages/backend build",
+    "deploy:backend": "pnpm -C packages/backend deploy",
+    "cf-typegen": "pnpm -C packages/backend cf-typegen",
+    "auth:update": "pnpm -C packages/backend auth:update",
+    "db:generate": "pnpm -C packages/backend db:generate",
+    "db:migrate:dev": "pnpm -C packages/backend db:migrate:dev",
+    "db:migrate:prod": "pnpm -C packages/backend db:migrate:prod",
+    "db:studio:dev": "pnpm -C packages/backend db:studio:dev",
+    "db:studio:prod": "pnpm -C packages/backend db:studio:prod",
+    "dev:frontend": "pnpm -C packages/frontend dev",
+    "build:frontend": "pnpm -C packages/frontend build",
+    "deploy:frontend": "pnpm -C packages/frontend deploy",
+    "lint": "eslint .",
+    "lint:backend": "eslint packages/backend",
+    "lint:frontend": "eslint packages/frontend"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.18.0",
+    "eslint": "^9.18.0",
+    "eslint-plugin-react": "^7.37.2",
+    "eslint-plugin-react-hooks": "^5.1.0",
+    "globals": "^17.3.0",
+    "typescript-eslint": "^8.54.0"
+  }
+}

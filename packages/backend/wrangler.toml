@@ -1,0 +1,31 @@
+# For more details on how to configure Wrangler, refer to:
+# https://developers.cloudflare.com/workers/wrangler/configuration/
+
+name = "spinupmail"
+main = "src/index.ts"
+compatibility_date = "2025-03-01"
+compatibility_flags = ["nodejs_compat"]
+
+[observability]
+enabled = true
+
+[placement]
+mode = "smart"
+
+[[d1_databases]]
+binding = "SUM_DB"
+database_name = "SUM_DB"
+database_id = "c7b62c8c-fbfc-4047-b949-73553900bdad"
+migrations_dir = "drizzle"
+
+[[kv_namespaces]]
+binding = "SUM_KV"
+id = "442502dbafb4409999092c94e7784fad"
+
+
+# To protect the database id, kv id, we ignore this
+# file when committing to the repo by running once:
+# git update-index --assume-unchanged wrangler.toml
+#
+# Put back in git if you need to commit this file:
+# git update-index --no-assume-unchanged wrangler.toml
