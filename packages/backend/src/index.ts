@@ -123,6 +123,148 @@ const readRawWithLimit = async (
   };
 };
 
+const splitHeadersAndBody = (content: string) => {
+  const match = content.match(/\r?\n\r?\n/);
+  if (!match || match.index === undefined) {
+    return { headerText: "", body: content };
+  }
+  const index = match.index;
+  const separatorLength = match[0].length;
+  return {
+    headerText: content.slice(0, index),
+    body: content.slice(index + separatorLength),
+  };
+};
+
+const parseHeaderBlock = (headerText: string) => {
+  const headers: Record<string, string> = {};
+  const lines = headerText.replace(/\r\n/g, "\n").split("\n");
+  let currentName: string | null = null;
+
+  for (const line of lines) {
+    if (!line) continue;
+    if (/^\s/.test(line) && currentName) {
+      headers[currentName] = `${headers[currentName]} ${line.trim()}`.trim();
+      continue;
+    }
+    const separatorIndex = line.indexOf(":");
+    if (separatorIndex === -1) continue;
+    const name = line.slice(0, separatorIndex).trim().toLowerCase();
+    const value = line.slice(separatorIndex + 1).trim();
+    headers[name] = headers[name] ? `${headers[name]}, ${value}` : value;
+    currentName = name;
+  }
+
+  return headers;
+};
+
+const parseContentType = (value?: string | null) => {
+  if (!value)
+    return { mime: "", boundary: null as string | null, charset: null };
+  const [rawMime, ...params] = value.split(";").map(part => part.trim());
+  let boundary: string | null = null;
+  let charset: string | null = null;
+
+  for (const param of params) {
+    const [key, rawValue] = param.split("=");
+    if (!key || !rawValue) continue;
+    const normalizedKey = key.trim().toLowerCase();
+    const cleaned = rawValue.trim().replace(/^"|"$/g, "");
+    if (normalizedKey === "boundary") boundary = cleaned;
+    if (normalizedKey === "charset") charset = cleaned;
+  }
+
+  return { mime: rawMime.toLowerCase(), boundary, charset };
+};
+
+const decodeBase64 = (input: string) => {
+  const cleaned = input.replace(/\s+/g, "");
+  try {
+    const binary = atob(cleaned);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) {
+      bytes[i] = binary.charCodeAt(i);
+    }
+    return new TextDecoder().decode(bytes);
+  } catch {
+    return input;
+  }
+};
+
+const decodeQuotedPrintable = (input: string) => {
+  const cleaned = input.replace(/=\r?\n/g, "");
+  const bytes: number[] = [];
+  for (let i = 0; i < cleaned.length; i++) {
+    const char = cleaned[i];
+    if (
+      char === "=" &&
+      i + 2 < cleaned.length &&
+      /[0-9A-Fa-f]{2}/.test(cleaned.slice(i + 1, i + 3))
+    ) {
+      bytes.push(Number.parseInt(cleaned.slice(i + 1, i + 3), 16));
+      i += 2;
+      continue;
+    }
+    bytes.push(char.charCodeAt(0));
+  }
+  return new TextDecoder().decode(new Uint8Array(bytes));
+};
+
+const decodeBody = (input: string, encoding?: string | null) => {
+  const normalized = encoding?.toLowerCase().trim();
+  if (!normalized) return input;
+  if (normalized === "base64") return decodeBase64(input);
+  if (normalized === "quoted-printable") return decodeQuotedPrintable(input);
+  return input;
+};
+
+const extractBodiesFromRaw = (
+  raw: string,
+  contentTypeHeader?: string | null
+) => {
+  const { headerText, body } = splitHeadersAndBody(raw);
+  const topHeaders = parseHeaderBlock(headerText);
+  if (contentTypeHeader) {
+    topHeaders["content-type"] = contentTypeHeader;
+  }
+
+  const walkPart = (
+    headers: Record<string, string>,
+    partBody: string
+  ): { html?: string; text?: string } => {
+    const { mime, boundary } = parseContentType(headers["content-type"]);
+    const encoding = headers["content-transfer-encoding"];
+
+    if (mime.startsWith("text/html")) {
+      return { html: decodeBody(partBody, encoding).trim() };
+    }
+    if (mime.startsWith("text/plain")) {
+      return { text: decodeBody(partBody, encoding).trim() };
+    }
+    if (mime.startsWith("multipart/") && boundary) {
+      const delimiter = `--${boundary}`;
+      const sections = partBody.split(delimiter);
+      let fallbackText: string | undefined;
+      for (const section of sections) {
+        const cleaned = section.replace(/^\r?\n/, "").trim();
+        if (!cleaned || cleaned === "--") continue;
+        if (cleaned.startsWith("--")) continue;
+        const { headerText: innerHeaders, body: innerBody } =
+          splitHeadersAndBody(cleaned);
+        const parsedHeaders = parseHeaderBlock(innerHeaders);
+        const result = walkPart(parsedHeaders, innerBody);
+        if (result.html) return result;
+        if (result.text && !fallbackText) fallbackText = result.text;
+      }
+      return fallbackText ? { text: fallbackText } : {};
+    }
+
+    return {};
+  };
+
+  return walkPart(topHeaders, body);
+};
+
 // CORS configuration for auth routes
 app.use(
   "/api/**",
@@ -394,6 +536,8 @@ app.get("/api/emails", async c => {
       subject: row.subject,
       messageId: row.messageId,
       headers: parsedHeaders,
+      html: row.bodyHtml,
+      text: row.bodyText,
       rawSize: row.rawSize,
       rawTruncated: row.rawTruncated,
       receivedAt: row.receivedAt ? row.receivedAt.toISOString() : null,
@@ -461,6 +605,8 @@ app.get("/api/emails/:id", async c => {
     subject: row.subject,
     messageId: row.messageId,
     headers: parsedHeaders,
+    html: row.bodyHtml,
+    text: row.bodyText,
     rawSize: row.rawSize,
     rawTruncated: row.rawTruncated,
     receivedAt: row.receivedAt ? row.receivedAt.toISOString() : null,
@@ -515,6 +661,10 @@ const handleIncomingEmail = async (
       ? maxBytesRaw
       : EMAIL_MAX_BYTES_DEFAULT;
   const { raw, truncated } = await readRawWithLimit(message.raw, maxBytes);
+  const { html, text } = extractBodiesFromRaw(
+    raw,
+    message.headers.get("content-type")
+  );
 
   const headersPairs = [...message.headers];
   const headersJson =
@@ -531,6 +681,8 @@ const handleIncomingEmail = async (
       to: message.to,
       subject: message.headers.get("subject") ?? undefined,
       headers: headersJson,
+      bodyHtml: html || undefined,
+      bodyText: text || undefined,
       raw,
       rawSize: message.rawSize,
       rawTruncated: truncated,

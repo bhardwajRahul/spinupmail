@@ -41,6 +41,8 @@ export const emails = sqliteTable(
     to: text("to").notNull(),
     subject: text("subject"),
     headers: text("headers"),
+    bodyHtml: text("body_html"),
+    bodyText: text("body_text"),
     raw: text("raw"),
     rawSize: integer("raw_size"),
     rawTruncated: integer("raw_truncated", { mode: "boolean" })

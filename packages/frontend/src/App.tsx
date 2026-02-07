@@ -424,11 +424,40 @@ export function App() {
                           </p>
                         </div>
                         <Separator />
-                        <Textarea
-                          readOnly
-                          className="min-h-65 font-mono text-xs"
-                          value={selectedEmail.raw ?? ""}
-                        />
+                        {selectedEmail.html ? (
+                          <div className="overflow-hidden rounded-md border border-foreground/10 bg-white">
+                            <iframe
+                              title="Email preview"
+                              sandbox=""
+                              className="h-80 w-full"
+                              srcDoc={selectedEmail.html}
+                            />
+                          </div>
+                        ) : selectedEmail.text ? (
+                          <Textarea
+                            readOnly
+                            className="min-h-65 font-mono text-xs"
+                            value={selectedEmail.text}
+                          />
+                        ) : (
+                          <Textarea
+                            readOnly
+                            className="min-h-65 font-mono text-xs"
+                            value={selectedEmail.raw ?? ""}
+                          />
+                        )}
+                        {selectedEmail.raw ? (
+                          <details className="rounded-md border border-foreground/10 p-3 text-xs">
+                            <summary className="cursor-pointer text-sm font-medium">
+                              Raw source
+                            </summary>
+                            <Textarea
+                              readOnly
+                              className="mt-3 min-h-65 font-mono text-xs"
+                              value={selectedEmail.raw}
+                            />
+                          </details>
+                        ) : null}
                       </>
                     ) : (
                       <p className="text-sm text-muted-foreground">

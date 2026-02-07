@@ -53,6 +53,8 @@ export type EmailMessage = {
   subject?: string | null;
   messageId?: string | null;
   headers: unknown;
+  html?: string | null;
+  text?: string | null;
   raw?: string | null;
   rawSize?: number | null;
   rawTruncated: boolean;
