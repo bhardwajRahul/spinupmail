@@ -1,0 +1,9 @@
+import type { CloudflareBindings } from "../env";
+import { createAuth } from "./index";
+
+const env =
+  typeof process !== "undefined" && process.env
+    ? (process.env as unknown as CloudflareBindings)
+    : undefined;
+
+export const auth = createAuth(env);

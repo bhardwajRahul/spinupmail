@@ -5,6 +5,7 @@ export interface CloudflareBindings {
   SUM_KV: KVNamespace;
   BETTER_AUTH_SECRET: string;
   BETTER_AUTH_BASE_URL: string;
+  CORS_ORIGIN?: string;
   EMAIL_DOMAIN?: string;
   EMAIL_FORWARD_TO?: string;
   EMAIL_MAX_BYTES?: string;

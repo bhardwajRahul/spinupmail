@@ -170,6 +170,44 @@ VITE_AUTH_BASE_URL=http://localhost:8787/api/auth
 VITE_API_BASE_URL=http://localhost:8787
 ```
 
+For local auth, add a `/Users/absolute/myoss/spinupmail/packages/backend/.dev.vars`
+file (not committed):
+
+```
+BETTER_AUTH_SECRET=dev-secret
+BETTER_AUTH_BASE_URL=http://localhost:8787/api/auth
+```
+
+The frontend dev server proxies `/api/*` to `http://127.0.0.1:8787`, so you can
+use relative URLs during development.
+
+### Local Email Testing
+
+Cloudflare does **not** deliver real emails to `.workers.dev` domains. For local
+testing, simulate Email Routing via Wrangler’s local email endpoint:
+
+```bash
+curl --location 'http://localhost:8787/cdn-cgi/handler/email?from=sender%40example.com&to=test-82bdbbd2%40spinupmail.com' \
+--header 'Content-Type: application/json' \
+--data-raw 'Received: from smtp.example.com (127.0.0.1)
+        by cloudflare-email.com (unknown) id 4fwwffRXOpyR
+        for <recipient@example.com>; Tue, 27 Aug 2024 15:50:20 +0000
+From: "John" <sender@example.com>
+Reply-To: sender@example.com
+To: recipient@example.com
+Subject: Testing Email Workers Local Dev
+Content-Type: text/html; charset="windows-1252"
+X-Mailer: Curl
+Date: Tue, 27 Aug 2024 08:49:44 -0700
+Message-ID: <6114391943504294873000@ZSH-GHOSTTY>
+
+Hi there'
+```
+
+To receive **real** emails, use a real domain in Cloudflare Email Routing (you
+can create a dev subdomain like `dev.your-domain.com`) and point the routing
+rule to your Worker.
+
 ## Notes
 
 - Email addresses **must** be created before email is sent. Unknown addresses

@@ -33,6 +33,13 @@ const EMAIL_LIST_LIMIT_MAX = 100;
 const EMAIL_MAX_BYTES_DEFAULT = 512 * 1024;
 
 const getDb = (env: CloudflareBindings) => drizzle(env.SUM_DB, { schema });
+const getAllowedOrigins = (env: CloudflareBindings) => {
+  const configured = env.CORS_ORIGIN?.split(",")
+    .map(origin => origin.trim())
+    .filter(Boolean);
+  if (configured && configured.length > 0) return configured;
+  return ["http://localhost:5173", "http://127.0.0.1:5173"];
+};
 
 const normalizeAddress = (address: string) => address.trim().toLowerCase();
 
@@ -223,9 +230,13 @@ const extractBodiesFromRaw = async (rawBytes: Uint8Array) => {
 
 // CORS configuration for auth routes
 app.use(
-  "/api/**",
+  "/api/*",
   cors({
-    origin: "*", // In production, replace with your actual domain
+    origin: (origin, c) => {
+      if (!origin) return null;
+      const allowed = getAllowedOrigins(c.env);
+      return allowed.includes(origin) ? origin : null;
+    },
     allowHeaders: ["Content-Type", "Authorization", "X-API-Key"],
     allowMethods: ["POST", "GET", "OPTIONS", "DELETE"],
     exposeHeaders: ["Content-Length"],

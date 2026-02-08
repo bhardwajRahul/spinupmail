@@ -6,7 +6,7 @@
     "build": "npx tsc --noEmit",
     "deploy": "pnpm exec wrangler deploy --minify",
     "cf-typegen": "pnpm exec wrangler types --env-interface CloudflareBindings",
-    "auth:generate": "npx --yes @better-auth/cli@latest generate --config src/auth/index.ts --output src/db/auth.schema.ts -y",
+    "auth:generate": "npx --yes @better-auth/cli@latest generate --config src/auth/cli.ts --output src/db/auth.schema.ts -y",
     "auth:format": "npx --yes prettier --write src/db/auth.schema.ts",
     "auth:update": "npm run auth:generate && npm run auth:format",
     "db:generate": "drizzle-kit generate",

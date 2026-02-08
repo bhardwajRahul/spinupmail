@@ -23,6 +23,9 @@ migrations_dir = "drizzle"
 binding = "SUM_KV"
 id = "YOUR_KV_NAMESPACE_ID"
 
+[[send_email]]
+name = "EMAIL"
+
 [vars]
 EMAIL_DOMAIN = "example.com"
 EMAIL_FORWARD_TO = ""

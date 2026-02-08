@@ -16,6 +16,9 @@ function createAuth(
   cf?: IncomingRequestCfProperties
 ) {
   const db = env ? drizzle(env.SUM_DB, { schema, logger: true }) : undefined;
+  const trustedOrigins = env?.CORS_ORIGIN?.split(",")
+    .map(origin => origin.trim())
+    .filter(Boolean);
 
   return betterAuth({
     secret: env?.BETTER_AUTH_SECRET,
@@ -38,6 +41,10 @@ function createAuth(
         kv: env?.SUM_KV,
       },
       {
+        trustedOrigins:
+          trustedOrigins && trustedOrigins.length > 0
+            ? trustedOrigins
+            : ["http://localhost:5173", "http://127.0.0.1:5173"],
         emailAndPassword: {
           enabled: true,
         },
@@ -65,9 +72,6 @@ function createAuth(
         }),
   });
 }
-
-// Export for CLI schema generation
-export const auth = createAuth();
 
 // Export for runtime usage
 export { createAuth };
