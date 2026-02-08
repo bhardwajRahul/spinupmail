@@ -692,13 +692,21 @@ const handleIncomingEmail = async (
   }
 
   const addressRow = await db
-    .select({ id: emailAddresses.id })
+    .select({ id: emailAddresses.id, expiresAt: emailAddresses.expiresAt })
     .from(emailAddresses)
     .where(eq(emailAddresses.address, recipient))
     .get();
 
   if (!addressRow) {
     message.setReject("Address not registered");
+    return;
+  }
+
+  if (addressRow.expiresAt && addressRow.expiresAt.getTime() <= Date.now()) {
+    // TODO: Should we silently drop or reject with a message?
+    // Silently dropping might cause senders to keep retrying,
+    // but rejecting might cause bounce back emails which can be undesirable.
+    message.setReject("Address expired");
     return;
   }
 
