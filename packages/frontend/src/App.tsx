@@ -20,6 +20,7 @@ import {
   listEmailAddresses,
   listEmails,
 } from "@/lib/api";
+import { ModeToggle } from "./components/mode-toggle";
 
 type SessionState = {
   user: {
@@ -309,6 +310,7 @@ export function App() {
               </Button>
             </div>
           ) : null}
+          <ModeToggle />
         </header>
 
         {sessionLoading ? (
