@@ -4,6 +4,7 @@ import { createBrowserRouter, redirect, type RouteObject } from "react-router";
 import { RouterProvider } from "react-router/dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ThemeProvider } from "@/components/theme-provider";
+import { Spinner } from "@/components/ui/spinner";
 import {
   redirectIfAuthenticatedLoader,
   requireAuthLoader,
@@ -29,10 +30,20 @@ const queryClient = new QueryClient({
   },
 });
 
+const hydrationFallbackElement = (
+  <div className="flex min-h-screen items-center justify-center">
+    <div className="flex items-center gap-2 rounded-md border border-border/70 bg-card/60 px-3 py-2 text-sm text-muted-foreground">
+      <Spinner className="size-4" />
+      <span>Loading mailbox...</span>
+    </div>
+  </div>
+);
+
 const routes: RouteObject[] = [
   {
     path: "/login",
     loader: redirectIfAuthenticatedLoader,
+    hydrateFallbackElement: hydrationFallbackElement,
     element: <LoginPage />,
     errorElement: <RouteErrorPage />,
     handle: { title: "Sign in" },
@@ -40,6 +51,7 @@ const routes: RouteObject[] = [
   {
     path: "/signup",
     loader: redirectIfAuthenticatedLoader,
+    hydrateFallbackElement: hydrationFallbackElement,
     element: <SignupPage />,
     errorElement: <RouteErrorPage />,
     handle: { title: "Sign up" },
@@ -47,6 +59,7 @@ const routes: RouteObject[] = [
   {
     path: "/",
     loader: requireAuthLoader,
+    hydrateFallbackElement: hydrationFallbackElement,
     element: <ProtectedLayoutPage />,
     errorElement: <RouteErrorPage />,
     children: [
