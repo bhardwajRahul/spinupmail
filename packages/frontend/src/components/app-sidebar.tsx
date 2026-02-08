@@ -85,14 +85,14 @@ export const AppSidebar = ({ user, onSignOut, ...props }: AppSidebarProps) => {
 
   return (
     <Sidebar collapsible="icon" variant="sidebar" {...props}>
-      <SidebarHeader>
+      <SidebarHeader className="h-16 border-b border-border/70 mt-px">
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton onClick={() => void navigate("/")} size="lg">
-              <div className="flex size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
+              <div className="flex size-8 shrink-0 items-center justify-center rounded-lg text-sidebar-primary">
                 <HugeiconsIcon icon={Mail} strokeWidth={2} />
               </div>
-              <div className="flex flex-col text-left">
+              <div className="flex flex-col text-left group-data-[collapsible=icon]:hidden">
                 <span className="text-sm font-semibold">SpinupMail</span>
               </div>
             </SidebarMenuButton>
@@ -102,7 +102,17 @@ export const AppSidebar = ({ user, onSignOut, ...props }: AppSidebarProps) => {
 
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Navigate</SidebarGroupLabel>
+          <SidebarGroupLabel className="group-data-[collapsible=icon]:mt-0! group-data-[collapsible=icon]:opacity-100!">
+            <span className="group-data-[collapsible=icon]:hidden pl-2.5">
+              Navigate
+            </span>
+            <span
+              aria-hidden="true"
+              className="hidden text-sidebar-foreground/45 tracking-wider group-data-[collapsible=icon]:inline pl-3"
+            >
+              ―
+            </span>
+          </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {navItems.map(item => {
@@ -116,9 +126,12 @@ export const AppSidebar = ({ user, onSignOut, ...props }: AppSidebarProps) => {
                       isActive={isActive}
                       onClick={() => void navigate(item.to)}
                       tooltip={item.title}
+                      className="pl-4"
                     >
                       <HugeiconsIcon icon={item.icon} strokeWidth={2} />
-                      <span>{item.title}</span>
+                      <span className="group-data-[collapsible=icon]:hidden">
+                        {item.title}
+                      </span>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 );
@@ -140,12 +153,12 @@ export const AppSidebar = ({ user, onSignOut, ...props }: AppSidebarProps) => {
                   />
                 }
               >
-                <Avatar className="size-8 rounded-md">
+                <Avatar className="size-8 shrink-0 rounded-md">
                   <AvatarFallback className="rounded-md text-xs">
                     {getInitials(user?.name)}
                   </AvatarFallback>
                 </Avatar>
-                <div className="grid flex-1 text-left leading-tight">
+                <div className="grid flex-1 text-left leading-tight group-data-[collapsible=icon]:hidden">
                   <span className="truncate text-sm font-medium">
                     {user?.name ?? "User"}
                   </span>
