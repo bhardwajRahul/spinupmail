@@ -67,7 +67,6 @@ const verifyPasswordWithNodeCrypto = async ({
   }
 };
 
-// Single auth configuration that handles both CLI and runtime scenarios
 function createAuth(
   env?: CloudflareBindings,
   cf?: IncomingRequestCfProperties
@@ -109,6 +108,12 @@ function createAuth(
             verify: verifyPasswordWithNodeCrypto,
           },
         },
+        session: {
+          cookieCache: {
+            enabled: true,
+            maxAge: 60,
+          },
+        },
         plugins: [
           apiKey({
             enableSessionForAPIKeys: true,
@@ -118,6 +123,7 @@ function createAuth(
         ],
         rateLimit: {
           enabled: true,
+          window: 60,
         },
       }
     ),
