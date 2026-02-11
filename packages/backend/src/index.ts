@@ -33,6 +33,8 @@ const EMAIL_LIST_LIMIT_MAX = 100;
 const EMAIL_MAX_BYTES_DEFAULT = 512 * 1024;
 const EMAIL_ATTACHMENT_MAX_BYTES_DEFAULT = 10 * 1024 * 1024;
 const EMAIL_ATTACHMENT_NAME_FALLBACK = "attachment";
+const EMAIL_BODY_MAX_BYTES_DEFAULT = 512 * 1024;
+const EMAIL_RAW_R2_CONTENT_TYPE = "message/rfc822";
 
 type ParsedEmailAttachment = {
   filename: string;
@@ -87,6 +89,17 @@ const parsePositiveNumber = (value: string | null | undefined) => {
   const parsed = Number(value);
   if (!Number.isFinite(parsed) || parsed <= 0) return undefined;
   return parsed;
+};
+
+const parseBooleanEnv = (
+  value: string | null | undefined,
+  fallback = false
+) => {
+  if (!value) return fallback;
+  const normalized = value.trim().toLowerCase();
+  if (["1", "true", "yes", "on"].includes(normalized)) return true;
+  if (["0", "false", "no", "off"].includes(normalized)) return false;
+  return fallback;
 };
 
 const clampNumber = (
@@ -271,6 +284,38 @@ const buildContentDisposition = (filename: string) => {
   const fallback = escapeContentDispositionFilename(filename);
   return `attachment; filename="${fallback}"; filename*=UTF-8''${encoded}`;
 };
+
+const getRawEmailR2Key = ({
+  userId,
+  addressId,
+  emailId,
+}: {
+  userId: string;
+  addressId: string;
+  emailId: string;
+}) => `email-raw/${userId}/${addressId}/${emailId}.eml`;
+
+const getRawDownloadPath = (
+  env: CloudflareBindings,
+  row: { id: string; raw: string | null }
+) => {
+  const hasRawInDb = typeof row.raw === "string" && row.raw.length > 0;
+  const rawInR2Enabled = parseBooleanEnv(env.EMAIL_STORE_RAW_IN_R2, false);
+  return hasRawInDb || rawInR2Enabled ? `/api/emails/${row.id}/raw` : undefined;
+};
+
+const capTextForStorage = (
+  value: string | undefined,
+  maxBytes: number
+): string | undefined => {
+  if (!value) return undefined;
+  const bytes = new TextEncoder().encode(value);
+  if (bytes.byteLength <= maxBytes) return value;
+  return undefined;
+};
+
+const getUtf8ByteLength = (value: string) =>
+  new TextEncoder().encode(value).byteLength;
 
 const toAttachmentResponse = (attachment: {
   id: string;
@@ -485,6 +530,44 @@ const persistAttachments = async ({
         error
       );
     }
+  }
+};
+
+const persistRawEmailToR2 = async ({
+  env,
+  rawBytes,
+  emailId,
+  addressId,
+  userId,
+}: {
+  env: CloudflareBindings;
+  rawBytes: Uint8Array;
+  emailId: string;
+  addressId: string;
+  userId: string;
+}) => {
+  const persistRawToR2 = parseBooleanEnv(env.EMAIL_STORE_RAW_IN_R2, false);
+  if (!persistRawToR2) return;
+
+  if (!env.R2_BUCKET) {
+    console.warn(
+      `[email] EMAIL_STORE_RAW_IN_R2 is enabled but R2_BUCKET is missing. Skipping raw storage for email ${emailId}.`
+    );
+    return;
+  }
+
+  const rawKey = getRawEmailR2Key({ userId, addressId, emailId });
+  try {
+    await env.R2_BUCKET.put(rawKey, rawBytes, {
+      httpMetadata: {
+        contentType: EMAIL_RAW_R2_CONTENT_TYPE,
+      },
+    });
+  } catch (error) {
+    console.error(
+      `[email] Failed to persist raw MIME to R2 for email ${emailId}`,
+      error
+    );
   }
 };
 
@@ -803,6 +886,7 @@ app.get("/api/emails", async c => {
       }
     }
 
+    const rawDownloadPath = getRawDownloadPath(c.env, row);
     const base = {
       id: row.id,
       addressId: row.addressId,
@@ -815,6 +899,7 @@ app.get("/api/emails", async c => {
       text: row.bodyText,
       rawSize: row.rawSize,
       rawTruncated: row.rawTruncated,
+      ...(rawDownloadPath ? { rawDownloadPath } : {}),
       attachments: attachmentsByEmail.get(row.id) ?? [],
       receivedAt: row.receivedAt ? row.receivedAt.toISOString() : null,
       receivedAtMs: row.receivedAt ? row.receivedAt.getTime() : null,
@@ -891,6 +976,7 @@ app.get("/api/emails/:id", async c => {
     }
   }
 
+  const rawDownloadPath = getRawDownloadPath(c.env, row);
   const base = {
     id: row.id,
     addressId: row.addressId,
@@ -904,6 +990,7 @@ app.get("/api/emails/:id", async c => {
     text: row.bodyText,
     rawSize: row.rawSize,
     rawTruncated: row.rawTruncated,
+    ...(rawDownloadPath ? { rawDownloadPath } : {}),
     attachments: attachmentRows.map(attachment =>
       toAttachmentResponse(attachment)
     ),
@@ -912,6 +999,74 @@ app.get("/api/emails/:id", async c => {
   };
 
   return c.json(includeRaw ? { ...base, raw: row.raw } : base);
+});
+
+app.get("/api/emails/:id/raw", async c => {
+  const session = c.get("session");
+  const emailId = c.req.param("id");
+  const db = getDb(c.env);
+
+  const row = await db
+    .select()
+    .from(emails)
+    .where(eq(emails.id, emailId))
+    .get();
+  if (!row) {
+    c.status(404);
+    return c.json({ error: "email not found" });
+  }
+
+  const addressRow = await db
+    .select({ id: emailAddresses.id, userId: emailAddresses.userId })
+    .from(emailAddresses)
+    .where(
+      and(
+        eq(emailAddresses.id, row.addressId),
+        eq(emailAddresses.userId, session.user.id)
+      )
+    )
+    .get();
+  if (!addressRow) {
+    c.status(404);
+    return c.json({ error: "email not found" });
+  }
+
+  if (row.raw && row.raw.length > 0) {
+    const rawByteLength = getUtf8ByteLength(row.raw);
+    return new Response(row.raw, {
+      headers: {
+        "Content-Type": EMAIL_RAW_R2_CONTENT_TYPE,
+        "Content-Disposition": buildContentDisposition(`${row.id}.eml`),
+        "Content-Length": String(rawByteLength),
+        "Cache-Control": "private, max-age=0, must-revalidate",
+      },
+    });
+  }
+
+  if (!c.env.R2_BUCKET) {
+    c.status(404);
+    return c.json({ error: "raw source not available" });
+  }
+
+  const rawKey = getRawEmailR2Key({
+    userId: session.user.id,
+    addressId: addressRow.id,
+    emailId: row.id,
+  });
+  const object = await c.env.R2_BUCKET.get(rawKey);
+  if (!object?.body) {
+    c.status(404);
+    return c.json({ error: "raw source not available" });
+  }
+
+  return new Response(object.body as unknown as BodyInit, {
+    headers: {
+      "Content-Type":
+        object.httpMetadata?.contentType ?? EMAIL_RAW_R2_CONTENT_TYPE,
+      "Content-Disposition": buildContentDisposition(`${row.id}.eml`),
+      "Cache-Control": "private, max-age=0, must-revalidate",
+    },
+  });
 });
 
 app.get("/api/emails/:id/attachments/:attachmentId", async c => {
@@ -979,92 +1134,124 @@ const handleIncomingEmail = async (
   env: CloudflareBindings,
   ctx: ExecutionContext
 ) => {
-  const db = getDb(env);
-  const recipient = normalizeAddress(message.to);
-  const atIndex = recipient.lastIndexOf("@");
+  try {
+    const db = getDb(env);
+    const recipient = normalizeAddress(message.to);
+    const atIndex = recipient.lastIndexOf("@");
 
-  if (atIndex === -1) {
-    message.setReject("Invalid recipient address");
-    return;
-  }
+    if (atIndex === -1) {
+      message.setReject("Invalid recipient address");
+      return;
+    }
 
-  const addressRow = await db
-    .select({
-      id: emailAddresses.id,
-      userId: emailAddresses.userId,
-      expiresAt: emailAddresses.expiresAt,
-    })
-    .from(emailAddresses)
-    .where(eq(emailAddresses.address, recipient))
-    .get();
+    const addressRow = await db
+      .select({
+        id: emailAddresses.id,
+        userId: emailAddresses.userId,
+        expiresAt: emailAddresses.expiresAt,
+      })
+      .from(emailAddresses)
+      .where(eq(emailAddresses.address, recipient))
+      .get();
 
-  if (!addressRow) {
-    message.setReject("Address not registered");
-    return;
-  }
+    if (!addressRow) {
+      message.setReject("Address not registered");
+      return;
+    }
 
-  if (addressRow.expiresAt && addressRow.expiresAt.getTime() <= Date.now()) {
-    // TODO: Should we silently drop or reject with a message?
-    // Silently dropping might cause senders to keep retrying,
-    // but rejecting might cause bounce back emails which can be undesirable.
-    message.setReject("Address expired");
-    return;
-  }
+    if (addressRow.expiresAt && addressRow.expiresAt.getTime() <= Date.now()) {
+      // TODO: Should we silently drop or reject with a message?
+      // Silently dropping might cause senders to keep retrying,
+      // but rejecting might cause bounce back emails which can be undesirable.
+      message.setReject("Address expired");
+      return;
+    }
 
-  const maxBytes =
-    parsePositiveNumber(env.EMAIL_MAX_BYTES) ?? EMAIL_MAX_BYTES_DEFAULT;
-  const { raw, rawBytes, truncated } = await readRawWithLimit(
-    message.raw,
-    maxBytes
-  );
-  const { html, text, attachments } = await extractBodiesFromRaw(rawBytes);
-  const sanitizedHtml = html ? sanitizeEmailHtml(html) : undefined;
+    const maxBytes =
+      parsePositiveNumber(env.EMAIL_MAX_BYTES) ?? EMAIL_MAX_BYTES_DEFAULT;
+    const maxBodyBytes =
+      parsePositiveNumber(env.EMAIL_BODY_MAX_BYTES) ??
+      EMAIL_BODY_MAX_BYTES_DEFAULT;
+    const { raw, rawBytes, truncated } = await readRawWithLimit(
+      message.raw,
+      maxBytes
+    );
+    const { html, text, attachments } = await extractBodiesFromRaw(rawBytes);
+    const sanitizedHtml = html ? sanitizeEmailHtml(html) : undefined;
+    const bodyHtml = capTextForStorage(sanitizedHtml, maxBodyBytes);
+    const bodyText = capTextForStorage(text, maxBodyBytes);
+    const storeHeadersInDb = parseBooleanEnv(
+      env.EMAIL_STORE_HEADERS_IN_DB,
+      false
+    );
+    const storeRawInDb = parseBooleanEnv(env.EMAIL_STORE_RAW_IN_DB, false);
 
-  const headersPairs = [...message.headers];
-  const headersJson =
-    headersPairs.length > 0 ? JSON.stringify(headersPairs) : undefined;
-  const receivedAt = new Date();
-  const emailId = crypto.randomUUID();
+    const headersPairs = storeHeadersInDb ? [...message.headers] : [];
+    const headersJson =
+      headersPairs.length > 0 ? JSON.stringify(headersPairs) : undefined;
+    const receivedAt = new Date();
+    const emailId = crypto.randomUUID();
+    const fromValue = message.from ?? message.headers.get("from") ?? "unknown";
+    const toValue = message.to || recipient;
 
-  await db
-    .insert(emails)
-    .values({
-      id: emailId,
+    await db
+      .insert(emails)
+      .values({
+        id: emailId,
+        addressId: addressRow.id,
+        messageId: message.headers.get("message-id") ?? undefined,
+        from: fromValue,
+        to: toValue,
+        subject: message.headers.get("subject") ?? undefined,
+        headers: headersJson,
+        bodyHtml,
+        bodyText,
+        raw: storeRawInDb ? raw : undefined,
+        rawSize: message.rawSize,
+        rawTruncated: truncated,
+        receivedAt,
+      })
+      .run();
+
+    await persistRawEmailToR2({
+      env,
+      rawBytes,
+      emailId,
       addressId: addressRow.id,
-      messageId: message.headers.get("message-id") ?? undefined,
-      from: message.from,
-      to: message.to,
-      subject: message.headers.get("subject") ?? undefined,
-      headers: headersJson,
-      bodyHtml: sanitizedHtml || undefined,
-      bodyText: text || undefined,
-      raw,
-      rawSize: message.rawSize,
-      rawTruncated: truncated,
-      receivedAt,
-    })
-    .run();
+      userId: addressRow.userId,
+    });
 
-  await persistAttachments({
-    attachments,
-    env,
-    db,
-    emailId,
-    addressId: addressRow.id,
-    userId: addressRow.userId,
-  });
+    await persistAttachments({
+      attachments,
+      env,
+      db,
+      emailId,
+      addressId: addressRow.id,
+      userId: addressRow.userId,
+    });
 
-  ctx.waitUntil(
-    db
-      .update(emailAddresses)
-      .set({ lastReceivedAt: receivedAt })
-      .where(eq(emailAddresses.id, addressRow.id))
-      .run()
-  );
+    ctx.waitUntil(
+      db
+        .update(emailAddresses)
+        .set({ lastReceivedAt: receivedAt })
+        .where(eq(emailAddresses.id, addressRow.id))
+        .run()
+    );
 
-  const forwardTo = env.EMAIL_FORWARD_TO?.trim();
-  if (forwardTo) {
-    await message.forward(forwardTo);
+    const forwardTo = env.EMAIL_FORWARD_TO?.trim();
+    if (forwardTo) {
+      ctx.waitUntil(
+        message.forward(forwardTo).catch(error => {
+          console.error(
+            `[email] Forward failed for ${recipient} -> ${forwardTo}`,
+            error
+          );
+        })
+      );
+    }
+  } catch (error) {
+    console.error("[email] Unhandled processing error", error);
+    message.setReject("Temporary processing error");
   }
 };
 
