@@ -153,8 +153,8 @@ export const AppSidebar = ({ user, onSignOut, ...props }: AppSidebarProps) => {
                   />
                 }
               >
-                <Avatar className="size-8 shrink-0 rounded-md">
-                  <AvatarFallback className="rounded-md text-xs">
+                <Avatar className="size-8 shrink-0">
+                  <AvatarFallback className="text-xs rounded-none">
                     {getInitials(user?.name)}
                   </AvatarFallback>
                 </Avatar>
@@ -169,7 +169,7 @@ export const AppSidebar = ({ user, onSignOut, ...props }: AppSidebarProps) => {
               </DropdownMenuTrigger>
               <DropdownMenuContent
                 className="min-w-56 rounded-lg"
-                side="right"
+                side="top"
                 sideOffset={6}
               >
                 <DropdownMenuGroup>
