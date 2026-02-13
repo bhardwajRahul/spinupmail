@@ -6,7 +6,6 @@ import {
   BookOpen02Icon,
   Settings05Icon,
   LogoutIcon,
-  Mail,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -102,9 +101,11 @@ export const AppSidebar = ({ user, onSignOut, ...props }: AppSidebarProps) => {
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton onClick={() => navigateIfNeeded("/")} size="lg">
-              <div className="flex size-8 shrink-0 items-center justify-center rounded-lg text-sidebar-primary">
-                <HugeiconsIcon icon={Mail} strokeWidth={2} />
-              </div>
+              <img
+                src="/logo.png"
+                alt="SpinupMail"
+                className="size-8 shrink-0 rounded-lg object-contain"
+              />
               <div className="flex flex-col text-left group-data-[collapsible=icon]:hidden">
                 <span className="text-sm font-semibold">SpinupMail</span>
               </div>
