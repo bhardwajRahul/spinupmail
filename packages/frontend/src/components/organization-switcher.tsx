@@ -39,7 +39,7 @@ import {
 const MAX_ORGANIZATIONS = 3;
 
 export const OrganizationSwitcher = () => {
-  const { activeOrganizationId } = useAuth();
+  const { activeOrganizationId, isLoading: isAuthLoading } = useAuth();
   const organizationsQuery = useOrganizationsQuery();
   const organizationStatsQuery = useOrganizationStatsQuery();
   const setActiveMutation = useSetActiveOrganizationMutation();
@@ -78,6 +78,9 @@ export const OrganizationSwitcher = () => {
     organizationsQuery.isLoading ||
     setActiveMutation.isPending ||
     createMutation.isPending;
+  const isInitialOrganizationLoad =
+    organizationsQuery.isLoading ||
+    (organizationsQuery.isFetching && organizationsQuery.data === undefined);
 
   const handleSwitch = async (organizationId: string) => {
     if (organizationId === activeOrganizationId) return;
@@ -105,6 +108,25 @@ export const OrganizationSwitcher = () => {
   };
 
   if (!activeOrganization) {
+    if (isAuthLoading || isInitialOrganizationLoad) {
+      return (
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton size="lg" disabled>
+              <div className="bg-sidebar-primary/80 text-sidebar-primary-foreground flex size-8 shrink-0 items-center justify-center rounded-lg">
+                <HugeiconsIcon icon={BookOpen02Icon} strokeWidth={2} />
+              </div>
+              <div className="grid flex-1 text-center leading-tight group-data-[collapsible=icon]:hidden">
+                <span className="truncate text-sm font-medium text-sidebar-foreground/75">
+                  Loading organization...
+                </span>
+              </div>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      );
+    }
+
     return (
       <div className="px-2 pt-2 text-xs text-destructive group-data-[collapsible=icon]:hidden">
         No active organization
