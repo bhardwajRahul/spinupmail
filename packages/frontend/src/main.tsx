@@ -1,6 +1,11 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import { createBrowserRouter, redirect, type RouteObject } from "react-router";
+import {
+  createBrowserRouter,
+  redirect,
+  type DataRouteMatch,
+  type RouteObject,
+} from "react-router";
 import { RouterProvider } from "react-router/dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
@@ -43,6 +48,27 @@ const hydrationFallbackElement = (
     </div>
   </div>
 );
+
+const appName = "SpinupMail";
+
+type RouteHandle = {
+  title?: string;
+};
+
+const resolveDocumentTitle = (matches: DataRouteMatch[]) => {
+  for (const match of [...matches].reverse()) {
+    const handle = match.route.handle as RouteHandle | undefined;
+    if (handle?.title) {
+      return `${handle.title} | ${appName}`;
+    }
+  }
+
+  return appName;
+};
+
+const syncDocumentTitle = (matches: DataRouteMatch[]) => {
+  document.title = resolveDocumentTitle(matches);
+};
 
 const routes: RouteObject[] = [
   {
@@ -97,7 +123,7 @@ const routes: RouteObject[] = [
       {
         path: "addresses",
         element: <AddressManagementPage />,
-        handle: { title: "Address management" },
+        handle: { title: "Address Management" },
       },
       {
         path: "settings",
@@ -107,7 +133,7 @@ const routes: RouteObject[] = [
       {
         path: "organization/settings",
         element: <OrganizationSettingsPage />,
-        handle: { title: "Organization settings" },
+        handle: { title: "Organization Settings" },
       },
       {
         path: "*",
@@ -123,6 +149,16 @@ const routes: RouteObject[] = [
 ];
 
 const router = createBrowserRouter(routes);
+syncDocumentTitle(router.state.matches);
+const unsubscribeRouter = router.subscribe(state => {
+  syncDocumentTitle(state.matches);
+});
+
+if (import.meta.hot) {
+  import.meta.hot.dispose(() => {
+    unsubscribeRouter();
+  });
+}
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
