@@ -14,6 +14,7 @@
     "db:studio:prod": "pnpm -C packages/backend db:studio:prod",
     "dev:frontend": "pnpm -C packages/frontend dev",
     "build:frontend": "pnpm -C packages/frontend build",
+    "typecheck:frontend": "pnpm -C packages/frontend exec tsc -b --noEmit",
     "deploy:frontend": "pnpm -C packages/frontend deploy",
     "lint": "eslint .",
     "lint:backend": "eslint packages/backend",
