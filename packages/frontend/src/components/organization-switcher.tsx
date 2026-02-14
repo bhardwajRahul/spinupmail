@@ -1,6 +1,5 @@
 import * as React from "react";
 import {
-  BookOpen02Icon,
   Mail01Icon,
   Mailbox01Icon,
   PlusSignIcon,
@@ -20,6 +19,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -29,6 +29,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useAuth } from "@/features/auth/hooks/use-auth";
+import { OrganizationAvatar } from "@/features/organization/components/organization-avatar";
 import {
   type OrganizationItem,
   useCreateOrganizationMutation,
@@ -36,10 +37,12 @@ import {
   useOrganizationStatsQuery,
   useSetActiveOrganizationMutation,
 } from "@/features/organization/hooks/use-organizations";
+import { cn } from "@/lib/utils";
 
 const MAX_ORGANIZATIONS = 3;
 
 export const OrganizationSwitcher = () => {
+  const { isMobile, state } = useSidebar();
   const { activeOrganizationId, isLoading: isAuthLoading } = useAuth();
   const organizationsQuery = useOrganizationsQuery();
   const organizationStatsQuery = useOrganizationStatsQuery();
@@ -82,6 +85,11 @@ export const OrganizationSwitcher = () => {
   const isInitialOrganizationLoad =
     organizationsQuery.isLoading ||
     (organizationsQuery.isFetching && organizationsQuery.data === undefined);
+  const menuSide = isMobile
+    ? "bottom"
+    : state === "collapsed"
+      ? "right"
+      : "bottom";
 
   const handleSwitch = async (organizationId: string) => {
     if (organizationId === activeOrganizationId) return;
@@ -145,9 +153,11 @@ export const OrganizationSwitcher = () => {
                 />
               }
             >
-              <div className="bg-sidebar-primary text-sidebar-primary-foreground flex size-8 shrink-0 items-center justify-center rounded-lg">
-                <HugeiconsIcon icon={BookOpen02Icon} strokeWidth={2} />
-              </div>
+              <OrganizationAvatar
+                organizationId={activeOrganization.id}
+                organizationName={activeOrganization.name}
+                className="shrink-0"
+              />
               <div className="grid flex-1 text-left leading-tight group-data-[collapsible=icon]:hidden">
                 <span className="truncate text-sm font-medium">
                   {activeOrganization.name}
@@ -234,9 +244,12 @@ export const OrganizationSwitcher = () => {
               </div>
             </DropdownMenuTrigger>
             <DropdownMenuContent
-              className="min-w-0 rounded-lg"
+              className={cn(
+                "rounded-lg",
+                state === "collapsed" ? "min-w-56" : "min-w-0"
+              )}
               align="start"
-              side="bottom"
+              side={menuSide}
               sideOffset={4}
             >
               <DropdownMenuGroup>
@@ -246,11 +259,17 @@ export const OrganizationSwitcher = () => {
                 {organizations.map(org => (
                   <DropdownMenuItem
                     key={org.id}
-                    className="gap-2"
+                    className="gap-2.5"
                     disabled={isBusy}
                     onClick={() => void handleSwitch(org.id)}
                   >
-                    <span className="truncate">{org.name}</span>
+                    <OrganizationAvatar
+                      organizationId={org.id}
+                      organizationName={org.name}
+                      size="sm"
+                      className="shrink-0"
+                    />
+                    <span className="flex-1 truncate">{org.name}</span>
                     {org.id === activeOrganizationId ? (
                       <span className="ml-auto text-xs text-muted-foreground">
                         Active

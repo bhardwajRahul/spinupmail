@@ -8,7 +8,7 @@ import {
   LogoutIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import BoringAvatar from "boring-avatars";
 import { OrganizationSwitcher } from "@/components/organization-switcher";
 import {
   DropdownMenu,
@@ -30,7 +30,9 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  useSidebar,
 } from "@/components/ui/sidebar";
+import { getAvatarColors } from "@/lib/avatar-colors";
 import type { AuthUser } from "@/lib/auth";
 
 type AppSidebarProps = React.ComponentProps<typeof Sidebar> & {
@@ -74,17 +76,8 @@ const navItems: NavItem[] = [
   },
 ];
 
-const getInitials = (value: string | undefined) => {
-  if (!value) return "U";
-
-  return value
-    .split(" ")
-    .slice(0, 2)
-    .map(part => part[0]?.toUpperCase())
-    .join("");
-};
-
 export const AppSidebar = ({ user, onSignOut, ...props }: AppSidebarProps) => {
+  const { isMobile, state } = useSidebar();
   const location = useLocation();
   const navigate = useNavigate();
   const navigateIfNeeded = React.useCallback(
@@ -94,6 +87,11 @@ export const AppSidebar = ({ user, onSignOut, ...props }: AppSidebarProps) => {
     },
     [location.pathname, navigate]
   );
+  const userAvatarSeed = user?.id ?? user?.email ?? user?.name ?? "guest";
+  const userAvatarColors = React.useMemo(
+    () => getAvatarColors(userAvatarSeed),
+    [userAvatarSeed]
+  );
 
   return (
     <Sidebar collapsible="icon" variant="sidebar" {...props}>
@@ -102,9 +100,14 @@ export const AppSidebar = ({ user, onSignOut, ...props }: AppSidebarProps) => {
           <SidebarMenuItem>
             <SidebarMenuButton onClick={() => navigateIfNeeded("/")} size="lg">
               <img
+                src="/logo-black.png"
+                alt="SpinupMail"
+                className="size-8 shrink-0 rounded-lg object-contain dark:hidden"
+              />
+              <img
                 src="/logo-transparent.png"
                 alt="SpinupMail"
-                className="size-8 shrink-0 rounded-lg object-contain"
+                className="size-8 shrink-0 rounded-lg object-contain hidden dark:block"
               />
               <div className="flex flex-col text-left group-data-[collapsible=icon]:hidden">
                 <span className="text-sm font-semibold">SpinupMail</span>
@@ -168,11 +171,16 @@ export const AppSidebar = ({ user, onSignOut, ...props }: AppSidebarProps) => {
                   />
                 }
               >
-                <Avatar className="size-8 shrink-0">
-                  <AvatarFallback className="text-xs rounded-none">
-                    {getInitials(user?.name)}
-                  </AvatarFallback>
-                </Avatar>
+                <div className="h-[30px] w-[30px] shrink-0 overflow-hidden rounded-md border border-border/70 leading-none [&>svg]:block! [&>svg]:size-full!">
+                  <BoringAvatar
+                    size="100%"
+                    name={userAvatarSeed}
+                    variant="beam"
+                    colors={userAvatarColors}
+                    className="block! size-full!"
+                    square
+                  />
+                </div>
                 <div className="grid flex-1 text-left leading-tight group-data-[collapsible=icon]:hidden">
                   <span className="truncate text-sm font-medium">
                     {user?.name ?? "User"}
@@ -184,7 +192,9 @@ export const AppSidebar = ({ user, onSignOut, ...props }: AppSidebarProps) => {
               </DropdownMenuTrigger>
               <DropdownMenuContent
                 className="min-w-56 rounded-lg"
-                side="top"
+                side={
+                  isMobile ? "bottom" : state === "collapsed" ? "right" : "top"
+                }
                 sideOffset={6}
               >
                 <DropdownMenuGroup>
