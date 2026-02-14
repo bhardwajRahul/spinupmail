@@ -8,16 +8,30 @@ const hashString = (value: string) => {
   return hash;
 };
 
-const AVATAR_PALETTES = [
-  ["#f8fafc", "#cbd5e1", "#94a3b8", "#64748b", "#334155"],
-  ["#f9fafb", "#d1d5db", "#9ca3af", "#6b7280", "#374151"],
-  ["#f4f6f5", "#ccd3cf", "#9ca8a2", "#6f7b75", "#454f4a"],
-  ["#eef2f7", "#c2ccd8", "#94a0b0", "#697588", "#3d4652"],
+const LIGHT_AVATAR_PALETTES = [
+  ["#d7d5d1", "#8b8a86", "#f3f3f1", "#171717", "#2f2f2f"],
+  ["#d2d1ce", "#7f7d79", "#f5f5f3", "#1b1b1b", "#343434"],
+  ["#dedcd8", "#92908b", "#f2f2f0", "#141414", "#2a2a2a"],
+  ["#cbc9c5", "#76746f", "#f6f6f4", "#202020", "#3a3a3a"],
 ] as const;
 
-export const getAvatarColors = (seed: string): string[] => {
+const DARK_AVATAR_PALETTES = [
+  ["#f2f2f2", "#c7c7c7", "#969696", "#5f5f5f", "#2b2b2b"],
+  ["#ededed", "#bdbdbd", "#8a8a8a", "#545454", "#232323"],
+  ["#f5f5f5", "#cdcdcd", "#9d9d9d", "#666666", "#303030"],
+  ["#e8e8e8", "#b5b5b5", "#828282", "#4e4e4e", "#1f1f1f"],
+] as const;
+
+export type AvatarColorMode = "light" | "dark";
+
+export const getAvatarColors = (
+  seed: string,
+  mode: AvatarColorMode = "dark"
+): string[] => {
   const hash = hashString(seed);
-  const palette = AVATAR_PALETTES[hash % AVATAR_PALETTES.length];
+  const palettes =
+    mode === "light" ? LIGHT_AVATAR_PALETTES : DARK_AVATAR_PALETTES;
+  const palette = palettes[hash % palettes.length];
   const offset = (hash >> 3) % palette.length;
 
   return palette.map((_, index) => palette[(index + offset) % palette.length]);

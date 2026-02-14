@@ -10,6 +10,7 @@ import {
 import { HugeiconsIcon } from "@hugeicons/react";
 import BoringAvatar from "boring-avatars";
 import { OrganizationSwitcher } from "@/components/organization-switcher";
+import { useTheme } from "@/components/theme-provider";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -78,6 +79,7 @@ const navItems: NavItem[] = [
 
 export const AppSidebar = ({ user, onSignOut, ...props }: AppSidebarProps) => {
   const { isMobile, state } = useSidebar();
+  const { theme } = useTheme();
   const location = useLocation();
   const navigate = useNavigate();
   const navigateIfNeeded = React.useCallback(
@@ -88,9 +90,15 @@ export const AppSidebar = ({ user, onSignOut, ...props }: AppSidebarProps) => {
     [location.pathname, navigate]
   );
   const userAvatarSeed = user?.id ?? user?.email ?? user?.name ?? "guest";
+  const resolvedTheme =
+    theme === "system"
+      ? window.matchMedia("(prefers-color-scheme: dark)").matches
+        ? "dark"
+        : "light"
+      : theme;
   const userAvatarColors = React.useMemo(
-    () => getAvatarColors(userAvatarSeed),
-    [userAvatarSeed]
+    () => getAvatarColors(userAvatarSeed, resolvedTheme),
+    [userAvatarSeed, resolvedTheme]
   );
 
   return (

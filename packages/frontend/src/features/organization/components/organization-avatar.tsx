@@ -1,4 +1,5 @@
 import BoringAvatar from "boring-avatars";
+import { useTheme } from "@/components/theme-provider";
 import { getAvatarColors } from "@/lib/avatar-colors";
 import { cn } from "@/lib/utils";
 
@@ -21,7 +22,14 @@ export const OrganizationAvatar = ({
   size = "default",
   className,
 }: OrganizationAvatarProps) => {
-  const colors = getAvatarColors(organizationId);
+  const { theme } = useTheme();
+  const resolvedTheme =
+    theme === "system"
+      ? window.matchMedia("(prefers-color-scheme: dark)").matches
+        ? "dark"
+        : "light"
+      : theme;
+  const colors = getAvatarColors(organizationId, resolvedTheme);
   const name = organizationName?.trim() || organizationId;
 
   return (
