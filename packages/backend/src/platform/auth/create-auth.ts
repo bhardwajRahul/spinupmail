@@ -2,6 +2,7 @@ import type {
   D1Database,
   ExecutionContext,
   IncomingRequestCfProperties,
+  KVNamespace,
 } from "@cloudflare/workers-types";
 import { betterAuth } from "better-auth";
 import { randomBytes, scrypt, timingSafeEqual } from "node:crypto";
@@ -11,13 +12,12 @@ import { organization } from "better-auth/plugins/organization";
 import { twoFactor } from "better-auth/plugins/two-factor";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { drizzle } from "drizzle-orm/d1";
-import { schema } from "../db";
-import type { CloudflareBindings } from "../env";
+import { schema } from "@/db";
 import {
   APP_NAME,
   createResendResetPasswordEmailSender,
   createResendVerificationEmailSender,
-} from "./email";
+} from "./email-sender";
 
 const PASSWORD_SALT_BYTES = 16;
 const PASSWORD_DERIVED_KEY_BYTES = 64;
@@ -108,7 +108,7 @@ function createAuth(
                 },
               }
             : undefined,
-        kv: env?.SUM_KV,
+        kv: env?.SUM_KV as KVNamespace | undefined,
       },
       {
         appName: APP_NAME,

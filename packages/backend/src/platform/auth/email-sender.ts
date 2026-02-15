@@ -1,5 +1,4 @@
 import { Resend } from "resend";
-import type { CloudflareBindings } from "../env";
 
 export const APP_NAME = "Spinupmail";
 
