@@ -27,18 +27,22 @@ const resolvePageTitle = (matches: UIMatch[]) => {
 export const ProtectedLayoutPage = () => {
   const navigate = useNavigate();
   const matches = useMatches();
-  const { user, signOut } = useAuth();
+  const { user, isLoading, signOut } = useAuth();
 
   const [signOutError, setSignOutError] = React.useState<string | null>(null);
 
   const pageTitle = resolvePageTitle(matches);
+
+  React.useEffect(() => {
+    if (isLoading || user) return;
+    void navigate("/login", { replace: true });
+  }, [isLoading, navigate, user]);
 
   const handleSignOut = async () => {
     setSignOutError(null);
 
     try {
       await signOut();
-      await navigate("/login", { replace: true });
     } catch (error) {
       setSignOutError((error as Error).message);
     }
