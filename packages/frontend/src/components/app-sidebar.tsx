@@ -1,11 +1,12 @@
 import * as React from "react";
 import { useLocation, useNavigate } from "react-router";
 import {
-  LayoutBottomIcon,
-  ComputerTerminalIcon,
-  BookOpen02Icon,
+  Mailbox01Icon,
+  AddressBookIcon,
   Settings05Icon,
   LogoutIcon,
+  UserMultiple02Icon,
+  DashboardSquare01Icon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import BoringAvatar from "boring-avatars";
@@ -26,7 +27,6 @@ import {
   SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
-  SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
@@ -45,7 +45,7 @@ type NavItem = {
   title: string;
   to: string;
   end?: boolean;
-  icon: typeof LayoutBottomIcon;
+  icon: typeof DashboardSquare01Icon;
 };
 
 const navItems: NavItem[] = [
@@ -53,17 +53,17 @@ const navItems: NavItem[] = [
     title: "Overview",
     to: "/",
     end: true,
-    icon: LayoutBottomIcon,
+    icon: DashboardSquare01Icon,
   },
   {
     title: "Mailbox",
     to: "/mailbox",
-    icon: ComputerTerminalIcon,
+    icon: Mailbox01Icon,
   },
   {
     title: "Addresses",
     to: "/addresses",
-    icon: BookOpen02Icon,
+    icon: AddressBookIcon,
   },
   {
     title: "Settings",
@@ -73,7 +73,7 @@ const navItems: NavItem[] = [
   {
     title: "Organization",
     to: "/organization/settings",
-    icon: Settings05Icon,
+    icon: UserMultiple02Icon,
   },
 ];
 
@@ -106,7 +106,11 @@ export const AppSidebar = ({ user, onSignOut, ...props }: AppSidebarProps) => {
       <SidebarHeader className="h-16 border-b border-border/70 mt-px">
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton onClick={() => navigateIfNeeded("/")} size="lg">
+            <SidebarMenuButton
+              onClick={() => navigateIfNeeded("/")}
+              size="lg"
+              className="gap-1"
+            >
               <img
                 src="/logo-black.png"
                 alt="SpinupMail"
@@ -128,18 +132,7 @@ export const AppSidebar = ({ user, onSignOut, ...props }: AppSidebarProps) => {
       <SidebarContent>
         <SidebarGroup>
           <OrganizationSwitcher />
-          <SidebarGroupLabel className="group-data-[collapsible=icon]:mt-0! group-data-[collapsible=icon]:opacity-100!">
-            <span className="group-data-[collapsible=icon]:hidden pl-2.5">
-              Navigate
-            </span>
-            <span
-              aria-hidden="true"
-              className="hidden text-sidebar-foreground/45 tracking-wider group-data-[collapsible=icon]:inline pl-3"
-            >
-              ―
-            </span>
-          </SidebarGroupLabel>
-          <SidebarGroupContent>
+          <SidebarGroupContent className="pt-2">
             <SidebarMenu>
               {navItems.map(item => {
                 const isActive = item.end
