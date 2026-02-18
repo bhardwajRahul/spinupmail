@@ -1,8 +1,9 @@
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   redirectIfAuthenticatedLoader,
   requireActiveOrganizationLoader,
   requireNoActiveOrganizationLoader,
-} from "@/features/auth/hooks/route-loaders";
+} from "./route-loaders";
 
 const mocks = vi.hoisted(() => ({
   getSession: vi.fn(),
@@ -33,6 +34,10 @@ const loaderArgs = (url: string) =>
   }) as never;
 
 describe("route loaders", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   it("redirects authenticated users away from sign in", async () => {
     mocks.getSession.mockResolvedValue({
       error: null,

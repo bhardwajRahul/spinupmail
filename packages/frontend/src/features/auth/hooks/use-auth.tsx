@@ -38,14 +38,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const sessionActiveOrganizationId =
     (data?.session as { activeOrganizationId?: string | null } | undefined)
       ?.activeOrganizationId ?? null;
+  const sessionUserId = data?.user?.id ?? null;
   const activeOrganizationId = isSigningOut
     ? null
     : (pendingOrganizationId ?? sessionActiveOrganizationId);
 
   React.useEffect(() => {
+    if (!sessionUserId) return;
     if (!sessionActiveOrganizationId) return;
-    setLastActiveOrganizationId(sessionActiveOrganizationId);
-  }, [sessionActiveOrganizationId]);
+    setLastActiveOrganizationId(sessionUserId, sessionActiveOrganizationId);
+  }, [sessionActiveOrganizationId, sessionUserId]);
 
   React.useEffect(() => {
     if (!pendingOrganizationId) return;
@@ -77,7 +79,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
       setPendingOrganizationId(null);
       setIsOrganizationSwitching(false);
-      clearLastActiveOrganizationId();
       queryClient.removeQueries({ queryKey: ["app"] });
       queryClient.removeQueries({ queryKey: ["auth"] });
       await refetch({
@@ -93,10 +94,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const beginOrganizationSwitch = React.useCallback(
     (organizationId: string) => {
       setPendingOrganizationId(organizationId);
-      setLastActiveOrganizationId(organizationId);
+      setLastActiveOrganizationId(sessionUserId, organizationId);
       setIsOrganizationSwitching(true);
     },
-    []
+    [sessionUserId]
   );
 
   const completeOrganizationSwitch = React.useCallback(() => {
@@ -107,13 +108,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     (organizationId: string | null) => {
       setPendingOrganizationId(organizationId);
       if (organizationId) {
-        setLastActiveOrganizationId(organizationId);
+        setLastActiveOrganizationId(sessionUserId, organizationId);
       } else {
-        clearLastActiveOrganizationId();
+        clearLastActiveOrganizationId(sessionUserId);
       }
       setIsOrganizationSwitching(false);
     },
-    []
+    [sessionUserId]
   );
 
   const value = React.useMemo<AuthContextValue>(

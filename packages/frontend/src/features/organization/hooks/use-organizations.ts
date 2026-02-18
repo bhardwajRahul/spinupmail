@@ -205,6 +205,7 @@ export const useSetActiveOrganizationMutation = () => {
   const queryClient = useQueryClient();
   const {
     activeOrganizationId,
+    user,
     beginOrganizationSwitch,
     completeOrganizationSwitch,
     cancelOrganizationSwitch,
@@ -231,7 +232,7 @@ export const useSetActiveOrganizationMutation = () => {
       return result.data;
     },
     onSuccess: async (_data, organizationId) => {
-      setLastActiveOrganizationId(organizationId);
+      setLastActiveOrganizationId(user?.id, organizationId);
       await refreshSession();
       completeOrganizationSwitch();
       await invalidateOrganizationQueries(queryClient);

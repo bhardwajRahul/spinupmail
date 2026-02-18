@@ -37,12 +37,12 @@ const getActiveOrganizationId = (
   );
 };
 
-const tryRestoreActiveOrganization = async () => {
+const tryRestoreActiveOrganization = async (userId: string) => {
   const organizations = await authClient.organization.list();
   const orgList = organizations.error ? [] : (organizations.data ?? []);
   if (orgList.length === 0) return false;
 
-  const lastActiveOrganizationId = getLastActiveOrganizationId();
+  const lastActiveOrganizationId = getLastActiveOrganizationId(userId);
   const fallbackOrganizationId =
     (lastActiveOrganizationId &&
     orgList.some(org => org.id === lastActiveOrganizationId)
@@ -56,7 +56,7 @@ const tryRestoreActiveOrganization = async () => {
   });
   if (setActive.error) return false;
 
-  setLastActiveOrganizationId(fallbackOrganizationId);
+  setLastActiveOrganizationId(userId, fallbackOrganizationId);
   await authClient.getSession({
     query: {
       disableCookieCache: true,
@@ -75,7 +75,7 @@ export const requireActiveOrganizationLoader = async ({
 }: LoaderFunctionArgs) => {
   const session = await getSessionOrRedirect(request);
   if (getActiveOrganizationId(session)) return null;
-  if (await tryRestoreActiveOrganization()) return null;
+  if (await tryRestoreActiveOrganization(session.user.id)) return null;
 
   const requestedPath = readRequestPath(request);
   const next = encodeURIComponent(requestedPath);
@@ -87,7 +87,7 @@ export const requireNoActiveOrganizationLoader = async ({
 }: LoaderFunctionArgs) => {
   const session = await getSessionOrRedirect(request);
   if (!getActiveOrganizationId(session)) {
-    if (!(await tryRestoreActiveOrganization())) return null;
+    if (!(await tryRestoreActiveOrganization(session.user.id))) return null;
   }
 
   const url = new URL(request.url);

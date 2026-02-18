@@ -16,6 +16,10 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
+  ChevronsUpDownIcon,
+  type ChevronsUpDownIconHandle,
+} from "@/components/ui/chevrons-up-down";
+import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
@@ -43,12 +47,19 @@ const MAX_ORGANIZATIONS = 3;
 
 export const OrganizationSwitcher = () => {
   const { isMobile, state } = useSidebar();
-  const { activeOrganizationId, isLoading: isAuthLoading } = useAuth();
+  const {
+    activeOrganizationId,
+    isLoading: isAuthLoading,
+    isSigningOut,
+    isAuthenticated,
+  } = useAuth();
   const organizationsQuery = useOrganizationsQuery();
   const organizationStatsQuery = useOrganizationStatsQuery();
   const setActiveMutation = useSetActiveOrganizationMutation();
   const createMutation = useCreateOrganizationMutation();
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
+  const [isDropdownOpen, setIsDropdownOpen] = React.useState(false);
+  const chevronsRef = React.useRef<ChevronsUpDownIconHandle | null>(null);
 
   const organizations: OrganizationItem[] = organizationsQuery.data ?? [];
   const activeOrganization =
@@ -85,6 +96,8 @@ export const OrganizationSwitcher = () => {
   const isInitialOrganizationLoad =
     organizationsQuery.isLoading ||
     (organizationsQuery.isFetching && organizationsQuery.data === undefined);
+  const isAtOrganizationLimit = organizations.length >= MAX_ORGANIZATIONS;
+  const isCreateDisabled = isBusy || isAtOrganizationLimit;
   const menuSide = isMobile
     ? "bottom"
     : state === "collapsed"
@@ -116,7 +129,30 @@ export const OrganizationSwitcher = () => {
     }
   };
 
+  const handleTriggerMouseEnter = () => {
+    if (isDropdownOpen) return;
+    chevronsRef.current?.startAnimation();
+  };
+
+  const handleTriggerMouseLeave = () => {
+    if (isDropdownOpen) return;
+    chevronsRef.current?.stopAnimation();
+  };
+
+  const handleOpenChange = (open: boolean) => {
+    setIsDropdownOpen(open);
+    if (open) {
+      chevronsRef.current?.startAnimation();
+      return;
+    }
+    chevronsRef.current?.stopAnimation();
+  };
+
   if (!activeOrganization) {
+    if (isSigningOut || !isAuthenticated) {
+      return null;
+    }
+
     if (isAuthLoading || isInitialOrganizationLoad) {
       return (
         <SidebarMenu>
@@ -144,12 +180,14 @@ export const OrganizationSwitcher = () => {
     <>
       <SidebarMenu>
         <SidebarMenuItem>
-          <DropdownMenu>
+          <DropdownMenu onOpenChange={handleOpenChange}>
             <DropdownMenuTrigger
               render={
                 <SidebarMenuButton
                   size="lg"
-                  className="aria-expanded:bg-sidebar-accent"
+                  className="aria-expanded:bg-sidebar-accent cursor-pointer"
+                  onMouseEnter={handleTriggerMouseEnter}
+                  onMouseLeave={handleTriggerMouseLeave}
                 />
               }
             >
@@ -242,6 +280,11 @@ export const OrganizationSwitcher = () => {
                   </span>
                 </TooltipProvider>
               </div>
+              <ChevronsUpDownIcon
+                ref={chevronsRef}
+                size={16}
+                className="ml-1 text-sidebar-foreground/70 group-data-[collapsible=icon]:hidden"
+              />
             </DropdownMenuTrigger>
             <DropdownMenuContent
               className={cn(
@@ -259,7 +302,7 @@ export const OrganizationSwitcher = () => {
                 {organizations.map(org => (
                   <DropdownMenuItem
                     key={org.id}
-                    className="gap-2.5"
+                    className="gap-2.5 cursor-pointer"
                     disabled={isBusy}
                     onClick={() => void handleSwitch(org.id)}
                   >
@@ -279,13 +322,24 @@ export const OrganizationSwitcher = () => {
                 ))}
               </DropdownMenuGroup>
               <DropdownMenuSeparator />
-              <DropdownMenuItem
-                disabled={isBusy || organizations.length >= MAX_ORGANIZATIONS}
-                onClick={() => void handleCreate()}
-              >
-                <HugeiconsIcon icon={PlusSignIcon} strokeWidth={2} />
-                Create organization
-              </DropdownMenuItem>
+              <TooltipProvider delay={120}>
+                <Tooltip>
+                  <TooltipTrigger render={<div className="w-full" />}>
+                    <DropdownMenuItem
+                      disabled={isCreateDisabled}
+                      onClick={() => void handleCreate()}
+                    >
+                      <HugeiconsIcon icon={PlusSignIcon} strokeWidth={2} />
+                      Create organization
+                    </DropdownMenuItem>
+                  </TooltipTrigger>
+                  {isAtOrganizationLimit ? (
+                    <TooltipContent side="top">
+                      You can have 3 orgs max
+                    </TooltipContent>
+                  ) : null}
+                </Tooltip>
+              </TooltipProvider>
             </DropdownMenuContent>
           </DropdownMenu>
         </SidebarMenuItem>

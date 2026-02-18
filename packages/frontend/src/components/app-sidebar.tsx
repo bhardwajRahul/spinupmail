@@ -33,6 +33,10 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
+import {
+  ChevronsUpDownIcon,
+  type ChevronsUpDownIconHandle,
+} from "@/components/ui/chevrons-up-down";
 import { getAvatarColors } from "@/lib/avatar-colors";
 import type { AuthUser } from "@/lib/auth";
 
@@ -100,6 +104,27 @@ export const AppSidebar = ({ user, onSignOut, ...props }: AppSidebarProps) => {
     () => getAvatarColors(userAvatarSeed, resolvedTheme),
     [userAvatarSeed, resolvedTheme]
   );
+  const [isUserDropdownOpen, setIsUserDropdownOpen] = React.useState(false);
+  const userChevronsRef = React.useRef<ChevronsUpDownIconHandle | null>(null);
+
+  const handleUserTriggerMouseEnter = () => {
+    if (isUserDropdownOpen) return;
+    userChevronsRef.current?.startAnimation();
+  };
+
+  const handleUserTriggerMouseLeave = () => {
+    if (isUserDropdownOpen) return;
+    userChevronsRef.current?.stopAnimation();
+  };
+
+  const handleUserDropdownOpenChange = (open: boolean) => {
+    setIsUserDropdownOpen(open);
+    if (open) {
+      userChevronsRef.current?.startAnimation();
+      return;
+    }
+    userChevronsRef.current?.stopAnimation();
+  };
 
   return (
     <Sidebar collapsible="icon" variant="sidebar" {...props}>
@@ -109,7 +134,7 @@ export const AppSidebar = ({ user, onSignOut, ...props }: AppSidebarProps) => {
             <SidebarMenuButton
               onClick={() => navigateIfNeeded("/")}
               size="lg"
-              className="gap-1"
+              className="gap-1 hover:bg-transparent! hover:text-inherit! active:bg-transparent! active:text-inherit! data-open:hover:bg-transparent! data-open:hover:text-inherit!"
             >
               <img
                 src="/logo-black.png"
@@ -145,7 +170,7 @@ export const AppSidebar = ({ user, onSignOut, ...props }: AppSidebarProps) => {
                       isActive={isActive}
                       onClick={() => navigateIfNeeded(item.to)}
                       tooltip={item.title}
-                      className="pl-4"
+                      className="pl-4 cursor-pointer"
                     >
                       <HugeiconsIcon icon={item.icon} strokeWidth={2} />
                       <span className="group-data-[collapsible=icon]:hidden">
@@ -163,12 +188,14 @@ export const AppSidebar = ({ user, onSignOut, ...props }: AppSidebarProps) => {
       <SidebarFooter>
         <SidebarMenu>
           <SidebarMenuItem>
-            <DropdownMenu>
+            <DropdownMenu onOpenChange={handleUserDropdownOpenChange}>
               <DropdownMenuTrigger
                 render={
                   <SidebarMenuButton
                     size="lg"
-                    className="aria-expanded:bg-sidebar-accent"
+                    className="aria-expanded:bg-sidebar-accent cursor-pointer"
+                    onMouseEnter={handleUserTriggerMouseEnter}
+                    onMouseLeave={handleUserTriggerMouseLeave}
                   />
                 }
               >
@@ -190,6 +217,11 @@ export const AppSidebar = ({ user, onSignOut, ...props }: AppSidebarProps) => {
                     {user?.email ?? "Not available"}
                   </span>
                 </div>
+                <ChevronsUpDownIcon
+                  ref={userChevronsRef}
+                  size={16}
+                  className="ml-1 text-sidebar-foreground/70 group-data-[collapsible=icon]:hidden"
+                />
               </DropdownMenuTrigger>
               <DropdownMenuContent
                 className="min-w-56 rounded-lg"
@@ -203,6 +235,7 @@ export const AppSidebar = ({ user, onSignOut, ...props }: AppSidebarProps) => {
                     Account
                   </DropdownMenuLabel>
                   <DropdownMenuItem
+                    className="cursor-pointer"
                     onClick={() => navigateIfNeeded("/settings")}
                   >
                     <HugeiconsIcon icon={Settings05Icon} strokeWidth={2} />
@@ -210,7 +243,10 @@ export const AppSidebar = ({ user, onSignOut, ...props }: AppSidebarProps) => {
                   </DropdownMenuItem>
                 </DropdownMenuGroup>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => void onSignOut()}>
+                <DropdownMenuItem
+                  className="cursor-pointer"
+                  onClick={() => void onSignOut()}
+                >
                   <HugeiconsIcon icon={LogoutIcon} strokeWidth={2} />
                   Sign out
                 </DropdownMenuItem>
