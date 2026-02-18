@@ -1,4 +1,5 @@
-import { buildEmailPreview } from "@/features/mailbox/utils/build-email-preview";
+import { describe, expect, it } from "vitest";
+import { buildEmailPreview } from "./build-email-preview";
 
 describe("buildEmailPreview", () => {
   it("embeds strict iframe CSP and dark theme colors", () => {

@@ -1,7 +1,5 @@
-import {
-  validateSignIn,
-  validateSignUp,
-} from "@/features/auth/schemas/auth-form.schemas";
+import { describe, expect, it } from "vitest";
+import { validateSignIn, validateSignUp } from "./auth-form.schemas";
 
 describe("auth form validation", () => {
   it("validates sign-in required fields", () => {
