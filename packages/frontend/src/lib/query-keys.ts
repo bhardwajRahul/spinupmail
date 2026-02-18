@@ -17,27 +17,8 @@ export const queryKeys = {
       limit,
       cursor,
     ] as const,
-  addressesBase: (organizationId: string | null) =>
+  addresses: (organizationId: string | null) =>
     ["app", "organizations", organizationId, "addresses"] as const,
-  addressesAll: (organizationId: string | null) =>
-    ["app", "organizations", organizationId, "addresses", "all"] as const,
-  addresses: (
-    organizationId: string | null,
-    page: number,
-    pageSize: number,
-    sortBy: "createdAt" | "address" | "lastReceivedAt",
-    sortDirection: "asc" | "desc"
-  ) =>
-    [
-      "app",
-      "organizations",
-      organizationId,
-      "addresses",
-      page,
-      pageSize,
-      sortBy,
-      sortDirection,
-    ] as const,
   domains: (organizationId: string | null) =>
     ["app", "organizations", organizationId, "domains"] as const,
   apiKeys: ["app", "api-keys"] as const,
