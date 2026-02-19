@@ -14,7 +14,7 @@ describe("shared env helpers", () => {
     const env = {
       EMAIL_DOMAINS: "Example.com,foo.test,@bar.io.,foo.test",
       EMAIL_DOMAIN: "BAR.io",
-    } as CloudflareBindings;
+    } as unknown as CloudflareBindings;
 
     expect(getAllowedDomains(env)).toEqual([
       "example.com",

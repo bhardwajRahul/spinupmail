@@ -1,28 +1,25 @@
 import { Hono } from "hono";
 import { resendVerificationEmail } from "@/modules/auth-http/service";
+import type { AppHonoEnv } from "@/app/types";
 import { FakeKvNamespace } from "../fixtures/fake-kv";
 import { withFixedNow } from "../fixtures/time";
 
-type TestEnv = {
-  Bindings: CloudflareBindings;
-  Variables: {
-    auth: {
-      api: {
-        sendVerificationEmail: ReturnType<typeof vi.fn>;
-      };
-    };
-  };
-};
+type SendVerificationEmail =
+  AppHonoEnv["Variables"]["auth"]["api"]["sendVerificationEmail"];
 
-const buildApp = (sendVerificationEmail: ReturnType<typeof vi.fn>) => {
-  const app = new Hono<TestEnv>();
+const buildApp = (sendVerificationEmailMock: ReturnType<typeof vi.fn>) => {
+  const app = new Hono<AppHonoEnv>();
 
   app.use("*", async (c, next) => {
+    const sendVerificationEmail: SendVerificationEmail = (args => {
+      return sendVerificationEmailMock(args);
+    }) as SendVerificationEmail;
+
     c.set("auth", {
       api: {
         sendVerificationEmail,
       },
-    });
+    } as AppHonoEnv["Variables"]["auth"]);
     await next();
   });
 

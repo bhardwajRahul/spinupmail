@@ -32,6 +32,10 @@ const executionCtx = {
   passThroughOnException: vi.fn(),
 };
 
+const testBindings = {
+  EMAIL_DOMAINS: "spinupmail.com",
+} as unknown as CloudflareBindings;
+
 describe("app auth middleware integration", () => {
   it("returns 401 when session is missing", async () => {
     const app = createApp({
@@ -41,9 +45,7 @@ describe("app auth middleware integration", () => {
     const response = await app.request(
       "/api/domains",
       undefined,
-      {
-        EMAIL_DOMAINS: "spinupmail.com",
-      } as CloudflareBindings,
+      testBindings,
       executionCtx as never
     );
 
@@ -64,9 +66,7 @@ describe("app auth middleware integration", () => {
     const response = await app.request(
       "/api/domains",
       undefined,
-      {
-        EMAIL_DOMAINS: "spinupmail.com",
-      } as CloudflareBindings,
+      testBindings,
       executionCtx as never
     );
 
@@ -93,9 +93,7 @@ describe("app auth middleware integration", () => {
           "x-api-key": "spin_test",
         },
       },
-      {
-        EMAIL_DOMAINS: "spinupmail.com",
-      } as CloudflareBindings,
+      testBindings,
       executionCtx as never
     );
 
@@ -124,9 +122,7 @@ describe("app auth middleware integration", () => {
           "x-org-id": "org-unknown",
         },
       },
-      {
-        EMAIL_DOMAINS: "spinupmail.com",
-      } as CloudflareBindings,
+      testBindings,
       executionCtx as never
     );
 
