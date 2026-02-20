@@ -24,7 +24,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { toFieldErrors } from "@/features/form-utils/to-field-errors";
+import { toFieldErrors } from "@/lib/forms/to-field-errors";
 import {
   useApiKeysQuery,
   useCreateApiKeyMutation,

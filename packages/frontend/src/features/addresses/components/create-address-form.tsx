@@ -36,7 +36,7 @@ import {
   uniqueDomains,
 } from "@/features/addresses/schemas/address-form";
 import { useCreateAddressMutation } from "@/features/addresses/hooks/use-addresses";
-import { toFieldErrors } from "@/features/form-utils/to-field-errors";
+import { toFieldErrors } from "@/lib/forms/to-field-errors";
 
 type CreateAddressFormProps = {
   domains: string[];

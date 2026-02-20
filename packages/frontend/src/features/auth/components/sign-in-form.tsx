@@ -25,7 +25,7 @@ import {
   TurnstileWidget,
   type TurnstileWidgetHandle,
 } from "@/features/auth/components/turnstile-widget";
-import { toFieldErrors } from "@/features/form-utils/to-field-errors";
+import { toFieldErrors } from "@/lib/forms/to-field-errors";
 
 type SignInFormProps = {
   onSuccess?: () => Promise<void> | void;

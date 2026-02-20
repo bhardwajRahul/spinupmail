@@ -18,7 +18,7 @@ import {
   useGoogleSignUpMutation,
   useSignUpMutation,
 } from "@/features/auth/hooks/use-auth-mutations";
-import { toFieldErrors } from "@/features/form-utils/to-field-errors";
+import { toFieldErrors } from "@/lib/forms/to-field-errors";
 
 type SignUpFormProps = {
   onSuccess?: () => Promise<void> | void;

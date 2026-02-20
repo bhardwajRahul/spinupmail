@@ -23,7 +23,7 @@ import {
   InputOTPSlot,
 } from "@/components/ui/input-otp";
 import { useAuth } from "@/features/auth/hooks/use-auth";
-import { toFieldErrors } from "@/features/form-utils/to-field-errors";
+import { toFieldErrors } from "@/lib/forms/to-field-errors";
 import { authClient, type AuthUser } from "@/lib/auth";
 import QRCode from "react-qr-code";
 

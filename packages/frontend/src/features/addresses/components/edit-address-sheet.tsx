@@ -39,7 +39,7 @@ import {
   uniqueDomains,
 } from "@/features/addresses/schemas/address-form";
 import { useUpdateAddressMutation } from "@/features/addresses/hooks/use-addresses";
-import { toFieldErrors } from "@/features/form-utils/to-field-errors";
+import { toFieldErrors } from "@/lib/forms/to-field-errors";
 import type { EmailAddress } from "@/lib/api";
 
 type EditAddressSheetProps = {

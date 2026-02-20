@@ -8,7 +8,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/features/auth/hooks/use-auth";
-import { toFieldErrors } from "@/features/form-utils/to-field-errors";
+import { toFieldErrors } from "@/lib/forms/to-field-errors";
 import { authClient } from "@/lib/auth";
 
 const changePasswordSchema = z

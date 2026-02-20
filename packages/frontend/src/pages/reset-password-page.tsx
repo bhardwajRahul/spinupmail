@@ -12,7 +12,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { AuthLayout } from "@/features/auth/components/auth-layout";
 import { useResetPasswordMutation } from "@/features/auth/hooks/use-auth-mutations";
-import { toFieldErrors } from "@/features/form-utils/to-field-errors";
+import { toFieldErrors } from "@/lib/forms/to-field-errors";
 import { cn } from "@/lib/utils";
 
 const resetPasswordSchema = z
