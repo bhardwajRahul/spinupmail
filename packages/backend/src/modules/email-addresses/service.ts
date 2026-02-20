@@ -1,5 +1,8 @@
 import { getDb } from "@/platform/db/client";
-import { getAllowedDomains } from "@/shared/env";
+import {
+  getAllowedDomains,
+  getMaxAddressesPerOrganization,
+} from "@/shared/env";
 import { isAddressConflictError } from "@/shared/errors";
 import { deleteR2ObjectsByPrefix } from "@/shared/utils/r2";
 import {
@@ -132,6 +135,7 @@ export const listEmailAddresses = async ({
   const totalItems = Number(countRow?.count ?? 0);
   const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
   const currentPage = page;
+  const addressLimit = getMaxAddressesPerOrganization(env);
 
   const rows = await listAddressesByOrganization({
     db,
@@ -147,6 +151,7 @@ export const listEmailAddresses = async ({
     page: currentPage,
     pageSize,
     totalItems,
+    addressLimit,
     totalPages,
     sortBy,
     sortDirection,
@@ -357,20 +362,33 @@ export const createEmailAddress = async ({
   const responseMeta = meta !== undefined ? parseAddressMeta(meta) : undefined;
 
   const db = getDb(env);
+  const addressLimit = getMaxAddressesPerOrganization(env);
   const id = crypto.randomUUID();
 
   try {
-    await insertAddress(db, {
-      id,
-      organizationId,
-      userId: session.user.id,
-      address,
-      localPart,
-      domain,
-      tag: typeof body.tag === "string" ? body.tag : undefined,
-      meta: meta ?? undefined,
-      expiresAt,
-    });
+    const inserted = await insertAddress(
+      db,
+      {
+        id,
+        organizationId,
+        userId: session.user.id,
+        address,
+        localPart,
+        domain,
+        tag: typeof body.tag === "string" ? body.tag : undefined,
+        meta: meta ?? undefined,
+        expiresAt,
+      },
+      addressLimit
+    );
+    if (!inserted) {
+      return {
+        status: 409 as const,
+        body: {
+          error: `Address limit reached. Each organization can create up to ${addressLimit} addresses.`,
+        },
+      };
+    }
   } catch (error) {
     if (!isAddressConflictError(error)) throw error;
 
