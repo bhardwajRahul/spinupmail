@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { listDomains } from "./api";
+import { listDomains } from "../api";
 
 describe("api client helpers", () => {
   it("adds org cache key and scope header to requests", async () => {

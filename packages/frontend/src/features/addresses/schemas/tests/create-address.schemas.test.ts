@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   toCreateAddressPayload,
   validateCreateAddress,
-} from "./create-address.schemas";
+} from "../create-address.schemas";
 
 describe("create address schema", () => {
   it("flags invalid address parts and ttl", () => {

@@ -3,7 +3,7 @@ import {
   redirectIfAuthenticatedLoader,
   requireActiveOrganizationLoader,
   requireNoActiveOrganizationLoader,
-} from "./route-loaders";
+} from "../route-loaders";
 
 const mocks = vi.hoisted(() => ({
   getSession: vi.fn(),

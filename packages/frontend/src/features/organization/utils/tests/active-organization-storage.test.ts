@@ -11,7 +11,7 @@ import {
   clearLastActiveOrganizationId,
   getLastActiveOrganizationId,
   setLastActiveOrganizationId,
-} from "./active-organization-storage";
+} from "../active-organization-storage";
 
 describe("active organization storage", () => {
   const createStorage = () => {
