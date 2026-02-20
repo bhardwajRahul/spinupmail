@@ -34,12 +34,13 @@ const apiFetch = async <T>(
   });
 
   if (!response.ok) {
-    let message = response.statusText;
+    let message = response.statusText || "Request failed";
     try {
-      const payload = (await response.json()) as ApiError;
+      const payload = (await response.clone().json()) as ApiError;
       message = payload.error || message;
     } catch {
-      message = await response.text();
+      const text = await response.text();
+      if (text) message = text;
     }
     throw new Error(message || "Request failed");
   }
@@ -50,7 +51,7 @@ const apiFetch = async <T>(
 const readErrorMessage = async (response: Response) => {
   let message = response.statusText || "Request failed";
   try {
-    const payload = (await response.json()) as ApiError;
+    const payload = (await response.clone().json()) as ApiError;
     message = payload.error || payload.details || message;
   } catch {
     const text = await response.text();
