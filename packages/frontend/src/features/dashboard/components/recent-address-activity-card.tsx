@@ -309,9 +309,19 @@ export const RecentAddressActivityCard = () => {
                     className="h-20 text-center text-muted-foreground"
                     colSpan={columns.length}
                   >
-                    {recentRows.length === 0
-                      ? "No addresses yet. Create one to begin."
-                      : "No addresses match this filter."}
+                    {recentRows.length === 0 ? (
+                      <>
+                        No addresses yet.{" "}
+                        <Link
+                          className="underline underline-offset-2"
+                          to="/addresses"
+                        >
+                          Create one to begin.
+                        </Link>
+                      </>
+                    ) : (
+                      "No addresses match this filter."
+                    )}
                   </TableCell>
                 </TableRow>
               )}

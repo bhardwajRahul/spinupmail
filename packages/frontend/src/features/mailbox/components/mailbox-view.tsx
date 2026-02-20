@@ -28,6 +28,7 @@ import {
   getCalendarDayDiff,
   getDayKey,
 } from "@/features/timezone/lib/date-format";
+import { useNavigate } from "react-router";
 
 type MailboxViewProps = {
   addresses: EmailAddress[];
@@ -122,6 +123,7 @@ export const MailboxView = ({
   previewEmail,
   previewEmailLoading,
 }: MailboxViewProps) => {
+  const navigate = useNavigate();
   const { effectiveTimeZone } = useTimezone();
   const [addressCommandOpen, setAddressCommandOpen] = React.useState(false);
   const dropdownRef = React.useRef<HTMLDivElement>(null);
@@ -252,6 +254,15 @@ export const MailboxView = ({
                   ? "No emails received yet. Send an email to this address to test things out."
                   : "Select an address to view its emails."}
               </p>
+              {!selectedAddressId ? (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => navigate("/addresses")}
+                >
+                  Create an address
+                </Button>
+              ) : null}
             </div>
           ) : (
             <div>
