@@ -20,6 +20,7 @@ export default [
     ignores: [
       "**/dist/**",
       "**/node_modules/**",
+      "**/coverage/**",
       "packages/backend/.wrangler/**",
       "packages/backend/drizzle/**",
     ],

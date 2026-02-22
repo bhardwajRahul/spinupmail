@@ -14,7 +14,7 @@
     "db:studio:prod": "pnpm -C packages/backend db:studio:prod",
     "dev:frontend": "pnpm -C packages/frontend dev",
     "build:frontend": "pnpm -C packages/frontend build",
-    "typecheck:frontend": "pnpm -C packages/frontend exec tsc -b --noEmit",
+    "typecheck:frontend": "pnpm -C packages/frontend exec tsgo -b --noEmit",
     "deploy:frontend": "pnpm -C packages/frontend deploy",
     "test:unit": "pnpm -C packages/backend test:unit && pnpm -C packages/frontend test:unit",
     "test:integration": "pnpm -C packages/backend test:integration",
