@@ -21,6 +21,9 @@
     "test:component": "pnpm -C packages/frontend test:component",
     "test:e2e": "pnpm -C packages/e2e test",
     "test:ci": "pnpm run lint && pnpm run build:backend && pnpm run typecheck:frontend && pnpm run test:unit && pnpm run test:integration && pnpm run test:component && pnpm run test:e2e",
+    "dev:landing": "pnpm -C packages/landing dev",
+    "build:landing": "pnpm -C packages/landing build",
+    "deploy:landing": "pnpm -C packages/landing deploy",
     "lint": "eslint .",
     "lint:backend": "eslint packages/backend",
     "prepare": "husky"
