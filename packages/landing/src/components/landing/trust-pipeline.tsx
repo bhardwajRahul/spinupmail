@@ -3,11 +3,8 @@ import {
   ArrowRight01Icon,
   DatabaseIcon,
   FolderCloudIcon,
-  MailOpen02Icon,
-  ShieldEnergyIcon,
 } from "@hugeicons/core-free-icons";
 import { motion, useReducedMotion } from "motion/react";
-import { Badge } from "@/components/ui/badge";
 
 const ease = [0.16, 1, 0.3, 1] as const;
 
@@ -54,7 +51,7 @@ export function TrustPipeline() {
           {...sectionMotion}
         >
           <h2 className="text-3xl font-bold tracking-tight md:text-4xl">
-            How inbound email is processed
+            Inbound email process
           </h2>
           <p className="mt-4 text-muted-foreground">
             Requests are validated in sequence: intake, policy checks, parsing,
@@ -126,37 +123,6 @@ export function TrustPipeline() {
               be enabled for debugging and downloaded through authenticated
               routes.
             </p>
-          </div>
-        </div>
-
-        <div className="mt-6 border border-border/70 bg-card px-5 py-4">
-          <div className="flex flex-wrap items-center gap-2 text-sm font-semibold">
-            <HugeiconsIcon
-              icon={ShieldEnergyIcon}
-              className="size-4 text-muted-foreground"
-            />
-            <span>Default operational limits</span>
-            <HugeiconsIcon
-              icon={MailOpen02Icon}
-              className="ml-1 size-4 text-muted-foreground"
-            />
-          </div>
-
-          <div className="mt-3 flex flex-wrap gap-2">
-            {[
-              "Raw email read cap: 512 KB",
-              "Body storage cap: 512 KB",
-              "Attachment cap: 10 MB",
-              "Email list limit: 100",
-            ].map(limit => (
-              <Badge
-                key={limit}
-                variant="outline"
-                className="border-border/70 bg-muted/20 text-muted-foreground"
-              >
-                {limit}
-              </Badge>
-            ))}
           </div>
         </div>
       </div>

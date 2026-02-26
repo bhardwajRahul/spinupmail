@@ -7,7 +7,6 @@ import { Hero } from "@/components/landing/hero";
 import { HowItWorks } from "@/components/landing/how-it-works";
 import { Nav } from "@/components/landing/nav";
 import { TrustPipeline } from "@/components/landing/trust-pipeline";
-import { WhyAdopt } from "@/components/landing/why-adopt";
 
 export const Route = createFileRoute("/")({ component: HomePage });
 
@@ -17,7 +16,6 @@ function HomePage() {
       <Nav />
       <main>
         <Hero />
-        <WhyAdopt />
         <Features />
         <TrustPipeline />
         <HowItWorks />

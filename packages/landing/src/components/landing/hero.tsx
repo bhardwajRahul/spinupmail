@@ -9,13 +9,38 @@ import { motion, useReducedMotion } from "motion/react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { landingLinks } from "@/lib/links";
+import { cn } from "@/lib/utils";
 
 const ease = [0.16, 1, 0.3, 1] as const;
 
 const inboxRows = [
-  { from: "github.com", subject: "Confirm your repository email", time: "2m" },
-  { from: "stripe.com", subject: "Webhook health alert", time: "9m" },
-  { from: "vercel.com", subject: "Preview deployment complete", time: "21m" },
+  { from: "gmail.com", subject: "Password Reset Request", time: "2m" },
+  { from: "github.com", subject: "Pipeline Alert", time: "9m" },
+  { from: "example.com", subject: "SMTP Service Testing", time: "21m" },
+] as const;
+
+const techStack = [
+  {
+    name: "Cloudflare Workers, D1, R2",
+    logo: "/logos/cloudflare-workers.svg",
+    logoClassName: "h-4 w-auto",
+  },
+  {
+    name: "Better Auth",
+    logo: "/logos/better-auth.svg",
+    logoClassName: "h-4 w-auto dark:invert",
+  },
+  {
+    name: "Drizzle",
+    logo: "/logos/drizzle.svg",
+    logoClassName: "h-7 w-auto brightness-0 invert opacity-90",
+  },
+  {
+    name: "Hono",
+    logo: "/logos/hono.svg",
+    logoClassName:
+      "h-4 w-auto saturate-0 brightness-[2.2] contrast-75 opacity-90",
+  },
 ] as const;
 
 export function Hero() {
@@ -37,8 +62,23 @@ export function Hero() {
         transition: { duration: 0.8, ease, delay: 0.2 },
       };
 
+  const cloudMotion = reduceMotion
+    ? {}
+    : {
+        initial: { x: -5, opacity: 0.75 },
+        animate: { x: 0, opacity: 1 },
+        transition: {
+          duration: 0.42,
+          ease,
+          delay: 0.05,
+        },
+      };
+
   return (
-    <section className="relative overflow-hidden border-b border-border/60 pb-18 pt-18 md:pb-24 md:pt-24">
+    <section
+      id="overview"
+      className="relative overflow-hidden border-b border-border/60 pb-18 pt-32 md:pb-24 lg:pt-24"
+    >
       <div
         className="pointer-events-none absolute inset-0"
         aria-hidden="true"
@@ -56,37 +96,45 @@ export function Hero() {
       </div>
 
       <div className="relative z-10 mx-auto max-w-6xl px-6">
-        <motion.div className="mx-auto max-w-3xl text-center" {...topMotion}>
+        <motion.div className="mx-auto max-w-4xl text-center" {...topMotion}>
           <Badge
             variant="outline"
             className="mb-6 border-border/70 bg-muted/30 text-muted-foreground"
           >
-            Cloudflare-native · Open Source · Self-hosted
+            Free & Open Source
           </Badge>
 
           <h1 className="text-pretty text-4xl font-bold tracking-tight md:text-5xl lg:text-6xl">
-            Self-host temporary emails
+            Self-host disposable emails
             <br />
-            <span className="text-foreground/80">for teams on Cloudflare</span>
+            <span className="text-foreground/80">
+              for teams on{" "}
+              <span className="inline-flex items-baseline gap-[0.16em] whitespace-nowrap">
+                <motion.span
+                  className="inline-flex shrink-0 text-foreground/65 dark:text-white/80"
+                  {...cloudMotion}
+                >
+                  <CloudflareCloud className="h-[0.82em] w-auto" />
+                </motion.span>
+                <span>Cloudflare</span>
+              </span>
+            </span>
           </h1>
 
           <p className="mx-auto mt-6 max-w-2xl text-base leading-relaxed text-muted-foreground md:text-lg">
-            Create organization-scoped inbox addresses with sender policies and
-            inspect inbound messages with attachments from the dashboard or API.
+            Create unlimited email addresses with attachment support for
+            you/your team, access via dashboard or API. Set TTL, allowed
+            senders, auto-cleanup, and more.
           </p>
 
-          <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
+          <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
             <Button
               size="lg"
               render={
-                <a
-                  href={landingLinks.quickstart}
-                  target="_blank"
-                  rel="noreferrer"
-                />
+                <a href={landingLinks.app} target="_blank" rel="noreferrer" />
               }
             >
-              Read Quickstart
+              Try it now
               <HugeiconsIcon icon={ArrowRight01Icon} data-icon="inline-end" />
             </Button>
 
@@ -105,40 +153,75 @@ export function Hero() {
               <HugeiconsIcon icon={ArrowUpRight01Icon} data-icon="inline-end" />
             </Button>
           </div>
-
-          <div className="mt-7 flex flex-wrap items-center justify-center gap-2 text-[11px]">
-            {[
-              "Scoped API keys + X-Org-Id",
-              "Sender-domain allowlists",
-              "2FA, Turnstile, email verification",
-            ].map(item => (
-              <Badge
-                key={item}
-                variant="outline"
-                className="border-border/70 bg-card/50 text-muted-foreground"
-              >
-                {item}
-              </Badge>
-            ))}
-          </div>
         </motion.div>
 
-        <motion.div className="mx-auto mt-14 max-w-4xl" {...previewMotion}>
+        <motion.div className="mx-auto mt-10 max-w-4xl" {...previewMotion}>
           <div className="border border-border/70 bg-linear-to-br from-white/3 via-transparent to-black/10 p-px">
             <InboxPreview reduceMotion={Boolean(reduceMotion)} />
           </div>
 
-          <div className="mt-4 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs text-muted-foreground/75">
-            <span className="font-medium text-foreground/80">Stack:</span>
-            {["Cloudflare Workers", "Email Routing", "D1", "R2", "Pages"].map(
-              tech => (
-                <span key={tech}>{tech}</span>
-              )
-            )}
+          <p className="pt-6 text-center font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground/65">
+            Tech Stack
+          </p>
+
+          <div className="mt-3 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-[13px] text-muted-foreground/75">
+            {techStack.map(tech => (
+              <span
+                key={tech.name}
+                className="inline-flex h-7 items-center gap-1.5 text-[13px] text-foreground/85"
+              >
+                <span className="inline-flex h-6 w-8 shrink-0 items-center justify-center">
+                  <img
+                    src={tech.logo}
+                    alt={`${tech.name} logo`}
+                    loading="lazy"
+                    className={cn(
+                      "max-h-full object-contain",
+                      tech.logoClassName
+                    )}
+                  />
+                </span>
+                <span className="leading-none">{tech.name}</span>
+              </span>
+            ))}
           </div>
+
+          <p className="mt-3 text-center font-mono text-[11px] text-muted-foreground/70">
+            scaffolded with{" "}
+            <a
+              href="https://github.com/zpg6/better-auth-cloudflare"
+              target="_blank"
+              rel="noreferrer"
+              className="underline decoration-dotted underline-offset-3 hover:text-foreground"
+            >
+              better-auth-cloudflare
+            </a>
+          </p>
         </motion.div>
       </div>
     </section>
+  );
+}
+
+function CloudflareCloud({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="44 88 422 254"
+      role="img"
+      aria-label="Cloudflare"
+      className={cn("h-4 w-auto", className)}
+    >
+      <path
+        fill="currentColor"
+        d="M331 326c11-26-4-38-19-38l-148-2c-4 0-4-6 1-7l150-2c17-1 37-15 43-33 0 0 10-21 9-24a97 97 0 0 0-187-11c-38-25-78 9-69 46-48 3-65 46-60 72 0 1 1 2 3 2h274c1 0 3-1 3-3z"
+        opacity="0.92"
+      />
+      <path
+        fill="currentColor"
+        d="M381 224c-4 0-6-1-7 1l-5 21c-5 16 3 30 20 31l32 2c4 0 4 6-1 7l-33 1c-36 4-46 39-46 39 0 2 0 3 2 3h113l3-2a81 81 0 0 0-78-103"
+        opacity="0.74"
+      />
+    </svg>
   );
 }
 
@@ -152,7 +235,7 @@ function InboxPreview({ reduceMotion }: { reduceMotion: boolean }) {
             className="size-4 shrink-0 text-muted-foreground"
           />
           <span className="truncate font-mono text-sm font-medium">
-            qa-suite@spinupmail.dev
+            test-user-1@spinupmail.dev
           </span>
         </div>
 
@@ -201,10 +284,6 @@ function InboxPreview({ reduceMotion }: { reduceMotion: boolean }) {
             </motion.div>
           );
         })}
-      </div>
-
-      <div className="border-t border-border/70 px-4 py-2.5 text-xs text-muted-foreground">
-        Sender policy active · Raw source available · Attachments downloadable
       </div>
     </div>
   );

@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { landingLinks } from "@/lib/links";
 
 const sections = [
-  { href: "#why", label: "Why Spinupmail" },
+  { href: "#overview", label: "Overview" },
   { href: "#features", label: "Features" },
   { href: "#pipeline", label: "Pipeline" },
   { href: "#setup", label: "Setup" },
@@ -66,7 +66,7 @@ export function Nav() {
   return (
     <header className="pointer-events-none fixed inset-x-0 top-3 z-50">
       <div className="mx-auto max-w-6xl px-6">
-        <div className="pointer-events-auto overflow-hidden rounded-lg border border-border/70 bg-background/60 shadow-[0_10px_40px_-28px_rgba(0,0,0,0.8)] backdrop-blur-xl">
+        <div className="pointer-events-auto overflow-hidden rounded-none border border-border/70 bg-background/60 shadow-[0_10px_40px_-28px_rgba(0,0,0,0.8)] backdrop-blur-xl">
           <div className="flex h-14 items-center justify-between gap-3 px-3 sm:px-4">
             <a
               href="/"
@@ -104,15 +104,6 @@ export function Nav() {
 
             <div className="hidden items-center gap-1.5 sm:flex">
               <Button
-                variant="ghost"
-                size="sm"
-                className="rounded-xl px-3"
-                render={<a href={landingLinks.app} rel="noreferrer" />}
-              >
-                Sign In
-              </Button>
-
-              <Button
                 variant="outline"
                 size="sm"
                 className="rounded-xl px-3 max-lg:hidden"
@@ -131,36 +122,20 @@ export function Nav() {
                 size="sm"
                 className="rounded-xl px-3.5"
                 render={
-                  <a
-                    href={landingLinks.quickstart}
-                    target="_blank"
-                    rel="noreferrer"
-                  />
+                  <a href={landingLinks.app} target="_blank" rel="noreferrer" />
                 }
               >
-                Quickstart
+                Dashboard
                 <HugeiconsIcon icon={ArrowRight01Icon} data-icon="inline-end" />
               </Button>
             </div>
 
             <div className="flex items-center gap-1.5 sm:hidden">
               <Button
-                variant="ghost"
-                size="sm"
-                className="rounded-xl px-2.5"
-                render={<a href={landingLinks.app} rel="noreferrer" />}
-              >
-                Sign In
-              </Button>
-              <Button
                 size="sm"
                 className="rounded-xl px-2.5"
                 render={
-                  <a
-                    href={landingLinks.quickstart}
-                    target="_blank"
-                    rel="noreferrer"
-                  />
+                  <a href={landingLinks.app} target="_blank" rel="noreferrer" />
                 }
               >
                 Setup
@@ -170,7 +145,7 @@ export function Nav() {
           </div>
 
           <div className="border-t border-border/60 px-3 py-2 lg:hidden">
-            <nav className="-mx-1 flex snap-x gap-1 overflow-x-auto px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <nav className="flex flex-wrap items-center justify-center gap-1">
               {sections.map(section => (
                 <a
                   key={`mobile-${section.href}`}

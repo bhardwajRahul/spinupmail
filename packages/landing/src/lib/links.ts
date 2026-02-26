@@ -17,7 +17,6 @@ export const landingLinks = {
   github,
   docs,
   app,
-  quickstart: `${docs}#1-install-dependencies`,
   apiDocs: `${docs}#api-usage-automation`,
   deployBackend: `${docs}#5-deploy-the-backend-worker`,
   deployFrontend: `${docs}#7-deploy-the-frontend-cloudflare-pages`,

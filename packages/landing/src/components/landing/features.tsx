@@ -172,7 +172,7 @@ function AddressControlsCard() {
               Allow
             </span>
             <div className="flex flex-1 flex-wrap gap-1.5">
-              {["github.com", "stripe.com", "vercel.com"].map(domain => (
+              {["gmail.com", "example.com", "outlook.com"].map(domain => (
                 <span
                   key={domain}
                   className="border border-border/70 bg-background px-2 py-0.5"

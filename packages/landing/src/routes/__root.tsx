@@ -15,12 +15,12 @@ export const Route = createRootRoute({
         content: "width=device-width, initial-scale=1",
       },
       {
-        title: "Spinupmail — Self-Hosted Temporary Emails on Cloudflare",
+        title: "Spinupmail — Self-host disposable emails on Cloudflare",
       },
       {
         name: "description",
         content:
-          "Self-host temporary emails on Cloudflare with organization-scoped addresses, sender controls, secure mailbox access, and a full REST API.",
+          "Create unlimited email addresses with attachment support for you/your team, access via dashboard or API. Set TTL, allowed senders, auto-cleanup, and more.",
       },
     ],
     links: [
