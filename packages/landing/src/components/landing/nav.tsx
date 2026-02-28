@@ -1,6 +1,7 @@
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowRight01Icon } from "@hugeicons/core-free-icons";
+import { ArrowRight01Icon, BookOpen01Icon } from "@hugeicons/core-free-icons";
 import { useEffect, useState } from "react";
+import { Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { landingLinks } from "@/lib/links";
 
@@ -108,15 +109,14 @@ export function Nav() {
                 size="sm"
                 nativeButton={false}
                 className="rounded-xl px-3 max-lg:hidden"
-                render={
-                  <a
-                    href={landingLinks.github}
-                    target="_blank"
-                    rel="noreferrer"
-                  />
-                }
+                render={<Link to="/docs" />}
               >
-                GitHub
+                <HugeiconsIcon
+                  icon={BookOpen01Icon}
+                  data-icon="inline-start"
+                  className="ml-1.5"
+                />
+                Docs
               </Button>
 
               <Button
