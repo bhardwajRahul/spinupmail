@@ -1,4 +1,9 @@
-import { HeadContent, Scripts, createRootRoute } from "@tanstack/react-router";
+import {
+  HeadContent,
+  Link,
+  Scripts,
+  createRootRoute,
+} from "@tanstack/react-router";
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
 import { TanStackDevtools } from "@tanstack/react-devtools";
 
@@ -41,6 +46,7 @@ export const Route = createRootRoute({
   }),
 
   shellComponent: RootDocument,
+  notFoundComponent: RootNotFound,
 });
 
 function RootDocument({ children }: { children: React.ReactNode }) {
@@ -65,5 +71,33 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <Scripts />
       </body>
     </html>
+  );
+}
+
+function RootNotFound() {
+  return (
+    <main className="mx-auto flex min-h-screen w-full max-w-3xl flex-col items-start justify-center px-6 py-16 text-foreground">
+      <p className="text-xs uppercase tracking-[0.15em] text-muted-foreground/70">
+        404
+      </p>
+      <h1 className="mt-2 text-3xl font-bold tracking-tight">Page not found</h1>
+      <p className="mt-3 max-w-prose text-sm leading-relaxed text-muted-foreground">
+        The page you requested does not exist or may have been moved.
+      </p>
+      <div className="mt-6 flex gap-3">
+        <Link
+          to="/"
+          className="inline-flex border border-border/70 bg-background px-3 py-1.5 text-xs text-foreground"
+        >
+          Go home
+        </Link>
+        <Link
+          to="/docs"
+          className="inline-flex border border-border/70 bg-background px-3 py-1.5 text-xs text-foreground"
+        >
+          Open docs
+        </Link>
+      </div>
+    </main>
   );
 }
