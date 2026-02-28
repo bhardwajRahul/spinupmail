@@ -148,6 +148,187 @@
   }
 }
 
+@layer components {
+  .docs-shell {
+    --docs-surface: var(--color-background);
+    background: var(--color-background);
+  }
+
+  .docs-shell a:focus-visible,
+  .docs-shell button:focus-visible,
+  .docs-shell summary:focus-visible,
+  .docs-shell input:focus-visible {
+    outline: 1px solid color-mix(in oklab, white 60%, var(--color-ring));
+    outline-offset: 2px;
+  }
+
+  .docs-header {
+    box-shadow: none;
+    background: var(--docs-surface);
+  }
+
+  .docs-layout-grid {
+    max-width: 100%;
+  }
+
+  .docs-left-pane,
+  .docs-right-pane {
+    background: var(--color-background);
+  }
+
+  .docs-main-pane {
+    background: var(--color-background);
+  }
+
+  .docs-shell h1,
+  .docs-shell h2,
+  .docs-shell h3 {
+    letter-spacing: -0.02em;
+  }
+
+  .docs-sidebar nav {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in oklab, white 20%, transparent) transparent;
+  }
+
+  .docs-sidebar a,
+  .docs-sidebar button,
+  .docs-header a,
+  .docs-header button {
+    border-radius: 0;
+  }
+
+  .docs-article {
+    max-width: 70rem;
+  }
+
+  .docs-article > header {
+    border-bottom-color: color-mix(in oklab, white 8%, transparent);
+  }
+
+  .docs-article > header h1 {
+    font-size: clamp(2.15rem, 4vw, 3.15rem);
+    letter-spacing: -0.03em;
+  }
+
+  .docs-article > header p {
+    max-width: 58rem;
+  }
+
+  .docs-article footer a {
+    border-radius: 0;
+  }
+
+  .docs-code-shell {
+    overflow: hidden;
+    border: 1px solid color-mix(in oklab, white 13%, transparent);
+    border-radius: 0;
+    background: #050505;
+    box-shadow: 0 22px 56px -44px rgba(0, 0, 0, 0.92);
+  }
+
+  .docs-code-toolbar {
+    display: flex;
+    min-height: 2.85rem;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    border-bottom: 1px solid color-mix(in oklab, white 12%, transparent);
+    background: #040404;
+    padding: 0.55rem 0.9rem;
+  }
+
+  .docs-code-shell > .docs-code-pre {
+    margin: 0;
+    overflow-x: auto;
+    padding: 1rem 0;
+    font-family:
+      ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
+      "Courier New", monospace;
+    font-size: 13.5px;
+    line-height: 1.72;
+    font-variant-ligatures: none;
+    background:
+      linear-gradient(
+        to bottom,
+        rgba(255, 255, 255, 0.015),
+        rgba(0, 0, 0, 0.2)
+      ),
+      radial-gradient(
+        circle at 0% 0%,
+        rgba(255, 255, 255, 0.04),
+        transparent 36%
+      );
+  }
+
+  .docs-code-shell > .docs-code-pre code {
+    display: block;
+    min-width: max-content;
+    color: inherit;
+    background: transparent;
+    border: 0;
+    padding: 0;
+  }
+
+  .docs-code-shell > .docs-code-pre code [data-line] {
+    display: block;
+    padding-inline: 1rem;
+  }
+
+  .docs-code-shell > .docs-code-pre code .docs-highlighted-line {
+    border-left: 2px solid color-mix(in oklab, white 42%, transparent);
+    background: color-mix(in oklab, white 8%, transparent);
+    padding-left: calc(1rem - 2px);
+  }
+
+  .docs-code-shell > .docs-code-pre code .docs-highlighted-word {
+    border-radius: 4px;
+    background: color-mix(in oklab, white 10%, transparent);
+    padding: 0 0.2rem;
+  }
+
+  .docs-mdx figure[data-rehype-pretty-code-figure] {
+    margin-block: 1.5rem;
+  }
+
+  .docs-mdx [data-rehype-pretty-code-title] {
+    display: flex;
+    align-items: center;
+    min-height: 2.8rem;
+    border: 1px solid color-mix(in oklab, white 13%, transparent);
+    border-bottom: 0;
+    border-radius: 0;
+    background: #040404;
+    padding: 0.65rem 0.9rem;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: color-mix(in oklab, white 82%, transparent);
+  }
+
+  .docs-mdx [data-rehype-pretty-code-figure] .docs-code-shell {
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+  }
+
+  .docs-toc {
+    font-size: 14px;
+    --docs-toc-rail: color-mix(in oklab, white 11%, transparent);
+    --docs-toc-active: color-mix(in oklab, white 78%, transparent);
+  }
+
+  .docs-toc nav [mask-image] > div {
+    background: var(--docs-toc-active) !important;
+  }
+
+  .docs-toc nav a {
+    border-radius: 0;
+  }
+
+  .docs-callout {
+    box-shadow: inset 0 0 0 1px color-mix(in oklab, white 8%, transparent);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
