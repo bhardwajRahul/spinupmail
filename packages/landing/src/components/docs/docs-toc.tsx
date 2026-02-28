@@ -77,7 +77,7 @@ export function DocsToc({ headings }: { headings: Array<DocHeading> }) {
         document.documentElement.scrollHeight - 8;
 
       if (isNearBottom) {
-        nextActiveId = headingElements.at(-1)?.id;
+        nextActiveId = headingElements[headingElements.length - 1].id;
       } else {
         for (const element of headingElements) {
           const offsetTop =
@@ -220,7 +220,7 @@ export function DocsToc({ headings }: { headings: Array<DocHeading> }) {
 
   if (!headings.length) {
     return (
-      <aside className="docs-toc px-4 py-6">
+      <aside className="docs-toc pb-6 pt-11">
         <p className="flex items-center gap-2 text-[11px] uppercase tracking-[0.15em] text-muted-foreground/70">
           <HugeiconsIcon
             icon={Menu01Icon}
@@ -237,7 +237,7 @@ export function DocsToc({ headings }: { headings: Array<DocHeading> }) {
   }
 
   return (
-    <aside className="docs-toc px-4 py-6">
+    <aside className="docs-toc pb-6 pt-11">
       <p className="flex items-center gap-2 text-[11px] uppercase tracking-[0.15em] text-muted-foreground/70">
         <HugeiconsIcon
           icon={Menu01Icon}
