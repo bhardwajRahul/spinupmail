@@ -4,6 +4,7 @@
   "scripts": {
     "dev": "wrangler dev",
     "build": "tsgo --noEmit",
+    "typecheck": "tsgo -b --noEmit",
     "deploy": "pnpm run db:migrate:prod && pnpm exec wrangler deploy --minify",
     "cf-typegen": "pnpm exec wrangler types --env-interface CloudflareBindings",
     "auth:generate": "npx --yes @better-auth/cli@latest generate --config src/auth/cli.ts --output src/db/auth.schema.ts -y",

@@ -32,10 +32,13 @@ jobs:
         run: pnpm run lint
 
       - name: Backend typecheck
-        run: pnpm run build:backend
+        run: pnpm run typecheck:backend
 
       - name: Frontend typecheck
         run: pnpm run typecheck:frontend
+
+      - name: Landing typecheck
+        run: pnpm run typecheck:landing
 
       - name: Unit tests
         run: pnpm run test:unit

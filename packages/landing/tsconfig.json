@@ -19,6 +19,7 @@
     "allowImportingTsExtensions": true,
     "verbatimModuleSyntax": false,
     "noEmit": true,
+    "tsBuildInfoFile": "./node_modules/.tsbuildinfo.landing",
 
     /* Linting */
     "skipLibCheck": true,
