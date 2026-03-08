@@ -251,17 +251,6 @@ export function HowItWorks() {
 
                 return (
                   <div key={step.number} className="relative">
-                    {!reduceMotion ? (
-                      <motion.div
-                        aria-hidden="true"
-                        className="pointer-events-none absolute inset-0"
-                        onViewportEnter={() =>
-                          activateTerminalStep(step.number)
-                        }
-                        viewport={{ once: false, margin: "0px 0px -70% 0px" }}
-                      />
-                    ) : null}
-
                     <motion.div className="flex gap-5" {...itemMotion}>
                       <span
                         className={cn(
