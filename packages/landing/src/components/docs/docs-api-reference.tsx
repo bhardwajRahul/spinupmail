@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { startTransition, useEffect, useState } from "react";
 import { getApiEndpointSpecById } from "./content/api-reference";
+import type { ReactNode } from "react";
 import type {
   ApiEndpointSpec,
   ApiErrorSpec,
@@ -8,8 +9,8 @@ import type {
 import { cn } from "@/lib/utils";
 
 const requirementTone: Record<string, string> = {
-  required: "border-emerald-400/35 bg-emerald-400/12 text-emerald-200",
-  optional: "border-white/16 bg-white/6 text-white/72",
+  required: "docs-api-chip docs-api-chip-required",
+  optional: "docs-api-chip docs-api-chip-optional",
 };
 
 function ApiRequirementBadge({ required = false }: { required?: boolean }) {
@@ -29,10 +30,10 @@ function ApiRequirementBadge({ required = false }: { required?: boolean }) {
 
 function ApiMethodBadge({ method }: { method: ApiEndpointSpec["method"] }) {
   const toneClassName = {
-    GET: "border-emerald-400/35 bg-emerald-400/12 text-emerald-200",
-    POST: "border-sky-400/35 bg-sky-400/12 text-sky-200",
-    PATCH: "border-amber-400/35 bg-amber-400/12 text-amber-200",
-    DELETE: "border-rose-400/35 bg-rose-400/12 text-rose-200",
+    GET: "docs-api-chip docs-api-method-badge docs-api-method-badge-get",
+    POST: "docs-api-chip docs-api-method-badge docs-api-method-badge-post",
+    PATCH: "docs-api-chip docs-api-method-badge docs-api-method-badge-patch",
+    DELETE: "docs-api-chip docs-api-method-badge docs-api-method-badge-delete",
   } as const;
 
   return (
@@ -44,6 +45,23 @@ function ApiMethodBadge({ method }: { method: ApiEndpointSpec["method"] }) {
     >
       {method}
     </span>
+  );
+}
+
+function ApiTableShell({
+  title,
+  children,
+}: {
+  title: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className="docs-reference-table-wrap">
+      <div className="docs-reference-table-header">
+        <h3>{title}</h3>
+      </div>
+      {children}
+    </div>
   );
 }
 
@@ -59,9 +77,9 @@ function ApiFieldTable({
   if (fields.length === 0) return null;
 
   return (
-    <div className="docs-reference-table-wrap">
+    <ApiTableShell title={caption}>
       <table className="docs-reference-table">
-        <caption>{caption}</caption>
+        <caption className="sr-only">{caption}</caption>
         <thead>
           <tr>
             <th scope="col">Field</th>
@@ -101,15 +119,15 @@ function ApiFieldTable({
           ))}
         </tbody>
       </table>
-    </div>
+    </ApiTableShell>
   );
 }
 
 function ApiHeaderTable({ spec }: { spec: ApiEndpointSpec }) {
   return (
-    <div className="docs-reference-table-wrap">
+    <ApiTableShell title="Request headers">
       <table className="docs-reference-table">
-        <caption>Request headers</caption>
+        <caption className="sr-only">Request headers</caption>
         <thead>
           <tr>
             <th scope="col">Header</th>
@@ -135,15 +153,15 @@ function ApiHeaderTable({ spec }: { spec: ApiEndpointSpec }) {
           ))}
         </tbody>
       </table>
-    </div>
+    </ApiTableShell>
   );
 }
 
 function ApiErrorTable({ errors }: { errors: Array<ApiErrorSpec> }) {
   return (
-    <div className="docs-reference-table-wrap">
+    <ApiTableShell title="Common error responses">
       <table className="docs-reference-table">
-        <caption>Common error responses</caption>
+        <caption className="sr-only">Common error responses</caption>
         <thead>
           <tr>
             <th scope="col">Status</th>
@@ -165,7 +183,7 @@ function ApiErrorTable({ errors }: { errors: Array<ApiErrorSpec> }) {
           ))}
         </tbody>
       </table>
-    </div>
+    </ApiTableShell>
   );
 }
 
@@ -179,6 +197,63 @@ function ApiCodePanel({
   title: string;
 }) {
   const [copied, setCopied] = useState(false);
+  const [highlightedCode, setHighlightedCode] = useState<string | null>(null);
+  const [isDark, setIsDark] = useState(true);
+
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+
+    const root = document.documentElement;
+    const syncTheme = () => {
+      setIsDark(root.classList.contains("dark"));
+    };
+
+    syncTheme();
+
+    const observer = new MutationObserver(syncTheme);
+    observer.observe(root, {
+      attributes: true,
+      attributeFilter: ["class"],
+    });
+
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    let cancelled = false;
+
+    const highlightCode = async () => {
+      try {
+        const { codeToHtml } = await import("shiki");
+        const html = await codeToHtml(code, {
+          lang: normalizeCodeLanguage(language),
+          theme: isDark ? "github-dark-default" : "github-light",
+        });
+
+        if (cancelled) return;
+
+        startTransition(() => {
+          setHighlightedCode(html);
+        });
+      } catch {
+        if (cancelled) return;
+
+        startTransition(() => {
+          setHighlightedCode(null);
+        });
+      }
+    };
+
+    void highlightCode();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [code, isDark, language]);
 
   const onCopy = async () => {
     if (typeof window === "undefined") return;
@@ -196,21 +271,17 @@ function ApiCodePanel({
     <div className="docs-code-shell">
       <div className="docs-code-toolbar">
         <div className="flex min-w-0 items-center gap-2">
-          <span className="inline-flex h-6 min-w-6 items-center justify-center border border-white/20 bg-white/10 px-1.5 font-mono text-[12px] font-semibold uppercase tracking-tight text-white/90">
+          <span className="docs-code-language-badge">
             {language.slice(0, 2)}
           </span>
-          <span className="truncate text-[13px] font-medium tracking-tight text-white/85">
-            {title}
-          </span>
+          <span className="docs-code-title">{title}</span>
         </div>
 
         <button
           type="button"
           className={cn(
-            "rounded-md border px-2 py-1 text-[11px] transition-colors",
-            copied
-              ? "border-white/25 bg-white/14 text-white"
-              : "border-white/15 bg-black/80 text-white/70 hover:border-white/25 hover:text-white"
+            "docs-code-copy-button",
+            copied && "docs-code-copy-button-copied"
           )}
           onClick={() => void onCopy()}
           aria-label={`Copy ${title}`}
@@ -219,11 +290,32 @@ function ApiCodePanel({
         </button>
       </div>
 
-      <pre className="docs-code-pre">
-        <code className="docs-code-plain">{code}</code>
-      </pre>
+      {highlightedCode ? (
+        <div
+          className="docs-code-pre docs-code-rendered"
+          dangerouslySetInnerHTML={{ __html: highlightedCode }}
+        />
+      ) : (
+        <pre className="docs-code-pre">
+          <code className="docs-code-plain">{code}</code>
+        </pre>
+      )}
     </div>
   );
+}
+
+function normalizeCodeLanguage(language: string) {
+  const normalizedLanguage = language.toLowerCase();
+
+  switch (normalizedLanguage) {
+    case "shell":
+    case "sh":
+      return "bash";
+    case "plaintext":
+      return "text";
+    default:
+      return normalizedLanguage;
+  }
 }
 
 export function ApiEndpointReference({ specId }: { specId: string }) {
@@ -243,9 +335,11 @@ export function ApiEndpointReference({ specId }: { specId: string }) {
         className="docs-api-summary-card"
         aria-label={`${spec.method} ${spec.path}`}
       >
-        <div className="flex flex-wrap items-center gap-2">
-          <ApiMethodBadge method={spec.method} />
-          <code className="text-[15px] text-foreground">{spec.path}</code>
+        <div className="docs-api-summary-header">
+          <div className="flex flex-wrap items-center gap-2">
+            <ApiMethodBadge method={spec.method} />
+            <code className="text-[15px] text-foreground">{spec.path}</code>
+          </div>
         </div>
 
         <p className="mt-3 text-[15px] leading-7 text-foreground/88">
@@ -253,14 +347,16 @@ export function ApiEndpointReference({ specId }: { specId: string }) {
         </p>
 
         <dl className="docs-api-summary-grid">
-          <div>
+          <div className="docs-api-summary-item">
             <dt>Auth</dt>
             <dd>{spec.auth.summary}</dd>
           </div>
-          <div>
+          <div className="docs-api-summary-item docs-api-summary-item-success">
             <dt>Success</dt>
             <dd>
-              <code>{spec.successStatus}</code>
+              <span className="docs-api-status-badge">
+                <code>{spec.successStatus}</code>
+              </span>
             </dd>
           </div>
         </dl>
@@ -276,20 +372,17 @@ export function ApiEndpointReference({ specId }: { specId: string }) {
 
       <div className="space-y-8">
         <section>
-          <h3>Headers</h3>
           <ApiHeaderTable spec={spec} />
         </section>
 
         {spec.pathParams?.length ? (
           <section>
-            <h3>Path parameters</h3>
             <ApiFieldTable caption="Path parameters" fields={spec.pathParams} />
           </section>
         ) : null}
 
         {spec.queryParams?.length ? (
           <section>
-            <h3>Query parameters</h3>
             <ApiFieldTable
               caption="Query parameters"
               fields={spec.queryParams}
@@ -299,25 +392,19 @@ export function ApiEndpointReference({ specId }: { specId: string }) {
 
         {spec.bodyFields?.length ? (
           <section>
-            <h3>Request body</h3>
-            <ApiFieldTable
-              caption="Request body fields"
-              fields={spec.bodyFields}
-            />
+            <ApiFieldTable caption="Request body" fields={spec.bodyFields} />
           </section>
         ) : null}
 
         <section>
-          <h3>Success response</h3>
           <ApiFieldTable
-            caption="Successful response fields"
+            caption="Success response"
             fields={spec.responseFields}
             showRequirement={false}
           />
         </section>
 
         <section>
-          <h3>Common errors</h3>
           <ApiErrorTable errors={spec.errors} />
         </section>
 
