@@ -14,6 +14,7 @@ import { twoFactor } from "better-auth/plugins/two-factor";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { drizzle } from "drizzle-orm/d1";
 import { schema } from "../../db";
+import { createEmailQualificationPlugin } from "./email-qualification-plugin";
 import {
   APP_NAME,
   createResendResetPasswordEmailSender,
@@ -164,6 +165,12 @@ function createAuth(
             enabled: true,
           },
           additionalFields: {
+            normalizedEmail: {
+              type: "string",
+              required: false,
+              input: false,
+              returned: false,
+            },
             timezone: {
               type: "string",
               required: false,
@@ -182,6 +189,7 @@ function createAuth(
               "/request-password-reset",
             ],
           }),
+          createEmailQualificationPlugin(env),
           organization({
             allowUserToCreateOrganization: true,
             organizationLimit: 3,
