@@ -1,5 +1,7 @@
 import * as React from "react";
 import { useForm } from "@tanstack/react-form";
+import { InformationCircleIcon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import {
@@ -362,9 +364,22 @@ export const SignInForm = ({
       </FieldGroup>
 
       {showVerificationNotice && !isForgotPasswordMode ? (
-        <p className="text-sm text-neutral-300">
-          Check your inbox for a verification email, then sign in.
-        </p>
+        <div className="flex items-start gap-3 rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-50">
+          <div className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-300">
+            <HugeiconsIcon
+              aria-hidden="true"
+              className="size-4"
+              icon={InformationCircleIcon}
+              strokeWidth={2}
+            />
+          </div>
+          <div className="space-y-1">
+            <p className="font-medium text-emerald-100">Verify your email</p>
+            <p className="text-emerald-50/85">
+              Use the link in the email to verify, then sign in.
+            </p>
+          </div>
+        </div>
       ) : null}
 
       {showPasswordResetNotice && !isForgotPasswordMode ? (

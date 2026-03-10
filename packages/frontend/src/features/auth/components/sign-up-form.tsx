@@ -1,5 +1,6 @@
 import * as React from "react";
 import { useForm } from "@tanstack/react-form";
+import { toast } from "sonner";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import {
@@ -65,6 +66,9 @@ export const SignUpForm = ({ onSuccess }: SignUpFormProps) => {
           ...value,
           captchaToken,
         });
+        toast.success(
+          "Verification email sent. Check your inbox, then sign in."
+        );
       } finally {
         turnstileRef.current?.reset();
       }

@@ -46,7 +46,7 @@ export function ModeToggle() {
           <Button
             variant="outline"
             size="icon"
-            className="rounded-xl cursor-pointer"
+            className="cursor-pointer bg-transparent"
             onMouseEnter={startTriggerAnimation}
             onMouseLeave={stopTriggerAnimation}
             onFocus={startTriggerAnimation}

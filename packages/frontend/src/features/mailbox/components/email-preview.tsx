@@ -36,6 +36,9 @@ type RemoteContentState = {
   remoteContentBlocked: boolean;
 };
 
+const EMAIL_PREVIEW_SCROLLBAR_CLASS =
+  "[scrollbar-color:var(--color-border)_transparent] [scrollbar-width:thin] [scrollbar-gutter:stable] [&::-webkit-scrollbar]:h-2.5 [&::-webkit-scrollbar]:w-2.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border [&::-webkit-scrollbar-thumb:hover]:bg-muted-foreground/45";
+
 const formatDate = (value: string | null, timeZone: string) => {
   if (!value) return "Unknown time";
 
@@ -234,7 +237,9 @@ export const EmailPreview = ({
               </Button>
             </div>
           ) : null}
-          <div className="relative h-96 overflow-auto rounded-md border border-border/70 bg-background">
+          <div
+            className={`relative h-96 overflow-auto rounded-md border border-border/70 bg-background ${EMAIL_PREVIEW_SCROLLBAR_CLASS}`}
+          >
             <EmailHtmlRenderer
               allowRemoteContent={activeRemoteContentState.allowRemoteContent}
               html={email.html}
@@ -244,7 +249,7 @@ export const EmailPreview = ({
         </div>
       ) : email.text ? (
         <Textarea
-          className="min-h-96 font-mono text-xs"
+          className={`min-h-96 font-mono text-xs ${EMAIL_PREVIEW_SCROLLBAR_CLASS}`}
           readOnly
           value={email.text}
         />
@@ -260,7 +265,7 @@ export const EmailPreview = ({
             Raw source
           </summary>
           <Textarea
-            className="mt-2 min-h-72 font-mono text-xs"
+            className={`mt-2 min-h-72 font-mono text-xs ${EMAIL_PREVIEW_SCROLLBAR_CLASS}`}
             readOnly
             value={email.raw}
           />
