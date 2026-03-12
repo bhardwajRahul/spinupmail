@@ -8,7 +8,7 @@ import { betterAuth } from "better-auth";
 import { randomBytes, scrypt, timingSafeEqual } from "node:crypto";
 import { withCloudflare } from "better-auth-cloudflare";
 import { apiKey } from "@better-auth/api-key";
-import { captcha } from "better-auth/plugins";
+import { captcha, testUtils } from "better-auth/plugins";
 import { organization } from "better-auth/plugins/organization";
 import { twoFactor } from "better-auth/plugins/two-factor";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
@@ -20,6 +20,7 @@ import {
   createResendResetPasswordEmailSender,
   createResendVerificationEmailSender,
 } from "./email-sender";
+import { isE2ETestUtilsEnabled } from "@/shared/env";
 
 const PASSWORD_SALT_BYTES = 16;
 const PASSWORD_DERIVED_KEY_BYTES = 64;
@@ -82,6 +83,7 @@ function createAuth(
   cf?: IncomingRequestCfProperties,
   executionContext?: ExecutionContext
 ) {
+  const enableE2ETestUtils = isE2ETestUtilsEnabled(env);
   const db = env ? drizzle(env.SUM_DB, { schema }) : undefined;
   const googleClientId = env?.GOOGLE_CLIENT_ID?.trim();
   const googleClientSecret = env?.GOOGLE_CLIENT_SECRET?.trim();
@@ -89,8 +91,12 @@ function createAuth(
   const trustedOrigins = env?.CORS_ORIGIN?.split(",")
     .map(origin => origin.trim())
     .filter(Boolean);
-  const sendVerificationEmail = createResendVerificationEmailSender(env);
-  const sendResetPassword = createResendResetPasswordEmailSender(env);
+  const sendVerificationEmail = enableE2ETestUtils
+    ? async () => undefined
+    : createResendVerificationEmailSender(env);
+  const sendResetPassword = enableE2ETestUtils
+    ? async () => undefined
+    : createResendResetPasswordEmailSender(env);
 
   return betterAuth({
     secret: env?.BETTER_AUTH_SECRET,
@@ -180,6 +186,7 @@ function createAuth(
           },
         },
         plugins: [
+          ...(enableE2ETestUtils ? [testUtils()] : []),
           captcha({
             provider: "cloudflare-turnstile",
             secretKey: env?.TURNSTILE_SECRET_KEY ?? "",
