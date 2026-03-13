@@ -138,6 +138,62 @@ describe("createResendVerificationEmailSender", () => {
     ).resolves.toBeUndefined();
   });
 
+  it("rewrites verification links to the frontend app origin", async () => {
+    const sender = createResendVerificationEmailSender({
+      ...buildEnv(),
+      BETTER_AUTH_BASE_URL: "http://localhost:8787/api/auth",
+      CORS_ORIGIN: "http://localhost:5173,http://127.0.0.1:5173",
+    } as CloudflareBindings);
+
+    await sender(
+      {
+        user: { email: "signup@example.com" },
+        url: "http://localhost:8787/api/auth/verify-email?token=token-123&callbackURL=http%3A%2F%2Flocalhost%3A5173%2Fmailbox",
+        token: createVerificationToken("email-verification"),
+      },
+      buildRequest("198.51.100.46")
+    );
+
+    expect(sendEmailMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        text: expect.stringContaining(
+          "http://localhost:5173/verify-email?token=token-123&flow=signup&callbackURL=http%3A%2F%2Flocalhost%3A5173%2Fmailbox"
+        ),
+        html: expect.stringContaining(
+          'href="http://localhost:5173/verify-email?token=token-123&amp;flow=signup&amp;callbackURL=http%3A%2F%2Flocalhost%3A5173%2Fmailbox"'
+        ),
+      })
+    );
+  });
+
+  it("adds a change-email flow hint when rewriting verification links", async () => {
+    const sender = createResendVerificationEmailSender({
+      ...buildEnv(),
+      BETTER_AUTH_BASE_URL: "http://localhost:8787/api/auth",
+      CORS_ORIGIN: "http://localhost:5173,http://127.0.0.1:5173",
+    } as CloudflareBindings);
+
+    await sender(
+      {
+        user: { email: "change@example.com" },
+        url: "http://localhost:8787/api/auth/verify-email?token=token-456&callbackURL=http%3A%2F%2Flocalhost%3A5173%2Fsettings",
+        token: createVerificationToken("change-email-verification"),
+      },
+      buildRequest("198.51.100.47")
+    );
+
+    expect(sendEmailMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        text: expect.stringContaining(
+          "http://localhost:5173/verify-email?token=token-456&flow=change-email&callbackURL=http%3A%2F%2Flocalhost%3A5173%2Fsettings"
+        ),
+        html: expect.stringContaining(
+          'href="http://localhost:5173/verify-email?token=token-456&amp;flow=change-email&amp;callbackURL=http%3A%2F%2Flocalhost%3A5173%2Fsettings"'
+        ),
+      })
+    );
+  });
+
   it("does not fail change-email flow when provider send fails", async () => {
     sendEmailMock.mockRejectedValueOnce(new Error("resend unavailable"));
     const sender = createResendVerificationEmailSender(buildEnv());
