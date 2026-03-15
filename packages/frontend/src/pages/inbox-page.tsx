@@ -1,10 +1,11 @@
 import * as React from "react";
-import { useNavigate, useParams } from "react-router";
+import { Navigate, useNavigate, useParams } from "react-router";
 import { useAllAddressesQuery } from "@/features/addresses/hooks/use-addresses";
 import { useAuth } from "@/features/auth/hooks/use-auth";
 import { useLocalStorage } from "@/hooks/use-local-storage";
 import { useDocumentTitle } from "@/hooks/use-document-title";
 import { InboxView } from "@/features/inbox/components/inbox-view";
+import { INBOX_EMAIL_SEARCH_MAX_LENGTH } from "@/features/inbox/constants";
 import {
   useInboxEmailDetailQuery,
   useInboxEmailsQuery,
@@ -47,6 +48,40 @@ export const InboxPage = () => {
   const [preferredAddressId, setPreferredAddressId] = useLocalStorage<
     string | null
   >(`inbox:address:${activeOrganizationId ?? "none"}`, null);
+  const [emailSearchInput, setEmailSearchInput] = React.useState("");
+  const deferredEmailSearchInput = React.useDeferredValue(emailSearchInput);
+  const [emailSearch, setEmailSearch] = React.useState("");
+  const [isEmailSearchFocused, setIsEmailSearchFocused] = React.useState(false);
+  const emailSearchDebounceTimerRef = React.useRef<number | null>(null);
+  const clearEmailSearch = React.useCallback(() => {
+    setEmailSearchInput("");
+    setEmailSearch("");
+    if (emailSearchDebounceTimerRef.current !== null) {
+      window.clearTimeout(emailSearchDebounceTimerRef.current);
+      emailSearchDebounceTimerRef.current = null;
+    }
+  }, []);
+  const handleEmailSearchChange = React.useCallback((value: string) => {
+    setEmailSearchInput(value.slice(0, INBOX_EMAIL_SEARCH_MAX_LENGTH));
+  }, []);
+
+  React.useEffect(() => {
+    const nextValue = deferredEmailSearchInput
+      .slice(0, INBOX_EMAIL_SEARCH_MAX_LENGTH)
+      .trim()
+      .replace(/\s+/g, " ");
+    emailSearchDebounceTimerRef.current = window.setTimeout(() => {
+      emailSearchDebounceTimerRef.current = null;
+      setEmailSearch(current => (current === nextValue ? current : nextValue));
+    }, 250);
+
+    return () => {
+      if (emailSearchDebounceTimerRef.current !== null) {
+        window.clearTimeout(emailSearchDebounceTimerRef.current);
+        emailSearchDebounceTimerRef.current = null;
+      }
+    };
+  }, [deferredEmailSearchInput]);
 
   const currentAddresses = React.useMemo(
     () => addressesQuery.data ?? [],
@@ -95,7 +130,10 @@ export const InboxPage = () => {
     setPreferredAddressId,
   ]);
 
-  const emailsQuery = useInboxEmailsQuery(resolvedSelectedAddressId);
+  const emailsQuery = useInboxEmailsQuery(
+    resolvedSelectedAddressId,
+    emailSearch
+  );
   const currentEmails = React.useMemo(
     () => emailsQuery.data?.items ?? [],
     [emailsQuery.data?.items]
@@ -125,15 +163,16 @@ export const InboxPage = () => {
     [routeAddressId, routeMailId]
   );
 
-  React.useEffect(() => {
+  const nextInboxPath = React.useMemo(() => {
     if (addressesQuery.isLoading) return;
     if (isRouteAddressRefreshing) return;
 
     if (!resolvedSelectedAddressId) {
-      if (currentInboxPath !== "/inbox") {
-        void navigate("/inbox", { replace: true });
-      }
-      return;
+      return currentInboxPath === "/inbox" ? null : "/inbox";
+    }
+
+    if (isEmailSearchFocused) {
+      return null;
     }
 
     if (!routeMailId && emailsQuery.isLoading) return;
@@ -143,16 +182,14 @@ export const InboxPage = () => {
       resolvedSelectedAddressId,
       resolvedSelectedEmailId
     );
-    if (nextPath !== currentInboxPath) {
-      void navigate(nextPath, { replace: true });
-    }
+    return nextPath === currentInboxPath ? null : nextPath;
   }, [
     addressesQuery.isLoading,
     currentInboxPath,
     emailsQuery.isLoading,
+    isEmailSearchFocused,
     isRouteAddressRefreshing,
     isRouteEmailRefreshing,
-    navigate,
     resolvedSelectedAddressId,
     resolvedSelectedEmailId,
     routeMailId,
@@ -177,6 +214,10 @@ export const InboxPage = () => {
       : `${truncateInboxTitle(previewEmail?.subject ?? selectedEmailListItem?.subject)} - ${selectedAddress.address} | ${APP_NAME}`;
   useDocumentTitle(inboxDocumentTitle);
 
+  if (nextInboxPath) {
+    return <Navigate replace to={nextInboxPath} />;
+  }
+
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-6">
       {addressesQuery.error ? (
@@ -198,11 +239,16 @@ export const InboxPage = () => {
       <InboxView
         addresses={addressesQuery.data ?? []}
         addressesLoading={addressesQuery.isLoading}
+        emailSearch={emailSearchInput}
+        onEmailSearchChange={handleEmailSearchChange}
+        onClearEmailSearch={clearEmailSearch}
+        onEmailSearchFocusChange={setIsEmailSearchFocused}
         emails={emailsQuery.data?.items ?? []}
         emailsLoading={emailsQuery.isLoading}
         previewEmail={previewEmail}
         previewEmailLoading={previewEmailLoading}
         onSelectAddress={addressId => {
+          clearEmailSearch();
           setPreferredAddressId(addressId);
           const nextPath = buildInboxPath(addressId);
           if (nextPath !== currentInboxPath) {

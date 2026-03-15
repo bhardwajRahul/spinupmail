@@ -8,6 +8,7 @@ import {
   useInboxEmailDetailQuery,
   useInboxEmailsQuery,
 } from "@/features/inbox/hooks/use-inbox";
+import { INBOX_EMAIL_SEARCH_MAX_LENGTH } from "@/features/inbox/constants";
 import { renderWithRouter } from "@/test/router-utils";
 
 vi.mock("@/features/addresses/hooks/use-addresses", () => ({
@@ -31,19 +32,37 @@ vi.mock("@/features/inbox/components/inbox-view", () => ({
   InboxView: ({
     selectedAddressId,
     selectedEmailId,
+    emailSearch,
+    onEmailSearchChange,
+    onClearEmailSearch,
+    onEmailSearchFocusChange,
     onSelectAddress,
     onSelectEmail,
   }: {
     selectedAddressId: string | null;
     selectedEmailId: string | null;
+    emailSearch: string;
+    onEmailSearchChange: (value: string) => void;
+    onClearEmailSearch?: () => void;
+    onEmailSearchFocusChange?: (focused: boolean) => void;
     onSelectAddress: (addressId: string) => void;
     onSelectEmail: (emailId: string) => void;
   }) => (
     <div>
       <p>selected-address:{selectedAddressId ?? "none"}</p>
       <p>selected-email:{selectedEmailId ?? "none"}</p>
+      <input
+        aria-label="search-emails"
+        onBlur={() => onEmailSearchFocusChange?.(false)}
+        onChange={event => onEmailSearchChange(event.target.value)}
+        onFocus={() => onEmailSearchFocusChange?.(true)}
+        value={emailSearch}
+      />
       <button onClick={() => onSelectAddress("a2")} type="button">
         select-address-a2
+      </button>
+      <button onClick={() => onClearEmailSearch?.()} type="button">
+        clear-search
       </button>
       <button onClick={() => onSelectEmail("e2")} type="button">
         select-email-e2
@@ -86,6 +105,7 @@ const renderInboxRoute = (initialEntries: string[]) =>
 describe("InboxPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.useRealTimers();
     document.title = "SpinupMail";
 
     mockedUseAuth.mockReturnValue({
@@ -105,10 +125,15 @@ describe("InboxPage", () => {
     ] as unknown as ReturnType<typeof useLocalStorage>);
 
     mockedUseInboxEmailsQuery.mockImplementation(
-      addressId =>
+      (addressId, search) =>
         ({
           data: {
-            items: addressId ? (emailsByAddress[addressId] ?? []) : [],
+            items:
+              addressId && search === "nomatch"
+                ? []
+                : addressId
+                  ? (emailsByAddress[addressId] ?? [])
+                  : [],
           },
           isLoading: false,
           isFetching: false,
@@ -296,6 +321,166 @@ describe("InboxPage", () => {
     expect(screen.getByText("Unable to load addresses")).toBeTruthy();
     expect(screen.getByText("Unable to load emails")).toBeTruthy();
     expect(screen.getByText("Unable to load preview")).toBeTruthy();
+  });
+
+  it("debounces search text before updating the email query", async () => {
+    vi.useFakeTimers();
+
+    renderInboxRoute(["/inbox/a1"]);
+
+    expect(mockedUseInboxEmailsQuery).toHaveBeenLastCalledWith("a1", "");
+
+    fireEvent.change(screen.getByLabelText("search-emails"), {
+      target: { value: "  reset   password  " },
+    });
+
+    expect(mockedUseInboxEmailsQuery).toHaveBeenLastCalledWith("a1", "");
+
+    await act(async () => {
+      vi.advanceTimersByTime(250);
+    });
+
+    expect(mockedUseInboxEmailsQuery).toHaveBeenLastCalledWith(
+      "a1",
+      "reset password"
+    );
+  });
+
+  it("caps search text to 30 characters before updating the email query", async () => {
+    vi.useFakeTimers();
+
+    renderInboxRoute(["/inbox/a1"]);
+
+    const overlongSearch =
+      "123456789012345678901234567890-overflow text that should not survive";
+
+    fireEvent.change(screen.getByLabelText("search-emails"), {
+      target: { value: overlongSearch },
+    });
+
+    await act(async () => {
+      vi.advanceTimersByTime(250);
+    });
+
+    expect(mockedUseInboxEmailsQuery).toHaveBeenLastCalledWith(
+      "a1",
+      overlongSearch.slice(0, INBOX_EMAIL_SEARCH_MAX_LENGTH)
+    );
+  });
+
+  it("clears the active search when selecting a different address", async () => {
+    vi.useFakeTimers();
+
+    const { router } = renderInboxRoute(["/inbox/a1"]);
+
+    fireEvent.change(screen.getByLabelText("search-emails"), {
+      target: { value: "invoice" },
+    });
+
+    await act(async () => {
+      vi.advanceTimersByTime(250);
+    });
+
+    expect(mockedUseInboxEmailsQuery).toHaveBeenLastCalledWith("a1", "invoice");
+    vi.useRealTimers();
+
+    fireEvent.click(screen.getByRole("button", { name: "select-address-a2" }));
+
+    await waitFor(() =>
+      expect(router.state.location.pathname).toBe("/inbox/a2/e2")
+    );
+    expect(
+      (screen.getByLabelText("search-emails") as HTMLInputElement).value
+    ).toBe("");
+    expect(mockedUseInboxEmailsQuery).toHaveBeenLastCalledWith("a2", "");
+  });
+
+  it("cancels a pending debounced search when selecting a different address", async () => {
+    vi.useFakeTimers();
+
+    const { router } = renderInboxRoute(["/inbox/a1"]);
+
+    fireEvent.change(screen.getByLabelText("search-emails"), {
+      target: { value: "invoice" },
+    });
+
+    await act(async () => {
+      vi.advanceTimersByTime(200);
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "select-address-a2" }));
+
+    await act(async () => {
+      vi.advanceTimersByTime(100);
+    });
+
+    vi.useRealTimers();
+
+    await waitFor(() =>
+      expect(router.state.location.pathname).toBe("/inbox/a2/e2")
+    );
+
+    expect(
+      mockedUseInboxEmailsQuery.mock.calls.some(
+        ([addressId, search]) => addressId === "a2" && search === "invoice"
+      )
+    ).toBe(false);
+    expect(mockedUseInboxEmailsQuery).toHaveBeenLastCalledWith("a2", "");
+  });
+
+  it("cancels a pending debounced search when clearing the search", async () => {
+    vi.useFakeTimers();
+
+    renderInboxRoute(["/inbox/a1"]);
+
+    fireEvent.change(screen.getByLabelText("search-emails"), {
+      target: { value: "invoice" },
+    });
+
+    await act(async () => {
+      vi.advanceTimersByTime(200);
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "clear-search" }));
+
+    await act(async () => {
+      vi.advanceTimersByTime(100);
+    });
+
+    expect(
+      mockedUseInboxEmailsQuery.mock.calls.some(
+        ([addressId, search]) => addressId === "a1" && search === "invoice"
+      )
+    ).toBe(false);
+    expect(mockedUseInboxEmailsQuery).toHaveBeenLastCalledWith("a1", "");
+    expect(
+      (screen.getByLabelText("search-emails") as HTMLInputElement).value
+    ).toBe("");
+  });
+
+  it("does not replace the route while the email search input is focused", async () => {
+    vi.useFakeTimers();
+    const { router } = renderInboxRoute(["/inbox/a1/e1"]);
+    const searchInput = screen.getByLabelText("search-emails");
+
+    fireEvent.focus(searchInput);
+    fireEvent.change(searchInput, {
+      target: { value: "nomatch" },
+    });
+
+    await act(async () => {
+      vi.advanceTimersByTime(250);
+    });
+
+    expect(mockedUseInboxEmailsQuery).toHaveBeenLastCalledWith("a1", "nomatch");
+    expect(router.state.location.pathname).toBe("/inbox/a1/e1");
+
+    fireEvent.blur(searchInput);
+    vi.useRealTimers();
+
+    await waitFor(() =>
+      expect(router.state.location.pathname).toBe("/inbox/a1")
+    );
   });
 
   it("waits for a refetching address list before replacing a new route address", async () => {

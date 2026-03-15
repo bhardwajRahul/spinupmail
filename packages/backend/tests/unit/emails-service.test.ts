@@ -1,4 +1,5 @@
 import {
+  deleteEmail,
   getEmailDetail,
   getEmailAttachment,
   getEmailRaw,
@@ -10,11 +11,17 @@ const mocks = vi.hoisted(() => ({
   findAddressByIdAndOrganization: vi.fn(),
   findAddressByValueAndOrganization: vi.fn(),
   listEmailsForAddress: vi.fn(),
+  searchEmailsForAddress: vi.fn(),
   findAttachmentCountsForEmails: vi.fn(),
   findEmailAttachmentsByEmailAndOrganization: vi.fn(),
   findEmailDetailByIdAndOrganization: vi.fn(),
   findEmailRawSourceByIdAndOrganization: vi.fn(),
   findAttachmentByIdsAndOrganization: vi.fn(),
+  buildDeleteEmailByIdAndAddressStatement: vi.fn(),
+  buildDeleteEmailSearchEntryByEmailIdStatement: vi.fn(),
+  buildDecrementAddressEmailCountStatement: vi.fn(),
+  findEmailDeleteTargetByIdAndOrganization: vi.fn(),
+  findAttachmentKeysByEmailAndOrganization: vi.fn(),
 }));
 
 vi.mock("@/platform/db/client", () => ({
@@ -22,10 +29,16 @@ vi.mock("@/platform/db/client", () => ({
 }));
 
 vi.mock("@/modules/emails/repo", () => ({
-  decrementAddressEmailCount: vi.fn(),
+  buildDecrementAddressEmailCountStatement:
+    mocks.buildDecrementAddressEmailCountStatement,
+  buildDeleteEmailByIdAndAddressStatement:
+    mocks.buildDeleteEmailByIdAndAddressStatement,
+  buildDeleteEmailSearchEntryByEmailIdStatement:
+    mocks.buildDeleteEmailSearchEntryByEmailIdStatement,
   findAddressByIdAndOrganization: mocks.findAddressByIdAndOrganization,
   findAddressByValueAndOrganization: mocks.findAddressByValueAndOrganization,
   listEmailsForAddress: mocks.listEmailsForAddress,
+  searchEmailsForAddress: mocks.searchEmailsForAddress,
   findAttachmentCountsForEmails: mocks.findAttachmentCountsForEmails,
   findEmailAttachmentsByEmailAndOrganization:
     mocks.findEmailAttachmentsByEmailAndOrganization,
@@ -33,9 +46,10 @@ vi.mock("@/modules/emails/repo", () => ({
   findEmailRawSourceByIdAndOrganization:
     mocks.findEmailRawSourceByIdAndOrganization,
   findAttachmentByIdsAndOrganization: mocks.findAttachmentByIdsAndOrganization,
-  findEmailDeleteTargetByIdAndOrganization: vi.fn(),
-  findAttachmentKeysByEmailAndOrganization: vi.fn(),
-  deleteEmailByIdAndAddress: vi.fn(),
+  findEmailDeleteTargetByIdAndOrganization:
+    mocks.findEmailDeleteTargetByIdAndOrganization,
+  findAttachmentKeysByEmailAndOrganization:
+    mocks.findAttachmentKeysByEmailAndOrganization,
 }));
 
 describe("emails service", () => {
@@ -43,6 +57,7 @@ describe("emails service", () => {
     vi.clearAllMocks();
     mocks.getDb.mockReturnValue({});
     mocks.findAttachmentCountsForEmails.mockResolvedValue([]);
+    mocks.findAttachmentKeysByEmailAndOrganization.mockResolvedValue([]);
   });
 
   it("requires address or addressId when listing emails", async () => {
@@ -141,6 +156,168 @@ describe("emails service", () => {
     expect(result.body.items[0]).toMatchObject({
       sender: null,
       senderLabel: "noname@example.com",
+    });
+  });
+
+  it("uses ranked search when a search query is provided", async () => {
+    mocks.findAddressByIdAndOrganization.mockResolvedValue({
+      id: "address-1",
+      address: "inbox@example.com",
+    });
+    mocks.searchEmailsForAddress.mockResolvedValue([
+      {
+        id: "email-2",
+        addressId: "address-1",
+        to: "inbox@example.com",
+        sender: "Jane Smith <jane@example.com>",
+        from: "jane@example.com",
+        subject: "Reset your password",
+        messageId: "message-2",
+        rawSize: 99,
+        rawTruncated: false,
+        receivedAt: new Date("2026-03-10T00:00:00.000Z"),
+        hasHtml: 1,
+        hasText: 1,
+      },
+    ]);
+
+    const result = await listEmails({
+      env: {} as CloudflareBindings,
+      organizationId: "org-1",
+      queryPayload: {
+        addressId: "address-1",
+        search: "  reset   pass  ",
+        limit: "10",
+      },
+    });
+
+    expect(mocks.searchEmailsForAddress).toHaveBeenCalledWith({
+      db: {},
+      addressId: "address-1",
+      search: "reset pass",
+      limit: 10,
+    });
+    expect(mocks.listEmailsForAddress).not.toHaveBeenCalled();
+    expect(result.status).toBe(200);
+    expect(result.body.items[0]).toMatchObject({
+      id: "email-2",
+      senderLabel: "Jane Smith",
+      subject: "Reset your password",
+    });
+  });
+
+  it("caps search queries to 30 characters before searching", async () => {
+    mocks.findAddressByIdAndOrganization.mockResolvedValue({
+      id: "address-1",
+      address: "inbox@example.com",
+    });
+    mocks.searchEmailsForAddress.mockResolvedValue([]);
+
+    const overlongSearch =
+      "123456789012345678901234567890-overflow text that should not survive";
+
+    const result = await listEmails({
+      env: {} as CloudflareBindings,
+      organizationId: "org-1",
+      queryPayload: {
+        addressId: "address-1",
+        search: overlongSearch,
+      },
+    });
+
+    expect(mocks.searchEmailsForAddress).toHaveBeenCalledWith({
+      db: {},
+      addressId: "address-1",
+      search: overlongSearch.slice(0, 30),
+      limit: 20,
+    });
+    expect(result.status).toBe(200);
+  });
+
+  it("rejects search requests that also pass after, before, or order", async () => {
+    mocks.findAddressByIdAndOrganization.mockResolvedValue({
+      id: "address-1",
+      address: "inbox@example.com",
+    });
+
+    const result = await listEmails({
+      env: {} as CloudflareBindings,
+      organizationId: "org-1",
+      queryPayload: {
+        addressId: "address-1",
+        search: "reset",
+        after: "2026-03-10T00:00:00.000Z",
+        order: "asc",
+      },
+    });
+
+    expect(mocks.searchEmailsForAddress).not.toHaveBeenCalled();
+    expect(mocks.listEmailsForAddress).not.toHaveBeenCalled();
+    expect(result).toEqual({
+      status: 400,
+      body: {
+        error: "search does not support after, before, or order=asc parameters",
+      },
+    });
+  });
+
+  it("deletes the email row, FTS entry, and count in one batch", async () => {
+    const deleteEmailStatement = { query: "delete email" };
+    const deleteSearchStatement = { query: "delete search" };
+    const decrementCountStatement = { query: "decrement count" };
+    const batch = vi.fn().mockResolvedValue([]);
+    const db = {
+      $client: {
+        batch,
+      },
+    };
+
+    mocks.getDb.mockReturnValue(db);
+    mocks.findEmailDeleteTargetByIdAndOrganization.mockResolvedValue({
+      id: "email-1",
+      addressId: "address-1",
+    });
+    mocks.findAttachmentKeysByEmailAndOrganization.mockResolvedValue([]);
+    mocks.buildDeleteEmailByIdAndAddressStatement.mockReturnValue(
+      deleteEmailStatement
+    );
+    mocks.buildDeleteEmailSearchEntryByEmailIdStatement.mockReturnValue(
+      deleteSearchStatement
+    );
+    mocks.buildDecrementAddressEmailCountStatement.mockReturnValue(
+      decrementCountStatement
+    );
+
+    const result = await deleteEmail({
+      env: {} as CloudflareBindings,
+      organizationId: "org-1",
+      emailId: "email-1",
+    });
+
+    expect(mocks.buildDeleteEmailByIdAndAddressStatement).toHaveBeenCalledWith(
+      db,
+      "email-1",
+      "address-1"
+    );
+    expect(
+      mocks.buildDeleteEmailSearchEntryByEmailIdStatement
+    ).toHaveBeenCalledWith(db, "email-1");
+    expect(mocks.buildDecrementAddressEmailCountStatement).toHaveBeenCalledWith(
+      db,
+      "address-1"
+    );
+    expect(batch).toHaveBeenCalledWith([
+      deleteEmailStatement,
+      deleteSearchStatement,
+      decrementCountStatement,
+    ]);
+    expect(batch).toHaveBeenCalledTimes(1);
+    expect(result).toEqual({
+      status: 200,
+      body: {
+        id: "email-1",
+        deleted: true,
+      },
     });
   });
 

@@ -2,6 +2,50 @@ import { and, asc, desc, eq, gte, inArray, lte, sql } from "drizzle-orm";
 import { emailAddresses, emailAttachments, emails } from "@/db";
 import type { AppDb } from "@/platform/db/client";
 
+const EMAIL_SEARCH_MARKER_START = "__smfts_s__";
+const EMAIL_SEARCH_MARKER_END = "__smfts_e__";
+const EMAIL_SEARCH_MAX_TOKENS = 6;
+const EMAIL_SEARCH_MAX_TOKEN_LENGTH = 48;
+const SAFE_EMAIL_SEARCH_MARKER_PATTERN = /^[A-Za-z0-9_]+$/;
+
+const assertSafeEmailSearchMarker = (value: string, name: string) => {
+  if (!SAFE_EMAIL_SEARCH_MARKER_PATTERN.test(value)) {
+    throw new Error(
+      `${name} must contain only ASCII letters, numbers, and underscores`
+    );
+  }
+};
+
+assertSafeEmailSearchMarker(
+  EMAIL_SEARCH_MARKER_START,
+  "EMAIL_SEARCH_MARKER_START"
+);
+assertSafeEmailSearchMarker(EMAIL_SEARCH_MARKER_END, "EMAIL_SEARCH_MARKER_END");
+
+const tokenizeEmailSearch = (value: string) =>
+  value
+    .normalize("NFKC")
+    .match(/[\p{L}\p{N}]+/gu)
+    ?.map(token => token.toLowerCase().slice(0, EMAIL_SEARCH_MAX_TOKEN_LENGTH))
+    .filter(token => token.length > 0)
+    .slice(0, EMAIL_SEARCH_MAX_TOKENS) ?? [];
+
+const buildEmailSearchMatchQuery = (value: string) => {
+  const tokens = tokenizeEmailSearch(value);
+  if (tokens.length === 0) return null;
+
+  const hasTrailingWhitespace = /\s$/.test(value);
+
+  return tokens
+    .map((token, index) => {
+      const isPrefixToken =
+        index === tokens.length - 1 && hasTrailingWhitespace === false;
+
+      return `"${token.replaceAll('"', '""')}"${isPrefixToken ? "*" : ""}`;
+    })
+    .join(" AND ");
+};
+
 export const findAddressByIdAndOrganization = (
   db: AppDb,
   organizationId: string,
@@ -39,6 +83,169 @@ export const findAddressByValueAndOrganization = (
       )
     )
     .get();
+
+export const insertEmailSearchEntry = async ({
+  db,
+  emailId,
+  subject,
+  sender,
+  senderAddress,
+  bodyText,
+}: {
+  db: AppDb;
+  emailId: string;
+  subject?: string | null;
+  sender?: string | null;
+  senderAddress: string;
+  bodyText?: string | null;
+}) => {
+  await db.$client
+    .prepare(
+      `
+        INSERT INTO emails_search (
+          subject,
+          sender,
+          sender_address,
+          body_text,
+          email_id
+        )
+        VALUES (?, ?, ?, ?, ?)
+      `
+    )
+    .bind(subject ?? "", sender ?? "", senderAddress, bodyText ?? "", emailId)
+    .run();
+};
+
+export const buildInsertEmailSearchEntryStatement = ({
+  db,
+  emailId,
+  subject,
+  sender,
+  senderAddress,
+  bodyText,
+}: {
+  db: AppDb;
+  emailId: string;
+  subject?: string | null;
+  sender?: string | null;
+  senderAddress: string;
+  bodyText?: string | null;
+}) =>
+  db.$client
+    .prepare(
+      `
+        INSERT INTO emails_search (
+          subject,
+          sender,
+          sender_address,
+          body_text,
+          email_id
+        )
+        VALUES (?, ?, ?, ?, ?)
+      `
+    )
+    .bind(subject ?? "", sender ?? "", senderAddress, bodyText ?? "", emailId);
+
+export const deleteEmailSearchEntryByEmailId = async (
+  db: AppDb,
+  emailId: string
+) => {
+  await db.$client
+    .prepare(`DELETE FROM emails_search WHERE email_id = ?`)
+    .bind(emailId)
+    .run();
+};
+
+export const deleteEmailSearchEntriesByAddressId = async (
+  db: AppDb,
+  addressId: string
+) => {
+  await buildDeleteEmailSearchEntriesByAddressIdStatement(db, addressId).run();
+};
+
+export const deleteEmailSearchEntriesByEmailIds = async (
+  db: AppDb,
+  emailIds: string[]
+) => {
+  if (emailIds.length === 0) return;
+
+  const placeholders = emailIds.map(() => "?").join(", ");
+  await db.$client
+    .prepare(`DELETE FROM emails_search WHERE email_id IN (${placeholders})`)
+    .bind(...emailIds)
+    .run();
+};
+
+export const buildDeleteEmailByIdAndAddressStatement = (
+  db: AppDb,
+  emailId: string,
+  addressId: string
+) =>
+  db.$client
+    .prepare(`DELETE FROM emails WHERE id = ? AND address_id = ?`)
+    .bind(emailId, addressId);
+
+export const buildDeleteEmailSearchEntryByEmailIdStatement = (
+  db: AppDb,
+  emailId: string
+) =>
+  db.$client
+    .prepare(`DELETE FROM emails_search WHERE email_id = ?`)
+    .bind(emailId);
+
+export const buildDeleteEmailSearchEntriesByEmailIdsStatement = (
+  db: AppDb,
+  emailIds: string[]
+) => {
+  if (emailIds.length === 0) {
+    throw new Error("emailIds must not be empty");
+  }
+
+  const placeholders = emailIds.map(() => "?").join(", ");
+  return db.$client
+    .prepare(`DELETE FROM emails_search WHERE email_id IN (${placeholders})`)
+    .bind(...emailIds);
+};
+
+export const maybeBuildDeleteEmailSearchEntriesByEmailIdsStatement = (
+  db: AppDb,
+  emailIds: string[]
+) => {
+  if (emailIds.length === 0) {
+    return null;
+  }
+
+  return buildDeleteEmailSearchEntriesByEmailIdsStatement(db, emailIds);
+};
+
+export const buildDeleteEmailSearchEntriesByAddressIdStatement = (
+  db: AppDb,
+  addressId: string
+) =>
+  db.$client
+    .prepare(
+      `
+        DELETE FROM emails_search
+        WHERE email_id IN (
+          SELECT id FROM emails WHERE address_id = ?
+        )
+      `
+    )
+    .bind(addressId);
+
+export const buildDecrementAddressEmailCountStatement = (
+  db: AppDb,
+  addressId: string
+) =>
+  db.$client
+    .prepare(
+      `
+        UPDATE email_addresses
+        SET email_count = max(email_count - 1, 0)
+        WHERE id = ?
+      `
+    )
+    .bind(addressId);
 
 export const listEmailsForAddress = ({
   db,
@@ -86,6 +293,90 @@ export const listEmailsForAddress = ({
     .where(whereClause)
     .orderBy(order === "asc" ? asc(emails.receivedAt) : desc(emails.receivedAt))
     .limit(limit);
+};
+
+export const searchEmailsForAddress = async ({
+  db,
+  addressId,
+  search,
+  limit,
+}: {
+  db: AppDb;
+  addressId: string;
+  search: string;
+  limit: number;
+}) => {
+  const matchQuery = buildEmailSearchMatchQuery(search);
+  if (!matchQuery) {
+    return [];
+  }
+
+  const result = await db.$client
+    .prepare(
+      `
+        SELECT
+          emails.id AS id,
+          emails.address_id AS addressId,
+          emails.sender AS sender,
+          emails."to" AS "to",
+          emails."from" AS "from",
+          emails.subject AS subject,
+          emails.message_id AS messageId,
+          emails.raw_size AS rawSize,
+          emails.raw_truncated AS rawTruncated,
+          emails.received_at AS receivedAtMs,
+          CASE WHEN emails.body_html IS NULL THEN 0 ELSE 1 END AS hasHtml,
+          CASE WHEN emails.body_text IS NULL THEN 0 ELSE 1 END AS hasText,
+          CASE
+            WHEN instr(
+              highlight(emails_search, 0, '${EMAIL_SEARCH_MARKER_START}', '${EMAIL_SEARCH_MARKER_END}'),
+              '${EMAIL_SEARCH_MARKER_START}'
+            ) > 0 THEN 0
+            WHEN
+              instr(
+                highlight(emails_search, 1, '${EMAIL_SEARCH_MARKER_START}', '${EMAIL_SEARCH_MARKER_END}'),
+                '${EMAIL_SEARCH_MARKER_START}'
+              ) > 0
+              OR instr(
+                highlight(emails_search, 2, '${EMAIL_SEARCH_MARKER_START}', '${EMAIL_SEARCH_MARKER_END}'),
+                '${EMAIL_SEARCH_MARKER_START}'
+              ) > 0
+            THEN 1
+            ELSE 2
+          END AS searchPriority,
+          bm25(emails_search, 10.0, 6.0, 6.0, 2.0) AS relevance
+        FROM emails_search
+        INNER JOIN emails ON emails.id = emails_search.email_id
+        WHERE emails_search MATCH ? AND emails.address_id = ?
+        ORDER BY
+          searchPriority ASC,
+          relevance ASC,
+          emails.received_at DESC
+        LIMIT ?
+      `
+    )
+    .bind(matchQuery, addressId, limit)
+    .all<{
+      id: string;
+      addressId: string;
+      sender: string | null;
+      to: string;
+      from: string;
+      subject: string | null;
+      messageId: string | null;
+      rawSize: number | null;
+      rawTruncated: number | boolean;
+      receivedAtMs: number | null;
+      hasHtml: number;
+      hasText: number;
+    }>();
+
+  return (result.results ?? []).map(row => ({
+    ...row,
+    rawTruncated: Boolean(row.rawTruncated),
+    receivedAt:
+      typeof row.receivedAtMs === "number" ? new Date(row.receivedAtMs) : null,
+  }));
 };
 
 export const findAttachmentCountsForEmails = (

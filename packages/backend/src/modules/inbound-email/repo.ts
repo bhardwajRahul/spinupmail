@@ -1,6 +1,10 @@
 import { and, eq, lt, sql } from "drizzle-orm";
-import { emailAddresses, emails } from "@/db";
+import { emailAddresses } from "@/db";
 import type { AppDb } from "@/platform/db/client";
+import {
+  buildDeleteEmailSearchEntriesByAddressIdStatement,
+  buildInsertEmailSearchEntryStatement,
+} from "@/modules/emails/repo";
 
 export const findAddressByRecipient = (db: AppDb, recipient: string) =>
   db
@@ -15,7 +19,7 @@ export const findAddressByRecipient = (db: AppDb, recipient: string) =>
     .where(eq(emailAddresses.address, recipient))
     .get();
 
-export const insertInboundEmail = (
+export const insertInboundEmail = async (
   db: AppDb,
   values: {
     id: string;
@@ -33,7 +37,58 @@ export const insertInboundEmail = (
     rawTruncated: boolean;
     receivedAt: Date;
   }
-) => db.insert(emails).values(values).run();
+) => {
+  const insertEmailStatement = db.$client
+    .prepare(
+      `
+        INSERT INTO emails (
+          id,
+          address_id,
+          message_id,
+          sender,
+          "from",
+          "to",
+          subject,
+          headers,
+          body_html,
+          body_text,
+          raw,
+          raw_size,
+          raw_truncated,
+          received_at
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `
+    )
+    .bind(
+      values.id,
+      values.addressId,
+      values.messageId ?? null,
+      values.sender ?? null,
+      values.from,
+      values.to,
+      values.subject ?? null,
+      values.headers ?? null,
+      values.bodyHtml ?? null,
+      values.bodyText ?? null,
+      values.raw ?? null,
+      values.rawSize ?? null,
+      values.rawTruncated ? 1 : 0,
+      values.receivedAt.getTime()
+    );
+
+  await db.$client.batch([
+    insertEmailStatement,
+    buildInsertEmailSearchEntryStatement({
+      db,
+      emailId: values.id,
+      subject: values.subject,
+      sender: values.sender,
+      senderAddress: values.from,
+      bodyText: values.bodyText,
+    }),
+  ]);
+};
 
 export const reserveInboxSlot = ({
   db,
@@ -85,8 +140,14 @@ export const resetAddressEmailCount = (db: AppDb, addressId: string) =>
     .where(eq(emailAddresses.id, addressId))
     .run();
 
-export const deleteEmailsForAddress = (db: AppDb, addressId: string) =>
-  db.delete(emails).where(eq(emails.addressId, addressId)).run();
+export const deleteEmailsForAddress = async (db: AppDb, addressId: string) => {
+  await db.$client.batch([
+    buildDeleteEmailSearchEntriesByAddressIdStatement(db, addressId),
+    db.$client
+      .prepare(`DELETE FROM emails WHERE address_id = ?`)
+      .bind(addressId),
+  ]);
+};
 
 export const updateAddressLastReceivedAt = (
   db: AppDb,

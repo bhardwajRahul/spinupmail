@@ -22,13 +22,15 @@ import {
   emailAttachmentQuerySchema,
   emailDetailQuerySchema,
   listEmailsQuerySchema,
+  EMAIL_SEARCH_MAX_LENGTH,
   type EmailAttachmentQuery,
   type EmailDetailQuery,
   type ListEmailsQuery,
 } from "./schemas";
 import {
-  decrementAddressEmailCount,
-  deleteEmailByIdAndAddress,
+  buildDecrementAddressEmailCountStatement,
+  buildDeleteEmailByIdAndAddressStatement,
+  buildDeleteEmailSearchEntryByEmailIdStatement,
   findAddressByIdAndOrganization,
   findAddressByValueAndOrganization,
   findAttachmentByIdsAndOrganization,
@@ -39,12 +41,32 @@ import {
   findEmailDetailByIdAndOrganization,
   findEmailRawSourceByIdAndOrganization,
   listEmailsForAddress,
+  searchEmailsForAddress,
 } from "./repo";
 import { toAttachmentResponse } from "./dto";
 
 const parseListQuery = (payload: unknown): ListEmailsQuery => {
   const parsed = listEmailsQuerySchema.safeParse(payload);
-  if (!parsed.success) return {};
+  if (!parsed.success) {
+    if (!payload || typeof payload !== "object") return {};
+
+    const candidate = payload as Record<string, unknown>;
+    return {
+      address:
+        typeof candidate.address === "string" ? candidate.address : undefined,
+      addressId:
+        typeof candidate.addressId === "string"
+          ? candidate.addressId
+          : undefined,
+      search:
+        typeof candidate.search === "string" ? candidate.search : undefined,
+      limit: typeof candidate.limit === "string" ? candidate.limit : undefined,
+      order: typeof candidate.order === "string" ? candidate.order : undefined,
+      after: typeof candidate.after === "string" ? candidate.after : undefined,
+      before:
+        typeof candidate.before === "string" ? candidate.before : undefined,
+    };
+  }
   return parsed.data;
 };
 
@@ -58,6 +80,12 @@ const parseAttachmentQuery = (payload: unknown): EmailAttachmentQuery => {
   const parsed = emailAttachmentQuerySchema.safeParse(payload);
   if (!parsed.success) return {};
   return parsed.data;
+};
+
+const normalizeEmailSearch = (value: string | undefined) => {
+  const normalized =
+    value?.slice(0, EMAIL_SEARCH_MAX_LENGTH).trim().replace(/\s+/g, " ") ?? "";
+  return normalized.length > 0 ? normalized : undefined;
 };
 
 const getRawDownloadPath = (
@@ -131,15 +159,36 @@ export const listEmails = async ({
 
   const after = parseOptionalTimestamp(query.after ?? null);
   const before = parseOptionalTimestamp(query.before ?? null);
+  const search = normalizeEmailSearch(query.search);
+  const hasUnsupportedSearchOrder = query.order === "asc";
 
-  const rows = await listEmailsForAddress({
-    db,
-    addressId: addressRow.id,
-    after,
-    before,
-    order,
-    limit,
-  });
+  if (
+    search &&
+    (after !== undefined || before !== undefined || hasUnsupportedSearchOrder)
+  ) {
+    return {
+      status: 400 as const,
+      body: {
+        error: "search does not support after, before, or order=asc parameters",
+      },
+    };
+  }
+
+  const rows = search
+    ? await searchEmailsForAddress({
+        db,
+        addressId: addressRow.id,
+        search,
+        limit,
+      })
+    : await listEmailsForAddress({
+        db,
+        addressId: addressRow.id,
+        after,
+        before,
+        order,
+        limit,
+      });
 
   const emailIds = rows.map(row => row.id);
   const attachmentCountRows = await findAttachmentCountsForEmails(
@@ -241,8 +290,15 @@ export const deleteEmail = async ({
     }
   }
 
-  await deleteEmailByIdAndAddress(db, emailRow.id, emailRow.addressId);
-  await decrementAddressEmailCount(db, emailRow.addressId);
+  await db.$client.batch([
+    buildDeleteEmailByIdAndAddressStatement(
+      db,
+      emailRow.id,
+      emailRow.addressId
+    ),
+    buildDeleteEmailSearchEntryByEmailIdStatement(db, emailRow.id),
+    buildDecrementAddressEmailCountStatement(db, emailRow.addressId),
+  ]);
 
   return {
     status: 200 as const,

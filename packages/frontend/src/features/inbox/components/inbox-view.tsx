@@ -16,12 +16,18 @@ import {
 } from "@/components/ui/command";
 import { Button } from "@/components/ui/button";
 import { DeleteIcon } from "@/components/ui/delete";
+import { Input } from "@/components/ui/input";
+import type { SearchIconHandle } from "@/components/ui/search";
+import { SearchIcon } from "@/components/ui/search";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
+import type { XIconHandle } from "@/components/ui/x";
+import { XIcon } from "@/components/ui/x";
 import { cn } from "@/lib/utils";
 import type { EmailAddress, EmailDetail, EmailListItem } from "@/lib/api";
 import { EmailPreview } from "@/features/inbox/components/email-preview";
+import { INBOX_EMAIL_SEARCH_MAX_LENGTH } from "@/features/inbox/constants";
 import { useTimezone } from "@/features/timezone/hooks/use-timezone";
 import {
   formatDateTimeInTimeZone,
@@ -37,6 +43,10 @@ type InboxViewProps = {
   onSelectAddress: (addressId: string) => void;
   emails: EmailListItem[];
   emailsLoading: boolean;
+  emailSearch: string;
+  onEmailSearchChange: (value: string) => void;
+  onClearEmailSearch?: (() => void) | undefined;
+  onEmailSearchFocusChange?: ((focused: boolean) => void) | undefined;
   selectedEmailId: string | null;
   onSelectEmail: (emailId: string) => void;
   previewEmail: EmailDetail | null;
@@ -118,12 +128,18 @@ export const InboxView = ({
   onSelectAddress,
   emails,
   emailsLoading,
+  emailSearch,
+  onEmailSearchChange,
+  onClearEmailSearch,
+  onEmailSearchFocusChange,
   selectedEmailId,
   onSelectEmail,
   previewEmail,
   previewEmailLoading,
 }: InboxViewProps) => {
   const navigate = useNavigate();
+  const searchIconRef = React.useRef<SearchIconHandle | null>(null);
+  const clearSearchIconRef = React.useRef<XIconHandle | null>(null);
   const { effectiveTimeZone } = useTimezone();
   const [addressCommandOpen, setAddressCommandOpen] = React.useState(false);
   const dropdownRef = React.useRef<HTMLDivElement>(null);
@@ -147,7 +163,7 @@ export const InboxView = ({
   }, [addressCommandOpen]);
 
   return (
-    <div className="flex min-h-0 max-h-[750px] flex-1 flex-col overflow-hidden rounded-xl ring-1 ring-foreground/10 md:flex-row">
+    <div className="flex min-h-0 max-h-[750px] flex-1 flex-col overflow-hidden rounded-none ring-1 ring-foreground/10 md:flex-row">
       {/* Left panel: Address selector + Email list */}
       <div className="flex w-full shrink-0 flex-col bg-card/40 md:w-[380px]">
         {/* Address selector */}
@@ -227,6 +243,66 @@ export const InboxView = ({
         </div>
 
         <Separator />
+        <div className="bg-card/40">
+          <div className="relative">
+            <SearchIcon
+              ref={searchIconRef}
+              aria-hidden="true"
+              className="pointer-events-none absolute top-1/2 left-[19px] -translate-y-1/2 text-muted-foreground"
+              size={14}
+            />
+            <Input
+              aria-label="Search emails"
+              className={cn(
+                "h-9.5 rounded-none border-0 bg-transparent pl-11.5 shadow-none focus-visible:bg-accent/40 focus-visible:ring-0",
+                emailSearch && "pr-8",
+                emailSearch && "bg-muted/40"
+              )}
+              disabled={!selectedAddressId}
+              onBlur={() => {
+                searchIconRef.current?.stopAnimation();
+                onEmailSearchFocusChange?.(false);
+              }}
+              onChange={event => {
+                onEmailSearchChange(event.target.value);
+              }}
+              onFocus={() => {
+                searchIconRef.current?.startAnimation();
+                onEmailSearchFocusChange?.(true);
+              }}
+              maxLength={INBOX_EMAIL_SEARCH_MAX_LENGTH}
+              placeholder={
+                selectedAddressId
+                  ? "Search this inbox..."
+                  : "Select an address to search"
+              }
+              type="search"
+              value={emailSearch}
+            />
+            {emailSearch ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-xs"
+                className="absolute top-1/2 right-1.5 -translate-y-1/2 cursor-pointer text-muted-foreground hover:text-foreground"
+                aria-label="Clear email search"
+                onClick={() => {
+                  onClearEmailSearch?.();
+                }}
+                onMouseEnter={() => {
+                  clearSearchIconRef.current?.startAnimation();
+                }}
+                onMouseLeave={() => {
+                  clearSearchIconRef.current?.stopAnimation();
+                }}
+              >
+                <XIcon ref={clearSearchIconRef} aria-hidden="true" size={14} />
+              </Button>
+            ) : null}
+          </div>
+        </div>
+
+        <Separator />
 
         {/* Email list */}
         <ScrollArea className="h-48 min-h-0 md:h-auto md:flex-1">
@@ -251,7 +327,9 @@ export const InboxView = ({
               />
               <p className="text-sm text-muted-foreground">
                 {selectedAddressId
-                  ? "No emails received yet. Send an email to this address to test things out."
+                  ? emailSearch.trim().length > 0
+                    ? "No emails match this search for the selected address."
+                    : "No emails received yet. Send an email to this address to test things out."
                   : "Select an address to view its emails."}
               </p>
               {!selectedAddressId ? (
@@ -274,6 +352,7 @@ export const InboxView = ({
                       ? "bg-primary/10 text-foreground"
                       : "hover:bg-muted/50"
                   )}
+                  data-testid="inbox-email-row"
                   key={email.id}
                   onClick={() => onSelectEmail(email.id)}
                   type="button"
@@ -297,7 +376,7 @@ export const InboxView = ({
       </div>
 
       {/* Right panel: Email preview */}
-      <div className="min-h-0 flex-1 overflow-y-auto border-t border-border/70 bg-card/20 md:border-l md:border-t-0">
+      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto border-t border-border/70 bg-card/20 md:border-l md:border-t-0">
         {previewEmailLoading ? (
           <div className="space-y-3 p-5">
             <div className="flex items-start justify-between gap-3">
@@ -321,7 +400,7 @@ export const InboxView = ({
             <Skeleton className="h-96 w-full rounded-md bg-muted/60" />
           </div>
         ) : previewEmail ? (
-          <div className="p-5">
+          <div className="flex min-h-full flex-1 flex-col p-5">
             <EmailPreview email={previewEmail} />
           </div>
         ) : (
