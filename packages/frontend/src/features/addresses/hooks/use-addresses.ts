@@ -3,10 +3,12 @@ import { useAuth } from "@/features/auth/hooks/use-auth";
 import {
   createEmailAddress,
   deleteEmailAddress,
+  getEmailAddress,
   listDomains,
   listAllEmailAddresses,
   listEmailAddresses,
   updateEmailAddress,
+  type EmailAddress,
   type EmailAddressSortBy,
   type SortDirection,
 } from "@/lib/api";
@@ -18,6 +20,7 @@ type UpdateAddressPayload = Parameters<typeof updateEmailAddress>[1];
 type UseAddressesQueryOptions = {
   page: number;
   pageSize: number;
+  search: string;
   sortBy: EmailAddressSortBy;
   sortDirection: SortDirection;
 };
@@ -25,6 +28,7 @@ type UseAddressesQueryOptions = {
 export const useAddressesQuery = ({
   page,
   pageSize,
+  search,
   sortBy,
   sortDirection,
 }: UseAddressesQueryOptions) => {
@@ -35,6 +39,7 @@ export const useAddressesQuery = ({
       activeOrganizationId,
       page,
       pageSize,
+      search,
       sortBy,
       sortDirection
     ),
@@ -42,6 +47,7 @@ export const useAddressesQuery = ({
       listEmailAddresses({
         page,
         pageSize,
+        search,
         sortBy,
         sortDirection,
         signal,
@@ -64,6 +70,27 @@ export const useDomainsQuery = () => {
       }),
     enabled: Boolean(activeOrganizationId && !isOrganizationSwitching),
     staleTime: 5 * 60 * 1000,
+  });
+};
+
+export const useAddressQuery = (
+  addressId: string | null,
+  options?: { initialData?: EmailAddress }
+) => {
+  const { activeOrganizationId, isOrganizationSwitching } = useAuth();
+
+  return useQuery({
+    queryKey: queryKeys.addressDetail(activeOrganizationId, addressId),
+    queryFn: ({ signal }) =>
+      getEmailAddress(addressId ?? "", {
+        signal,
+        organizationId: activeOrganizationId,
+      }),
+    enabled: Boolean(
+      addressId && activeOrganizationId && !isOrganizationSwitching
+    ),
+    staleTime: 20_000,
+    initialData: options?.initialData,
   });
 };
 
@@ -91,10 +118,16 @@ export const useCreateAddressMutation = () => {
       createEmailAddress(payload, {
         organizationId: activeOrganizationId,
       }),
-    onSuccess: async () => {
+    onSuccess: async createdAddress => {
       await Promise.all([
         queryClient.invalidateQueries({
           queryKey: queryKeys.addressesBase(activeOrganizationId),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.addressDetail(
+            activeOrganizationId,
+            createdAddress.id
+          ),
         }),
         queryClient.invalidateQueries({
           queryKey: [
@@ -121,10 +154,16 @@ export const useDeleteAddressMutation = () => {
       deleteEmailAddress(addressId, {
         organizationId: activeOrganizationId,
       }),
-    onSuccess: async () => {
+    onSuccess: async (deletedAddress, addressId) => {
       await Promise.all([
         queryClient.invalidateQueries({
           queryKey: queryKeys.addressesBase(activeOrganizationId),
+        }),
+        queryClient.removeQueries({
+          queryKey: queryKeys.addressDetail(
+            activeOrganizationId,
+            deletedAddress.id ?? addressId
+          ),
         }),
         queryClient.invalidateQueries({
           queryKey: queryKeys.organizationStats,
@@ -179,10 +218,16 @@ export const useUpdateAddressMutation = () => {
       updateEmailAddress(addressId, payload, {
         organizationId: activeOrganizationId,
       }),
-    onSuccess: async () => {
+    onSuccess: async (updatedAddress, { addressId }) => {
       await Promise.all([
         queryClient.invalidateQueries({
           queryKey: queryKeys.addressesBase(activeOrganizationId),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.addressDetail(
+            activeOrganizationId,
+            updatedAddress.id ?? addressId
+          ),
         }),
         queryClient.invalidateQueries({
           queryKey: queryKeys.organizationStats,
