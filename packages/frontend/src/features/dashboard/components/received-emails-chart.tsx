@@ -1,4 +1,5 @@
 import { Bar, BarChart, XAxis } from "recharts";
+import NumberFlow from "@number-flow/react";
 import { Mail01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Badge } from "@/components/ui/badge";
@@ -58,11 +59,10 @@ export const ReceivedEmailsChart = () => {
           </Badge>
         </div>
         <p className="text-2xl font-semibold tracking-tight">
-          {isLoading ? (
-            <Skeleton className="h-8 w-10 rounded-sm" />
-          ) : (
-            total.toLocaleString()
-          )}
+          <NumberFlow
+            value={isLoading ? 0 : total}
+            format={{ useGrouping: true }}
+          />
         </p>
       </CardHeader>
       <CardContent className="mt-auto pb-0.5 pt-0">

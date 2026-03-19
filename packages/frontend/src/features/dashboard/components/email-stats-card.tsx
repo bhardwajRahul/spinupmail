@@ -1,3 +1,5 @@
+import * as React from "react";
+import NumberFlow from "@number-flow/react";
 import { ChartAnalysisIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Badge } from "@/components/ui/badge";
@@ -57,30 +59,12 @@ const StatBlock = ({
 }: {
   icon: React.ComponentType<{ className?: string }>;
   label: string;
-  value: string;
+  value: React.ReactNode;
 }) => (
   <div className="flex min-w-0 flex-1 flex-col items-center gap-0.5">
     <div className="flex items-center justify-center gap-2.5">
       <Icon className="size-4 shrink-0 text-muted-foreground" />
       <span className="text-lg font-semibold tabular-nums">{value}</span>
-    </div>
-    <span className="text-[10px] text-muted-foreground">{label}</span>
-  </div>
-);
-
-const StatValueSkeleton = ({
-  icon: Icon,
-  label,
-  valueWidthClass,
-}: {
-  icon: React.ComponentType<{ className?: string }>;
-  label: string;
-  valueWidthClass: string;
-}) => (
-  <div className="flex min-w-0 flex-1 flex-col items-center gap-0.5">
-    <div className="flex items-center justify-center gap-2.5">
-      <Icon className="size-4 shrink-0 text-muted-foreground" />
-      <Skeleton className={`h-7 rounded-sm ${valueWidthClass}`} />
     </div>
     <span className="text-[10px] text-muted-foreground">{label}</span>
   </div>
@@ -92,6 +76,8 @@ export const EmailStatsCard = () => {
   const busiestInboxes = data?.busiestInboxes ?? [];
   const topDomains = data?.topDomains ?? [];
   const dormantInboxes = data?.dormantInboxes ?? [];
+  const totalEmailCount = data?.totalEmailCount ?? 0;
+  const attachmentCount = data?.attachmentCount ?? 0;
 
   return (
     <Card className="min-w-0 border-border/70 bg-card/60">
@@ -106,203 +92,107 @@ export const EmailStatsCard = () => {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-2 pb-3 pt-0">
-        {isLoading ? (
-          <>
-            <div className="flex min-h-[4rem] items-stretch px-1 py-2">
-              <StatValueSkeleton
-                icon={Mail}
-                label="Total Received"
-                valueWidthClass="w-10"
-              />
-              <Separator orientation="vertical" className="mx-2" />
-              <StatValueSkeleton
-                icon={Paperclip}
-                label="Attachments"
-                valueWidthClass="w-10"
-              />
-              <Separator orientation="vertical" className="mx-2" />
-              <StatValueSkeleton
-                icon={HardDrive}
-                label="Total size"
-                valueWidthClass="w-14"
-              />
-            </div>
-            <Separator className="my-2" />
-            <div className="space-y-2">
-              <div className="flex flex-wrap items-center gap-1.5">
-                <Inbox className="size-3.5 shrink-0 text-muted-foreground" />
-                <span className="text-xs text-muted-foreground">
-                  Busiest inboxes:
-                </span>
-                <Skeleton className="h-5 w-[4.5rem] rounded-sm" />
-                <Skeleton className="h-5 w-14 rounded-sm" />
+        <>
+          <div className="flex min-h-[4rem] items-stretch px-1 py-2">
+            <StatBlock
+              icon={Mail}
+              label="Total Received"
+              value={
+                <NumberFlow
+                  value={isLoading ? 0 : totalEmailCount}
+                  format={{ useGrouping: true }}
+                />
+              }
+            />
+            <Separator orientation="vertical" className="mx-2" />
+            <StatBlock
+              icon={Paperclip}
+              label="Attachments"
+              value={
+                <NumberFlow
+                  value={isLoading ? 0 : attachmentCount}
+                  format={{ useGrouping: true }}
+                />
+              }
+            />
+            <Separator orientation="vertical" className="mx-2" />
+            <StatBlock
+              icon={HardDrive}
+              label="Total size"
+              value={formatBytes(
+                isLoading ? 0 : (data?.attachmentSizeTotal ?? 0)
+              )}
+            />
+          </div>
+          {isLoading ? (
+            <>
+              <Separator className="my-2" />
+              <div className="space-y-2">
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <Inbox className="size-3.5 shrink-0 text-muted-foreground" />
+                  <span className="text-xs text-muted-foreground">
+                    Busiest inboxes:
+                  </span>
+                  <Skeleton className="h-5 w-[4.5rem] rounded-sm" />
+                  <Skeleton className="h-5 w-14 rounded-sm" />
+                </div>
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <Send className="size-3.5 shrink-0 text-muted-foreground" />
+                  <span className="text-xs text-muted-foreground">
+                    Top domains:
+                  </span>
+                  <Skeleton className="h-5 w-20 rounded-sm" />
+                  <Skeleton className="h-5 w-16 rounded-sm" />
+                </div>
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <Mailbox className="size-3.5 shrink-0 text-muted-foreground" />
+                  <span className="text-xs text-muted-foreground">
+                    Dormant inboxes:
+                  </span>
+                  <Skeleton className="h-5 w-14 rounded-sm" />
+                  <Skeleton className="h-5 w-12 rounded-sm" />
+                </div>
               </div>
-              <div className="flex flex-wrap items-center gap-1.5">
-                <Send className="size-3.5 shrink-0 text-muted-foreground" />
-                <span className="text-xs text-muted-foreground">
-                  Top domains:
-                </span>
-                <Skeleton className="h-5 w-20 rounded-sm" />
-                <Skeleton className="h-5 w-16 rounded-sm" />
-              </div>
-              <div className="flex flex-wrap items-center gap-1.5">
-                <Mailbox className="size-3.5 shrink-0 text-muted-foreground" />
-                <span className="text-xs text-muted-foreground">
-                  Dormant inboxes:
-                </span>
-                <Skeleton className="h-5 w-14 rounded-sm" />
-                <Skeleton className="h-5 w-12 rounded-sm" />
-              </div>
-            </div>
-          </>
-        ) : (
-          <>
-            <div className="flex min-h-[4rem] items-stretch px-1 py-2">
-              <StatBlock
-                icon={Mail}
-                label="Total Received"
-                value={(data?.totalEmailCount ?? 0).toLocaleString()}
-              />
-              <Separator orientation="vertical" className="mx-2" />
-              <StatBlock
-                icon={Paperclip}
-                label="Attachments"
-                value={(data?.attachmentCount ?? 0).toLocaleString()}
-              />
-              <Separator orientation="vertical" className="mx-2" />
-              <StatBlock
-                icon={HardDrive}
-                label="Total size"
-                value={formatBytes(data?.attachmentSizeTotal ?? 0)}
-              />
-            </div>
-            {topDomains.length > 0 ||
+            </>
+          ) : topDomains.length > 0 ||
             busiestInboxes.length > 0 ||
             dormantInboxes.length > 0 ? (
-              <>
-                <Separator className="my-2" />
-                <div className="space-y-2">
-                  {busiestInboxes.length > 0 && (
-                    <TooltipProvider delay={200}>
-                      <div className="flex flex-wrap items-center gap-1.5">
-                        <Inbox className="size-3.5 shrink-0 text-muted-foreground" />
-                        <span className="text-xs text-muted-foreground">
-                          Busiest inboxes:
-                        </span>
-                        <Tooltip key={busiestInboxes[0].address}>
-                          <TooltipTrigger
-                            render={
-                              <Badge
-                                variant="outline"
-                                className="cursor-pointer text-[10px] font-normal"
-                                render={
-                                  <Link
-                                    to={buildInboxAddressPath(
-                                      busiestInboxes[0].addressId
-                                    )}
-                                  />
-                                }
-                              />
-                            }
-                          >
-                            {getAddressLocalPart(busiestInboxes[0].address)}
-                            <span className="ml-1 text-muted-foreground">
-                              ×{busiestInboxes[0].count}
-                            </span>
-                          </TooltipTrigger>
-                          <TooltipContent side="top">
-                            {busiestInboxes[0].address}
-                          </TooltipContent>
-                        </Tooltip>
-                        {busiestInboxes.length > 1 && (
-                          <HoverCard>
-                            <HoverCardTrigger
-                              delay={200}
+            <>
+              <Separator className="my-2" />
+              <div className="space-y-2">
+                {busiestInboxes.length > 0 && (
+                  <TooltipProvider delay={200}>
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <Inbox className="size-3.5 shrink-0 text-muted-foreground" />
+                      <span className="text-xs text-muted-foreground">
+                        Busiest inboxes:
+                      </span>
+                      <Tooltip key={busiestInboxes[0].address}>
+                        <TooltipTrigger
+                          render={
+                            <Badge
+                              variant="outline"
+                              className="cursor-pointer text-[10px] font-normal"
                               render={
-                                <Badge
-                                  variant="outline"
-                                  className="cursor-pointer text-[10px] font-normal"
+                                <Link
+                                  to={buildInboxAddressPath(
+                                    busiestInboxes[0].addressId
+                                  )}
                                 />
                               }
-                            >
-                              <Inbox className="size-3" />
-                              <span className="ml-0.5">
-                                +{busiestInboxes.length - 1}
-                              </span>
-                            </HoverCardTrigger>
-                            <HoverCardContent
-                              align="start"
-                              className="w-56 p-0"
-                            >
-                              <p className="border-b px-2 py-1.5 text-xs font-medium text-muted-foreground">
-                                Other busiest inboxes
-                              </p>
-                              <ScrollArea className="max-h-48">
-                                <div className="flex flex-wrap gap-1.5 p-2">
-                                  {busiestInboxes
-                                    .slice(1)
-                                    .map(({ addressId, address, count }) => (
-                                      <Tooltip key={address}>
-                                        <TooltipTrigger
-                                          render={
-                                            <Badge
-                                              variant="outline"
-                                              className="cursor-pointer text-[10px] font-normal"
-                                              render={
-                                                <Link
-                                                  to={buildInboxAddressPath(
-                                                    addressId
-                                                  )}
-                                                />
-                                              }
-                                            />
-                                          }
-                                        >
-                                          {getAddressLocalPart(address)}
-                                          <span className="ml-1 text-muted-foreground">
-                                            ×{count}
-                                          </span>
-                                        </TooltipTrigger>
-                                        <TooltipContent side="top">
-                                          {address}
-                                        </TooltipContent>
-                                      </Tooltip>
-                                    ))}
-                                </div>
-                              </ScrollArea>
-                            </HoverCardContent>
-                          </HoverCard>
-                        )}
-                      </div>
-                    </TooltipProvider>
-                  )}
-                  {topDomains.length > 0 && (
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      <Send className="size-3.5 shrink-0 text-muted-foreground" />
-                      <span className="text-xs text-muted-foreground">
-                        Top domains:
-                      </span>
-                      <Badge
-                        variant="outline"
-                        className="text-[10px] font-normal"
-                      >
-                        {topDomains[0].domain}
-                        <span className="ml-1 text-muted-foreground">
-                          ×{topDomains[0].count}
-                        </span>
-                      </Badge>
-                      {topDomains[1] && (
-                        <Badge
-                          variant="outline"
-                          className="text-[10px] font-normal"
+                            />
+                          }
                         >
-                          {topDomains[1].domain}
+                          {getAddressLocalPart(busiestInboxes[0].address)}
                           <span className="ml-1 text-muted-foreground">
-                            ×{topDomains[1].count}
+                            ×{busiestInboxes[0].count}
                           </span>
-                        </Badge>
-                      )}
-                      {topDomains.length > 2 && (
+                        </TooltipTrigger>
+                        <TooltipContent side="top">
+                          {busiestInboxes[0].address}
+                        </TooltipContent>
+                      </Tooltip>
+                      {busiestInboxes.length > 1 && (
                         <HoverCard>
                           <HoverCardTrigger
                             delay={200}
@@ -313,30 +203,45 @@ export const EmailStatsCard = () => {
                               />
                             }
                           >
-                            <Send className="size-3" />
+                            <Inbox className="size-3" />
                             <span className="ml-0.5">
-                              +{topDomains.length - 2}
+                              +{busiestInboxes.length - 1}
                             </span>
                           </HoverCardTrigger>
                           <HoverCardContent align="start" className="w-56 p-0">
                             <p className="border-b px-2 py-1.5 text-xs font-medium text-muted-foreground">
-                              Other top domains
+                              Other busiest inboxes
                             </p>
                             <ScrollArea className="max-h-48">
                               <div className="flex flex-wrap gap-1.5 p-2">
-                                {topDomains
-                                  .slice(2)
-                                  .map(({ domain, count }) => (
-                                    <Badge
-                                      key={domain}
-                                      variant="outline"
-                                      className="text-[10px] font-normal"
-                                    >
-                                      {domain}
-                                      <span className="ml-1 text-muted-foreground">
-                                        ×{count}
-                                      </span>
-                                    </Badge>
+                                {busiestInboxes
+                                  .slice(1)
+                                  .map(({ addressId, address, count }) => (
+                                    <Tooltip key={address}>
+                                      <TooltipTrigger
+                                        render={
+                                          <Badge
+                                            variant="outline"
+                                            className="cursor-pointer text-[10px] font-normal"
+                                            render={
+                                              <Link
+                                                to={buildInboxAddressPath(
+                                                  addressId
+                                                )}
+                                              />
+                                            }
+                                          />
+                                        }
+                                      >
+                                        {getAddressLocalPart(address)}
+                                        <span className="ml-1 text-muted-foreground">
+                                          ×{count}
+                                        </span>
+                                      </TooltipTrigger>
+                                      <TooltipContent side="top">
+                                        {address}
+                                      </TooltipContent>
+                                    </Tooltip>
                                   ))}
                               </div>
                             </ScrollArea>
@@ -344,114 +249,176 @@ export const EmailStatsCard = () => {
                         </HoverCard>
                       )}
                     </div>
-                  )}
-                  {dormantInboxes.length > 0 && (
-                    <TooltipProvider delay={200}>
-                      <div className="flex flex-wrap items-center gap-1.5">
-                        <Mailbox className="size-3.5 shrink-0 text-muted-foreground" />
-                        <span className="text-xs text-muted-foreground">
-                          Dormant inboxes:
+                  </TooltipProvider>
+                )}
+                {topDomains.length > 0 && (
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <Send className="size-3.5 shrink-0 text-muted-foreground" />
+                    <span className="text-xs text-muted-foreground">
+                      Top domains:
+                    </span>
+                    <Badge
+                      variant="outline"
+                      className="text-[10px] font-normal"
+                    >
+                      {topDomains[0].domain}
+                      <span className="ml-1 text-muted-foreground">
+                        ×{topDomains[0].count}
+                      </span>
+                    </Badge>
+                    {topDomains[1] && (
+                      <Badge
+                        variant="outline"
+                        className="text-[10px] font-normal"
+                      >
+                        {topDomains[1].domain}
+                        <span className="ml-1 text-muted-foreground">
+                          ×{topDomains[1].count}
                         </span>
-                        <Tooltip key={dormantInboxes[0].address}>
-                          <TooltipTrigger
+                      </Badge>
+                    )}
+                    {topDomains.length > 2 && (
+                      <HoverCard>
+                        <HoverCardTrigger
+                          delay={200}
+                          render={
+                            <Badge
+                              variant="outline"
+                              className="cursor-pointer text-[10px] font-normal"
+                            />
+                          }
+                        >
+                          <Send className="size-3" />
+                          <span className="ml-0.5">
+                            +{topDomains.length - 2}
+                          </span>
+                        </HoverCardTrigger>
+                        <HoverCardContent align="start" className="w-56 p-0">
+                          <p className="border-b px-2 py-1.5 text-xs font-medium text-muted-foreground">
+                            Other top domains
+                          </p>
+                          <ScrollArea className="max-h-48">
+                            <div className="flex flex-wrap gap-1.5 p-2">
+                              {topDomains.slice(2).map(({ domain, count }) => (
+                                <Badge
+                                  key={domain}
+                                  variant="outline"
+                                  className="text-[10px] font-normal"
+                                >
+                                  {domain}
+                                  <span className="ml-1 text-muted-foreground">
+                                    ×{count}
+                                  </span>
+                                </Badge>
+                              ))}
+                            </div>
+                          </ScrollArea>
+                        </HoverCardContent>
+                      </HoverCard>
+                    )}
+                  </div>
+                )}
+                {dormantInboxes.length > 0 && (
+                  <TooltipProvider delay={200}>
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <Mailbox className="size-3.5 shrink-0 text-muted-foreground" />
+                      <span className="text-xs text-muted-foreground">
+                        Dormant inboxes:
+                      </span>
+                      <Tooltip key={dormantInboxes[0].address}>
+                        <TooltipTrigger
+                          render={
+                            <Badge
+                              variant="outline"
+                              className="cursor-pointer text-[10px] font-normal"
+                              render={
+                                <Link
+                                  to={buildInboxAddressPath(
+                                    dormantInboxes[0].addressId
+                                  )}
+                                />
+                              }
+                            />
+                          }
+                        >
+                          {getAddressLocalPart(dormantInboxes[0].address)}
+                        </TooltipTrigger>
+                        <TooltipContent side="top">
+                          {dormantInboxes[0].address}
+                          <span className="block text-muted-foreground">
+                            {formatDormantCreatedAt(
+                              dormantInboxes[0].createdAt,
+                              effectiveTimeZone
+                            )}
+                          </span>
+                        </TooltipContent>
+                      </Tooltip>
+                      {dormantInboxes.length > 1 && (
+                        <HoverCard>
+                          <HoverCardTrigger
+                            delay={200}
                             render={
                               <Badge
                                 variant="outline"
                                 className="cursor-pointer text-[10px] font-normal"
-                                render={
-                                  <Link
-                                    to={buildInboxAddressPath(
-                                      dormantInboxes[0].addressId
-                                    )}
-                                  />
-                                }
                               />
                             }
                           >
-                            {getAddressLocalPart(dormantInboxes[0].address)}
-                          </TooltipTrigger>
-                          <TooltipContent side="top">
-                            {dormantInboxes[0].address}
-                            <span className="block text-muted-foreground">
-                              {formatDormantCreatedAt(
-                                dormantInboxes[0].createdAt,
-                                effectiveTimeZone
-                              )}
+                            <Mailbox className="size-3" />
+                            <span className="ml-0.5">
+                              +{dormantInboxes.length - 1}
                             </span>
-                          </TooltipContent>
-                        </Tooltip>
-                        {dormantInboxes.length > 1 && (
-                          <HoverCard>
-                            <HoverCardTrigger
-                              delay={200}
-                              render={
-                                <Badge
-                                  variant="outline"
-                                  className="cursor-pointer text-[10px] font-normal"
-                                />
-                              }
-                            >
-                              <Mailbox className="size-3" />
-                              <span className="ml-0.5">
-                                +{dormantInboxes.length - 1}
-                              </span>
-                            </HoverCardTrigger>
-                            <HoverCardContent
-                              align="start"
-                              className="w-56 p-0"
-                            >
-                              <p className="border-b px-2 py-1.5 text-xs font-medium text-muted-foreground">
-                                Other dormant inboxes
-                              </p>
-                              <ScrollArea className="max-h-48">
-                                <div className="flex flex-wrap gap-1.5 p-2">
-                                  {dormantInboxes
-                                    .slice(1)
-                                    .map(
-                                      ({ addressId, address, createdAt }) => (
-                                        <Tooltip key={address}>
-                                          <TooltipTrigger
+                          </HoverCardTrigger>
+                          <HoverCardContent align="start" className="w-56 p-0">
+                            <p className="border-b px-2 py-1.5 text-xs font-medium text-muted-foreground">
+                              Other dormant inboxes
+                            </p>
+                            <ScrollArea className="max-h-48">
+                              <div className="flex flex-wrap gap-1.5 p-2">
+                                {dormantInboxes
+                                  .slice(1)
+                                  .map(({ addressId, address, createdAt }) => (
+                                    <Tooltip key={address}>
+                                      <TooltipTrigger
+                                        render={
+                                          <Badge
+                                            variant="outline"
+                                            className="cursor-pointer text-[10px] font-normal"
                                             render={
-                                              <Badge
-                                                variant="outline"
-                                                className="cursor-pointer text-[10px] font-normal"
-                                                render={
-                                                  <Link
-                                                    to={buildInboxAddressPath(
-                                                      addressId
-                                                    )}
-                                                  />
-                                                }
+                                              <Link
+                                                to={buildInboxAddressPath(
+                                                  addressId
+                                                )}
                                               />
                                             }
-                                          >
-                                            {getAddressLocalPart(address)}
-                                          </TooltipTrigger>
-                                          <TooltipContent side="top">
-                                            {address}
-                                            <span className="block text-muted-foreground">
-                                              {formatDormantCreatedAt(
-                                                createdAt,
-                                                effectiveTimeZone
-                                              )}
-                                            </span>
-                                          </TooltipContent>
-                                        </Tooltip>
-                                      )
-                                    )}
-                                </div>
-                              </ScrollArea>
-                            </HoverCardContent>
-                          </HoverCard>
-                        )}
-                      </div>
-                    </TooltipProvider>
-                  )}
-                </div>
-              </>
-            ) : null}
-          </>
-        )}
+                                          />
+                                        }
+                                      >
+                                        {getAddressLocalPart(address)}
+                                      </TooltipTrigger>
+                                      <TooltipContent side="top">
+                                        {address}
+                                        <span className="block text-muted-foreground">
+                                          {formatDormantCreatedAt(
+                                            createdAt,
+                                            effectiveTimeZone
+                                          )}
+                                        </span>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  ))}
+                              </div>
+                            </ScrollArea>
+                          </HoverCardContent>
+                        </HoverCard>
+                      )}
+                    </div>
+                  </TooltipProvider>
+                )}
+              </div>
+            </>
+          ) : null}
+        </>
       </CardContent>
     </Card>
   );

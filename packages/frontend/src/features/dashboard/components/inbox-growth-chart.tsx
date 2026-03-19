@@ -1,5 +1,6 @@
 import * as React from "react";
 import { Area, AreaChart, XAxis } from "recharts";
+import NumberFlow from "@number-flow/react";
 import { BorderFullIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Badge } from "@/components/ui/badge";
@@ -102,11 +103,10 @@ export const InboxGrowthChart = () => {
           </Badge>
         </div>
         <p className="text-2xl font-semibold tracking-tight">
-          {isLoading ? (
-            <Skeleton className="h-8 w-10 rounded-sm" />
-          ) : (
-            totalInboxes.toLocaleString()
-          )}
+          <NumberFlow
+            value={isLoading ? 0 : totalInboxes}
+            format={{ useGrouping: true }}
+          />
         </p>
       </CardHeader>
       <CardContent className="mt-auto pb-0.5 pt-0">

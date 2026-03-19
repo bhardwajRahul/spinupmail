@@ -1,4 +1,5 @@
 import * as React from "react";
+import NumberFlow from "@number-flow/react";
 import {
   ArrowRight01Icon,
   Mail01Icon,
@@ -114,10 +115,14 @@ export const OrganizationSwitcher = () => {
   const hasPendingInvitations = pendingInvitationCount > 0;
   const isPendingInvitationsLoading = userInvitationsQuery.isLoading;
   const hasLoadedStats = organizationStatsQuery.data !== undefined;
-  const formatCountValue = (value: number | undefined) => {
-    if (typeof value === "number") return value.toLocaleString();
-    return hasLoadedStats ? "0" : "--";
+  const memberCount = activeOrganizationStats?.memberCount ?? 0;
+  const addressCount = activeOrganizationStats?.addressCount ?? 0;
+  const emailCount = activeOrganizationStats?.emailCount ?? 0;
+  const renderCountValue = (value: number) => {
+    const displayValue = hasLoadedStats ? value : 0;
+    return <NumberFlow value={displayValue} format={{ useGrouping: true }} />;
   };
+
   const formatCountLabel = (
     value: number | undefined,
     singular: string,
@@ -302,11 +307,7 @@ export const OrganizationSwitcher = () => {
                           strokeWidth={2}
                           className="size-3!"
                         />
-                        <span>
-                          {formatCountValue(
-                            activeOrganizationStats?.memberCount
-                          )}
-                        </span>
+                        <span>{renderCountValue(memberCount)}</span>
                       </TooltipTrigger>
                       <TooltipContent side="top">
                         {formatCountLabel(
@@ -327,11 +328,7 @@ export const OrganizationSwitcher = () => {
                           strokeWidth={2}
                           className="size-3.5!"
                         />
-                        <span>
-                          {formatCountValue(
-                            activeOrganizationStats?.addressCount
-                          )}
-                        </span>
+                        <span>{renderCountValue(addressCount)}</span>
                       </TooltipTrigger>
                       <TooltipContent side="top">
                         {formatCountLabel(
@@ -352,11 +349,7 @@ export const OrganizationSwitcher = () => {
                           strokeWidth={2}
                           className="size-3!"
                         />
-                        <span>
-                          {formatCountValue(
-                            activeOrganizationStats?.emailCount
-                          )}
-                        </span>
+                        <span>{renderCountValue(emailCount)}</span>
                       </TooltipTrigger>
                       <TooltipContent side="top">
                         {formatCountLabel(
