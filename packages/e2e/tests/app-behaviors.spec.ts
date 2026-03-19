@@ -17,6 +17,20 @@ const navButton = (page: Page, text: string) =>
 const cardTitle = (page: Page, text: string) =>
   page.locator('[data-slot="card-title"]').filter({ hasText: text }).first();
 
+const openCommandMenu = async (page: Page) => {
+  await page.getByRole("button", { name: "Open command menu" }).click();
+
+  const dialog = page.getByRole("dialog", { name: "Command menu" });
+  const searchInput = dialog.getByPlaceholder(
+    "Search pages, addresses, settings, and actions..."
+  );
+
+  await expect(dialog).toBeVisible();
+  await expect(searchInput).toBeVisible();
+
+  return { dialog, searchInput };
+};
+
 test.describe("spinupmail app behaviors", () => {
   test.skip(!runE2E, "Set RUN_E2E=1 to run browser smoke tests.");
 
@@ -52,6 +66,94 @@ test.describe("spinupmail app behaviors", () => {
     await navButton(page, "Overview").click();
     await expect(page).toHaveURL(`${e2eFrontendBaseUrl}/`);
     await expect(cardTitle(page, "Statistics")).toBeVisible();
+  });
+
+  test("opens the password settings section from the navbar command menu", async ({
+    authSeed,
+    page,
+  }) => {
+    await signInWithOrganization(authSeed, {
+      email: uniqueEmail("command-password"),
+      name: "Command Password User",
+      organizationName: "Command Password Org",
+    });
+
+    await page.goto("/");
+
+    const { dialog, searchInput } = await openCommandMenu(page);
+    await searchInput.fill("password");
+
+    const passwordOption = dialog
+      .locator('[data-slot="command-item"]')
+      .filter({ hasText: "Change Password" })
+      .first();
+
+    await expect(passwordOption).toBeVisible();
+    await passwordOption.click();
+
+    await expect(page).toHaveURL(`${e2eFrontendBaseUrl}/settings#password`);
+    await expect(cardTitle(page, "Password")).toBeVisible();
+    await expect(dialog).toBeHidden();
+  });
+
+  test("searches an address from command menu and opens its seeded email", async ({
+    authSeed,
+    page,
+  }) => {
+    const session = await signInWithOrganization(authSeed, {
+      email: uniqueEmail("command-address-search"),
+      name: "Command Address User",
+      organizationName: "Command Address Org",
+    });
+
+    const organizationId = session.organizationId;
+    if (!organizationId) {
+      throw new Error(
+        "Expected command menu seeded session to include an organization."
+      );
+    }
+
+    const address = await authSeed.createAddress({
+      organizationId,
+      userId: session.userId,
+      localPart: `command-search-${Date.now()}`,
+      tag: "command-menu-address",
+    });
+
+    const subject = "Command menu seeded inbox email";
+    const bodyText = "Seeded body text for command menu address navigation.";
+    const sender = "Command Menu Sender <sender@example.com>";
+
+    const seededEmail = await authSeed.createInboxEmail({
+      organizationId,
+      addressId: address.id,
+      from: "sender@example.com",
+      sender,
+      subject,
+      bodyText,
+    });
+
+    await page.goto("/");
+
+    const { dialog, searchInput } = await openCommandMenu(page);
+    await searchInput.fill(address.localPart);
+
+    const addressOption = dialog
+      .locator('[data-slot="command-item"]')
+      .filter({ hasText: address.address })
+      .first();
+
+    await expect(addressOption).toBeVisible();
+    await expect(addressOption).toContainText("1");
+
+    await addressOption.click();
+
+    await expect(page).toHaveURL(
+      new RegExp(`/inbox/${address.id}/${seededEmail.id}$`)
+    );
+    await expect(page.getByText(subject).first()).toBeVisible();
+    await expect(page.getByText(`Sender: ${sender}`)).toBeVisible();
+    await expect(page.locator("textarea").first()).toHaveValue(bodyText);
   });
 
   test("creates an address from the addresses page", async ({

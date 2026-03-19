@@ -79,7 +79,7 @@ test.describe("recent address activity", () => {
 
     const card = recentActivityCard(page);
     const rows = recentActivityRows(card);
-    const searchInput = card.getByPlaceholder("Search by address...");
+    const searchInput = card.getByPlaceholder("Search by address…");
 
     await expect(card).toBeVisible();
     await expect(rows).toHaveCount(10);
