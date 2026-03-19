@@ -1,6 +1,7 @@
 import * as React from "react";
 import {
   Calendar03Icon,
+  Calendar05Icon,
   Clock03Icon,
   Tick02Icon,
 } from "@hugeicons/core-free-icons";
@@ -760,10 +761,17 @@ const RecentAddressActivityCardContent = () => {
   );
 
   return (
-    <Card className="border-border/70 bg-card/60">
+    <Card className="border-border/70 bg-card/60 rounded-none">
       <CardHeader className="border-b border-border/70">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <CardTitle className="text-[15px]">Recent Address Activity</CardTitle>
+          <CardTitle className="flex items-center gap-2 text-[15px]">
+            <HugeiconsIcon
+              icon={Calendar05Icon}
+              className="size-4 shrink-0 text-muted-foreground"
+              strokeWidth={2}
+            />
+            <span>Recent Address Activity</span>
+          </CardTitle>
           <div className="relative w-52 sm:ml-auto sm:max-w-xs">
             <SearchIcon
               ref={searchIconRef}
@@ -788,7 +796,7 @@ const RecentAddressActivityCardContent = () => {
                 searchInputValue &&
                   "border-primary/50 bg-muted/40 ring-1 ring-primary/25"
               )}
-              placeholder="Search by address..."
+              placeholder="Search by address…"
             />
             {searchInputValue ? (
               <Button

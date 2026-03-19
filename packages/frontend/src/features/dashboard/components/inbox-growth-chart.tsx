@@ -1,5 +1,7 @@
 import * as React from "react";
 import { Area, AreaChart, XAxis } from "recharts";
+import { BorderFullIcon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -81,11 +83,16 @@ export const InboxGrowthChart = () => {
   const totalInboxes = addresses?.length ?? 0;
 
   return (
-    <Card className="flex min-w-0 flex-col border-border/70 bg-card/60 gap-0">
+    <Card className="flex min-w-0 flex-col border-border/70 bg-card/60 gap-0 rounded-none">
       <CardHeader className="space-y-0.5 pb-1 pt-3">
         <div className="flex items-start justify-between">
-          <CardTitle className="text-xs font-medium text-muted-foreground">
-            Total Addresses
+          <CardTitle className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+            <HugeiconsIcon
+              icon={BorderFullIcon}
+              className="size-3 shrink-0"
+              strokeWidth={2}
+            />
+            <span>Total Addresses</span>
           </CardTitle>
           <Badge
             variant="outline"

@@ -1,3 +1,5 @@
+import { ChartAnalysisIcon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -92,10 +94,15 @@ export const EmailStatsCard = () => {
   const dormantInboxes = data?.dormantInboxes ?? [];
 
   return (
-    <Card className="min-w-0 border-border/70 bg-card/60">
+    <Card className="min-w-0 border-border/70 bg-card/60 rounded-none">
       <CardHeader className="space-y-0 pb-1 pt-3">
-        <CardTitle className="text-xs font-medium text-muted-foreground">
-          Statistics
+        <CardTitle className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+          <HugeiconsIcon
+            icon={ChartAnalysisIcon}
+            className="size-3 shrink-0"
+            strokeWidth={2}
+          />
+          <span>Statistics</span>
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-2 pb-3 pt-0">
@@ -104,7 +111,7 @@ export const EmailStatsCard = () => {
             <div className="flex min-h-[4rem] items-stretch px-1 py-2">
               <StatValueSkeleton
                 icon={Mail}
-                label="Received"
+                label="Total Received"
                 valueWidthClass="w-10"
               />
               <Separator orientation="vertical" className="mx-2" />
@@ -129,7 +136,6 @@ export const EmailStatsCard = () => {
                 </span>
                 <Skeleton className="h-5 w-[4.5rem] rounded-sm" />
                 <Skeleton className="h-5 w-14 rounded-sm" />
-                <Skeleton className="h-5 w-16 rounded-sm" />
               </div>
               <div className="flex flex-wrap items-center gap-1.5">
                 <Send className="size-3.5 shrink-0 text-muted-foreground" />
@@ -154,7 +160,7 @@ export const EmailStatsCard = () => {
             <div className="flex min-h-[4rem] items-stretch px-1 py-2">
               <StatBlock
                 icon={Mail}
-                label="Received"
+                label="Total Received"
                 value={(data?.totalEmailCount ?? 0).toLocaleString()}
               />
               <Separator orientation="vertical" className="mx-2" />

@@ -1,4 +1,6 @@
 import { Bar, BarChart, XAxis } from "recharts";
+import { Mail01Icon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -37,11 +39,16 @@ export const ReceivedEmailsChart = () => {
   const total = daily?.reduce((sum, d) => sum + d.count, 0) ?? 0;
 
   return (
-    <Card className="flex min-w-0 flex-col border-border/70 bg-card/60 gap-0">
+    <Card className="flex min-w-0 flex-col border-border/70 bg-card/60 gap-0 rounded-none">
       <CardHeader className="space-y-0.5 pb-2 pt-3">
         <div className="flex items-start justify-between">
-          <CardTitle className="text-xs font-medium text-muted-foreground">
-            Received Emails
+          <CardTitle className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+            <HugeiconsIcon
+              icon={Mail01Icon}
+              className="size-3 shrink-0"
+              strokeWidth={2}
+            />
+            <span>Received Emails</span>
           </CardTitle>
           <Badge
             variant="outline"
