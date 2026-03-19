@@ -43,7 +43,7 @@ test.describe("spinupmail app behaviors", () => {
 
     await navButton(page, "Settings").click();
     await expect(page).toHaveURL(`${e2eFrontendBaseUrl}/settings`);
-    await expect(page.getByLabel("Name")).toBeVisible();
+    await expect(page.getByLabel("Name", { exact: true })).toBeVisible();
 
     await navButton(page, "Organization").click();
     await expect(page).toHaveURL(`${e2eFrontendBaseUrl}/organization/settings`);
@@ -67,7 +67,7 @@ test.describe("spinupmail app behaviors", () => {
     const localPart = `e2e-address-${Date.now()}`;
 
     await page.goto("/addresses");
-    await page.getByRole("textbox", { name: "Address prefix" }).fill(localPart);
+    await page.getByRole("textbox", { name: "Username" }).fill(localPart);
     await page.getByRole("combobox", { name: "Domain" }).click();
     await page.getByRole("option").first().click();
     await page.getByRole("checkbox").first().click();
@@ -75,9 +75,11 @@ test.describe("spinupmail app behaviors", () => {
       .getByRole("button", { name: "Create address", exact: true })
       .click();
 
+    await expect(page.getByText("Address created.")).toBeVisible();
+
     await expect(
       page.getByRole("link", { name: new RegExp(localPart, "i") }).first()
-    ).toBeVisible();
+    ).toBeVisible({ timeout: 30_000 });
   });
 
   test("shows seeded inbox email content", async ({ authSeed, page }) => {
@@ -288,12 +290,14 @@ test.describe("spinupmail app behaviors", () => {
     const updatedName = "Updated Settings User";
 
     await page.goto("/settings");
-    await page.getByLabel("Name").fill(updatedName);
+    await page.getByLabel("Name", { exact: true }).fill(updatedName);
     await page.getByRole("button", { name: "Save changes" }).click();
 
     await expect(page.getByText("Profile saved.")).toBeVisible();
     await page.reload();
-    await expect(page.getByLabel("Name")).toHaveValue(updatedName);
+    await expect(page.getByLabel("Name", { exact: true })).toHaveValue(
+      updatedName
+    );
   });
 
   test("shows organization settings as view-only for non-admin members", async ({

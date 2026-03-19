@@ -33,7 +33,7 @@ test.describe("spinupmail auth", () => {
     await page.getByRole("button", { name: "Sign in", exact: true }).click();
 
     await expect(page).toHaveURL(`${e2eFrontendBaseUrl}/settings`);
-    await expect(page.getByLabel("Name")).toBeVisible();
+    await expect(page.getByLabel("Name", { exact: true })).toBeVisible();
   });
 
   test("keeps users on sign-in when credentials are invalid", async ({

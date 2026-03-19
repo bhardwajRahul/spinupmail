@@ -35,6 +35,8 @@ test.describe("spinupmail turnstile", () => {
     await signInButton.click();
 
     await expect(page).toHaveURL(`${e2eFrontendBaseUrl}/settings`);
-    await expect(page.getByLabel("Name")).toHaveValue("Turnstile Login User");
+    await expect(page.getByLabel("Name", { exact: true })).toHaveValue(
+      "Turnstile Login User"
+    );
   });
 });

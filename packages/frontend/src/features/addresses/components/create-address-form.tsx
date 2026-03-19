@@ -1,5 +1,10 @@
 import { useForm } from "@tanstack/react-form";
-import { ShuffleIcon } from "@hugeicons/core-free-icons";
+import {
+  AddSquareIcon,
+  Cancel01Icon,
+  Delete02Icon,
+  ShuffleIcon,
+} from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { z } from "zod";
 import { Link } from "react-router";
@@ -22,8 +27,8 @@ import {
   InputGroupButton,
   InputGroupInput,
 } from "@/components/ui/input-group";
-import { PlusIcon, type PlusIconHandle } from "@/components/ui/plus";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { SendIcon, type SendIconHandle } from "@/components/ui/send";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Select,
@@ -125,16 +130,16 @@ const createAddressSchema = (availableDomains: string[]) =>
     localPart: z
       .string()
       .trim()
-      .min(1, "Address prefix is required")
+      .min(1, "Username is required")
       .max(ADDRESS_LOCAL_PART_MAX_LENGTH, {
-        message: `Address prefix must be ${ADDRESS_LOCAL_PART_MAX_LENGTH} characters or fewer`,
+        message: `Username must be ${ADDRESS_LOCAL_PART_MAX_LENGTH} characters or fewer`,
       })
       .refine(value => addressPartRegex.test(value), {
         message:
-          "Address prefix can contain letters, numbers, dot, underscore, plus, and dash",
+          "Username can contain letters, numbers, dot, underscore, plus, and dash",
       })
       .refine(value => !hasReservedLocalPartKeyword(value), {
-        message: "This address prefix is reserved and cannot be used",
+        message: "This username is reserved and cannot be used",
       }),
     ttlMinutes: z.union([
       z
@@ -192,7 +197,7 @@ export const CreateAddressForm = ({
   isDomainsLoading = false,
 }: CreateAddressFormProps) => {
   const createMutation = useCreateAddressMutation();
-  const plusIconRef = useRef<PlusIconHandle>(null);
+  const sendIconRef = useRef<SendIconHandle>(null);
   const availableDomains = useMemo(() => uniqueDomains(domains), [domains]);
   const copyCreatedAddress = async (address: string) => {
     try {
@@ -268,9 +273,16 @@ export const CreateAddressForm = ({
   });
 
   return (
-    <Card className="border-border/70 bg-card/60">
+    <Card className="border-border/70 bg-card/60 rounded-none">
       <CardHeader className="space-y-1 border-b border-border/70 pb-4">
-        <CardTitle className="text-[15px]">Create Email Address</CardTitle>
+        <CardTitle className="flex items-center gap-2 text-[15px]">
+          <HugeiconsIcon
+            icon={AddSquareIcon}
+            strokeWidth={2}
+            className="size-4 text-muted-foreground"
+          />
+          Create Email Address
+        </CardTitle>
       </CardHeader>
       <CardContent>
         <form
@@ -283,7 +295,7 @@ export const CreateAddressForm = ({
           }}
         >
           <FieldGroup>
-            <div className="grid gap-4 xl:grid-cols-[minmax(0,50%)_minmax(0,50%)]">
+            <div className="grid gap-4 xl:grid-cols-[minmax(0,55%)_minmax(0,45%)]">
               <div className="space-y-4">
                 <div className="grid gap-3 md:grid-cols-[minmax(0,1.15fr)_auto_minmax(0,0.85fr)] md:items-start">
                   <form.Field
@@ -295,7 +307,7 @@ export const CreateAddressForm = ({
                       return (
                         <Field data-invalid={isInvalid}>
                           <FieldLabel htmlFor="address-local-part">
-                            Address prefix
+                            Username
                           </FieldLabel>
                           <InputGroup>
                             <InputGroupInput
@@ -315,8 +327,8 @@ export const CreateAddressForm = ({
                                 variant="outline"
                                 size="xs"
                                 className="cursor-pointer border-none bg-transparent! uppercase tracking-[0.08em]"
-                                aria-label="Generate random address prefix"
-                                title="Generate random address prefix"
+                                aria-label="Generate random username"
+                                title="Generate random username"
                                 onClick={() =>
                                   field.handleChange(
                                     generateRandomLocalPart(field.state.value)
@@ -507,7 +519,7 @@ export const CreateAddressForm = ({
 
                     return (
                       <Field data-invalid={isInvalid}>
-                        <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div className="space-y-3">
                           <label className="flex min-w-0 flex-1 items-center gap-2 text-sm text-muted-foreground">
                             <Checkbox
                               checked={field.state.value}
@@ -527,7 +539,7 @@ export const CreateAddressForm = ({
                                 target="_blank"
                                 to="/terms"
                               >
-                                Terms
+                                Terms of Service
                               </Link>{" "}
                               and{" "}
                               <Link
@@ -542,17 +554,18 @@ export const CreateAddressForm = ({
                           <Button
                             disabled={createMutation.isPending}
                             type="submit"
-                            className="w-fit cursor-pointer self-center"
+                            className="w-fit cursor-pointer mt-px"
                             onMouseEnter={() => {
-                              plusIconRef.current?.startAnimation();
+                              sendIconRef.current?.startAnimation();
                             }}
                             onMouseLeave={() => {
-                              plusIconRef.current?.stopAnimation();
+                              sendIconRef.current?.stopAnimation();
                             }}
                           >
-                            <PlusIcon
-                              ref={plusIconRef}
+                            <SendIcon
+                              ref={sendIconRef}
                               size={16}
+                              className="shrink-0 mt-px"
                               aria-hidden="true"
                             />
                             {createMutation.isPending
@@ -579,18 +592,15 @@ export const CreateAddressForm = ({
                 {isLimitEnabled => (
                   <div
                     className={cn(
-                      "self-start rounded-lg border p-3",
+                      "self-start rounded-lg border p-4",
                       isLimitEnabled
                         ? "border-border bg-muted/35"
                         : "border-border/70 bg-muted/20"
                     )}
                   >
                     <div className="flex flex-wrap items-center justify-between gap-2">
-                      <div className="space-y-0.5">
-                        <p className="text-sm font-medium">Inbox limit</p>
-                        <p className="text-[11px] text-muted-foreground">
-                          Empty = unlimited.
-                        </p>
+                      <div className="space-y-1">
+                        <p className="text-sm font-medium">Inbox Limits</p>
                       </div>
                       <span
                         className={cn(
@@ -600,11 +610,17 @@ export const CreateAddressForm = ({
                             : "border-border/80 text-muted-foreground"
                         )}
                       >
-                        {isLimitEnabled ? "Enabled" : "Unlimited"}
+                        {isLimitEnabled ? "Enabled" : "Optional"}
                       </span>
                     </div>
 
-                    <div className="mt-3 grid gap-2 md:grid-cols-[minmax(0,12rem)_minmax(0,1fr)] md:items-start">
+                    <p className="mt-2 text-[11px] text-muted-foreground">
+                      {isLimitEnabled
+                        ? "When the limit is reached, choose how this address should behave."
+                        : "Leave max emails empty to keep this inbox unlimited."}
+                    </p>
+
+                    <div className="mt-3 space-y-3">
                       <form.Field
                         name="maxReceivedEmailCount"
                         children={field => {
@@ -615,7 +631,7 @@ export const CreateAddressForm = ({
                           return (
                             <Field data-invalid={isInvalid}>
                               <FieldLabel htmlFor="address-max-received-email-count">
-                                Max emails
+                                Max stored emails
                               </FieldLabel>
                               <Input
                                 id="address-max-received-email-count"
@@ -632,7 +648,7 @@ export const CreateAddressForm = ({
                                     value === "" ? undefined : Number(value)
                                   );
                                 }}
-                                placeholder="Unlimited"
+                                placeholder="e.g. 500"
                                 className="h-9"
                                 aria-invalid={isInvalid}
                               />
@@ -657,7 +673,7 @@ export const CreateAddressForm = ({
 
                           return (
                             <Field data-invalid={isInvalid}>
-                              <FieldLabel>On limit</FieldLabel>
+                              <FieldLabel>When limit is reached</FieldLabel>
                               <RadioGroup
                                 value={field.state.value}
                                 disabled={!isLimitEnabled}
@@ -685,9 +701,16 @@ export const CreateAddressForm = ({
                                     id="address-max-received-action-clean-all"
                                     value="cleanAll"
                                   />
-                                  <span className="font-medium">
-                                    Delete all
+                                  <span className="flex flex-col leading-tight">
+                                    <span className="font-medium">
+                                      Delete all
+                                    </span>
                                   </span>
+                                  <HugeiconsIcon
+                                    icon={Delete02Icon}
+                                    strokeWidth={2}
+                                    className="ml-auto size-3.5 shrink-0 text-muted-foreground"
+                                  />
                                 </label>
                                 <label
                                   htmlFor="address-max-received-action-reject-new"
@@ -702,9 +725,16 @@ export const CreateAddressForm = ({
                                     id="address-max-received-action-reject-new"
                                     value="rejectNew"
                                   />
-                                  <span className="font-medium">
-                                    Reject new
+                                  <span className="flex flex-col leading-tight">
+                                    <span className="font-medium">
+                                      Reject new
+                                    </span>
                                   </span>
+                                  <HugeiconsIcon
+                                    icon={Cancel01Icon}
+                                    strokeWidth={2}
+                                    className="ml-auto size-3.5 shrink-0 text-muted-foreground"
+                                  />
                                 </label>
                               </RadioGroup>
                               {isInvalid ? (

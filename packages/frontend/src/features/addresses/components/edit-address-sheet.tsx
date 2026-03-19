@@ -62,16 +62,16 @@ const editAddressSchema = (availableDomains: string[]) =>
     localPart: z
       .string()
       .trim()
-      .min(1, "Address prefix is required")
+      .min(1, "Username is required")
       .max(ADDRESS_LOCAL_PART_MAX_LENGTH, {
-        message: `Address prefix must be ${ADDRESS_LOCAL_PART_MAX_LENGTH} characters or fewer`,
+        message: `Username must be ${ADDRESS_LOCAL_PART_MAX_LENGTH} characters or fewer`,
       })
       .refine(value => addressPartRegex.test(value), {
         message:
-          "Address prefix can contain letters, numbers, dot, underscore, plus, and dash",
+          "Username can contain letters, numbers, dot, underscore, plus, and dash",
       })
       .refine(value => !hasReservedLocalPartKeyword(value), {
-        message: "This address prefix is reserved and cannot be used",
+        message: "This username is reserved and cannot be used",
       }),
     domain: z
       .string()
@@ -217,7 +217,7 @@ const EditAddressSheetForm = ({
               return (
                 <Field data-invalid={isInvalid}>
                   <FieldLabel htmlFor="edit-address-local-part">
-                    Address prefix
+                    Username
                   </FieldLabel>
                   <Input
                     id="edit-address-local-part"

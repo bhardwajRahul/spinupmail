@@ -64,9 +64,7 @@ test.describe("spinupmail protected pages", () => {
 
     await expect(page).toHaveURL(`${e2eFrontendBaseUrl}/addresses`);
     await expect(cardTitle(page, "Create Email Address")).toBeVisible();
-    await expect(
-      page.getByRole("textbox", { name: "Address prefix" })
-    ).toBeVisible();
+    await expect(page.getByRole("textbox", { name: "Username" })).toBeVisible();
     await expect(cardTitle(page, "Addresses")).toBeVisible();
     await expect(page.getByText("No addresses created yet.")).toBeVisible();
   });
@@ -81,7 +79,7 @@ test.describe("spinupmail protected pages", () => {
     await page.goto("/settings");
 
     await expect(page).toHaveURL(`${e2eFrontendBaseUrl}/settings`);
-    await expect(page.getByLabel("Name")).toBeVisible();
+    await expect(page.getByLabel("Name", { exact: true })).toBeVisible();
     await expect(cardTitle(page, "Password")).toBeVisible();
     await expect(cardTitle(page, "Two-Factor Authentication")).toBeVisible();
     await expect(cardTitle(page, "API Keys")).toBeVisible();

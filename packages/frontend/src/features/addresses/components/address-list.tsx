@@ -1,6 +1,8 @@
 import * as React from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
+  AddressBookIcon,
+  ArrowUpDownIcon,
   Calendar03Icon,
   Clock03Icon,
   Copy01Icon,
@@ -296,7 +298,6 @@ const AddressLinkCell = ({
   addressId: string;
 }) => {
   const [didCopyAddress, setDidCopyAddress] = React.useState(false);
-  const [isAtLeastSm, setIsAtLeastSm] = React.useState(false);
   const copyResetTimeoutRef = React.useRef<number | null>(null);
   const copyIconRef = React.useRef<CopyIconHandle | null>(null);
   const openInboxIconRef = React.useRef<ChevronRightIconHandle | null>(null);
@@ -306,33 +307,6 @@ const AddressLinkCell = ({
       if (copyResetTimeoutRef.current !== null) {
         window.clearTimeout(copyResetTimeoutRef.current);
       }
-    };
-  }, []);
-
-  React.useEffect(() => {
-    if (typeof window === "undefined" || !window.matchMedia) {
-      return;
-    }
-
-    const mediaQuery = window.matchMedia("(min-width: 640px)");
-    const syncBreakpoint = () => {
-      setIsAtLeastSm(mediaQuery.matches);
-    };
-
-    syncBreakpoint();
-
-    if (typeof mediaQuery.addEventListener === "function") {
-      mediaQuery.addEventListener("change", syncBreakpoint);
-
-      return () => {
-        mediaQuery.removeEventListener("change", syncBreakpoint);
-      };
-    }
-
-    mediaQuery.addListener(syncBreakpoint);
-
-    return () => {
-      mediaQuery.removeListener(syncBreakpoint);
     };
   }, []);
 
@@ -397,10 +371,10 @@ const AddressLinkCell = ({
             {address}
           </Link>
           <Link
-            aria-hidden={!isAtLeastSm}
-            className="mt-px pointer-events-none absolute top-1/2 left-[calc(100%+0.5rem)] inline-flex -translate-y-1/2 items-center gap-1 whitespace-nowrap rounded-sm bg-card/95 px-1 py-0.5 text-[11px] text-muted-foreground opacity-0 transition-all duration-150 hover:text-foreground sm:translate-x-1 sm:group-hover/row:pointer-events-auto sm:group-hover/row:translate-x-0 sm:group-hover/row:opacity-100 sm:focus-visible:pointer-events-auto sm:focus-visible:translate-x-0 sm:focus-visible:opacity-100"
-            tabIndex={isAtLeastSm ? undefined : -1}
+            className="mt-px pointer-events-none absolute top-1/2 left-[calc(100%+0.5rem)] hidden -translate-y-1/2 items-center gap-1 whitespace-nowrap rounded-sm bg-card/95 px-1 py-0.5 text-[11px] text-muted-foreground opacity-0 transition-all duration-150 hover:text-foreground lg:inline-flex sm:translate-x-1 sm:group-hover/row:pointer-events-auto sm:group-hover/row:translate-x-0 sm:group-hover/row:opacity-100 sm:focus-visible:pointer-events-auto sm:focus-visible:translate-x-0 sm:focus-visible:opacity-100"
             to={`/inbox/${encodeURIComponent(addressId)}`}
+            tabIndex={-1}
+            aria-hidden="true"
             onMouseEnter={() => {
               openInboxIconRef.current?.startAnimation();
             }}
@@ -671,7 +645,17 @@ const AddressListContent = ({ domains }: AddressListProps) => {
   };
 
   const sortLabel = (column: EmailAddressSortBy) => {
-    if (sortBy !== column) return "";
+    if (sortBy !== column) {
+      return (
+        <HugeiconsIcon
+          icon={ArrowUpDownIcon}
+          strokeWidth={2}
+          className="size-3.5 text-muted-foreground"
+          aria-hidden="true"
+        />
+      );
+    }
+
     return sortDirection === "asc" ? "↑" : "↓";
   };
 
@@ -837,9 +821,16 @@ const AddressListContent = ({ domains }: AddressListProps) => {
   }
 
   return (
-    <Card className="border-border/70 bg-card/60">
+    <Card className="border-border/70 bg-card/60 rounded-none">
       <CardHeader className="flex flex-col gap-2 border-b border-border/70 pb-4 sm:flex-row sm:items-center sm:justify-between">
-        <CardTitle className="text-[15px]">Addresses</CardTitle>
+        <CardTitle className="flex items-center gap-2 text-[15px]">
+          <HugeiconsIcon
+            icon={AddressBookIcon}
+            strokeWidth={2}
+            className="size-4 text-muted-foreground"
+          />
+          Addresses
+        </CardTitle>
         <div className="relative w-52 sm:ml-auto sm:max-w-xs">
           <SearchIcon
             ref={searchIconRef}
@@ -945,8 +936,16 @@ const AddressListContent = ({ domains }: AddressListProps) => {
                         Last Received {sortLabel("lastReceivedAt")}
                       </Button>
                     </TableHead>
-                    <TableHead>Allowed Senders</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
+                    <TableHead>
+                      <span className="inline-flex h-8 items-center text-xs font-medium">
+                        Allowed Senders
+                      </span>
+                    </TableHead>
+                    <TableHead className="text-right">
+                      <span className="inline-flex h-8 items-center text-xs font-medium">
+                        Actions
+                      </span>
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -1165,9 +1164,12 @@ const AddressListContent = ({ domains }: AddressListProps) => {
             {isTotalLoading ? (
               <Skeleton className="h-5 w-14 rounded-md" />
             ) : (
-              <Badge variant="secondary" className="font-mono text-xs">
-                {totalItems}/{addressLimit}
-              </Badge>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground">Total</span>
+                <Badge variant="secondary" className="font-mono text-xs">
+                  {totalItems}/{addressLimit}
+                </Badge>
+              </div>
             )}
           </div>
         </div>
