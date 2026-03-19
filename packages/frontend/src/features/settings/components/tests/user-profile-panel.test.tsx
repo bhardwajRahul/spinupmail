@@ -1,3 +1,4 @@
+import type { ComponentProps } from "react";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import {
   afterAll,
@@ -65,6 +66,15 @@ const renderUserProfilePanel = () =>
   render(
     <TestQueryProvider>
       <UserProfilePanel />
+    </TestQueryProvider>
+  );
+
+const renderUserProfilePanelWithProps = (
+  props: ComponentProps<typeof UserProfilePanel>
+) =>
+  render(
+    <TestQueryProvider>
+      <UserProfilePanel {...props} />
     </TestQueryProvider>
   );
 
@@ -266,5 +276,49 @@ describe("UserProfilePanel", () => {
     expect(
       screen.getByRole("button", { name: "America/New_York" })
     ).toBeTruthy();
+  });
+
+  it("keeps focus on the outside control when the timezone popover closes from an outside click", async () => {
+    mockedUseAuth.mockReturnValue(buildAuthenticatedAuthState());
+
+    renderUserProfilePanel();
+
+    fireEvent.click(screen.getByRole("checkbox"));
+    fireEvent.click(screen.getByRole("button", { name: "UTC" }));
+
+    const searchInput = screen.getByPlaceholderText(
+      "Search timezone (e.g. America/New_York)"
+    ) as HTMLInputElement;
+
+    await waitFor(() => {
+      expect(document.activeElement).toBe(searchInput);
+    });
+
+    const nameInput = screen.getByLabelText("Name") as HTMLInputElement;
+    nameInput.focus();
+    expect(document.activeElement).toBe(nameInput);
+    fireEvent.pointerDown(nameInput);
+    fireEvent.click(nameInput);
+
+    await waitFor(() => {
+      expect(
+        screen.queryByPlaceholderText("Search timezone (e.g. America/New_York)")
+      ).toBeNull();
+      expect(document.activeElement).toBe(nameInput);
+    });
+  });
+
+  it("applies wrapperClassName when rendering with the default card wrapper", () => {
+    mockedUseAuth.mockReturnValue(buildAuthenticatedAuthState());
+
+    const { container } = renderUserProfilePanelWithProps({
+      wrapperClassName: "profile-wrapper-test",
+    });
+
+    expect(
+      container
+        .querySelector('[data-slot="card"]')
+        ?.className.includes("profile-wrapper-test")
+    ).toBe(true);
   });
 });
