@@ -272,7 +272,7 @@ export const EmailPreview = ({
         </div>
       ) : email.text ? (
         <Textarea
-          className={`min-h-0 flex-1 font-mono text-xs ${EMAIL_PREVIEW_SCROLLBAR_CLASS}`}
+          className={`min-h-0 flex-1 bg-card text-foreground font-mono text-xs [-webkit-text-fill-color:currentColor] ${EMAIL_PREVIEW_SCROLLBAR_CLASS}`}
           readOnly
           value={email.text}
         />
@@ -288,7 +288,7 @@ export const EmailPreview = ({
             Raw source
           </summary>
           <Textarea
-            className={`mt-2 min-h-72 font-mono text-xs ${EMAIL_PREVIEW_SCROLLBAR_CLASS}`}
+            className={`mt-2 min-h-72 bg-card text-foreground font-mono text-xs [-webkit-text-fill-color:currentColor] ${EMAIL_PREVIEW_SCROLLBAR_CLASS}`}
             readOnly
             value={email.raw}
           />

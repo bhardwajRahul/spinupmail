@@ -43,8 +43,10 @@ const resolveTheme = (theme: Theme) => {
 
 const applyTheme = (theme: Theme) => {
   const root = window.document.documentElement;
+  const resolvedTheme = resolveTheme(theme);
   root.classList.remove("light", "dark");
-  root.classList.add(resolveTheme(theme));
+  root.classList.add(resolvedTheme);
+  root.style.colorScheme = resolvedTheme;
 };
 
 export function ThemeProvider({
