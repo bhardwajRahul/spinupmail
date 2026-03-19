@@ -1,6 +1,7 @@
 {
   "name": "spinupmail",
   "private": true,
+  "license": "MIT",
   "scripts": {
     "dev:backend": "pnpm -C packages/backend dev",
     "build:backend": "pnpm -C packages/backend build",
