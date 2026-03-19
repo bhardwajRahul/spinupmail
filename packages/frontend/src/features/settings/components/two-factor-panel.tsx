@@ -302,9 +302,7 @@ export const TwoFactorPanel = ({
   };
 
   return (
-    <Card
-      className={cn("border-border/70 bg-card/60 rounded-none", cardClassName)}
-    >
+    <Card className={cn("border-border/70 bg-card/60", cardClassName)}>
       <CardHeader className="space-y-1 border-b border-border/70 pb-4">
         <div className="flex flex-wrap items-center gap-2">
           <CardTitle className="flex items-center gap-2 text-[15px]">
@@ -399,7 +397,7 @@ export const TwoFactorPanel = ({
                   >
                     {enableForm.state.isSubmitting
                       ? "Preparing..."
-                      : "Start setup"}
+                      : "Enable 2FA"}
                   </Button>
                 </div>
               </form>

@@ -86,7 +86,7 @@ test.describe("recent address activity", () => {
     await expect(rows.nth(0)).toContainText(seededLocalParts[0]);
     await expect(rows.nth(9)).toContainText(seededLocalParts[9]);
     await expect(card.getByText("Showing 10 of 11")).toBeVisible();
-    await expect(card.getByText("Total 11")).toBeVisible();
+    await expect(card.getByText("11 Total")).toBeVisible();
     await expect(
       card.getByRole("button", { name: "2", exact: true })
     ).toBeVisible();
@@ -119,6 +119,6 @@ test.describe("recent address activity", () => {
     await expect(rows).toHaveCount(1);
     await expect(rows.first()).toContainText(seededLocalParts[10]);
     await expect(card.getByText("Showing 1 of 1")).toBeVisible();
-    await expect(card.getByText("Total 1")).toBeVisible();
+    await expect(card.getByText("1 Total")).toBeVisible();
   });
 });

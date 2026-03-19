@@ -45,7 +45,7 @@ export const OrganizationProfileCard = ({
 }: OrganizationProfileCardProps) => {
   if (isLoading || !activeOrganization) {
     return (
-      <Card className="border-border/70 bg-card/60 rounded-none">
+      <Card className="border-border/70 bg-card/60">
         <CardHeader className="space-y-1 border-b border-border/70 pb-4">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="flex min-w-0 items-center gap-3">
@@ -113,7 +113,7 @@ export const OrganizationProfileCard = ({
   }
 
   return (
-    <Card className="border-border/70 bg-card/60 rounded-none">
+    <Card className="border-border/70 bg-card/60">
       <CardHeader className="space-y-1 border-b border-border/70 pb-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">

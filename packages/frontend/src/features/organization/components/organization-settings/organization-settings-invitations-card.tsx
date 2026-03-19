@@ -61,7 +61,7 @@ export const OrganizationInvitationsCard = ({
 }: OrganizationInvitationsCardProps) => {
   if (isLoading && !canManage) {
     return (
-      <Card className="border-border/70 bg-card/60 rounded-none">
+      <Card className="border-border/70 bg-card/60">
         <CardHeader className="space-y-1 border-b border-border/70 pb-4">
           <div className="flex items-center justify-between gap-2">
             <CardTitle className="flex items-center gap-2 text-[15px]">
@@ -132,7 +132,7 @@ export const OrganizationInvitationsCard = ({
   const inviteControlsDisabled = isLoading || isInviteMemberPending;
 
   return (
-    <Card className="border-border/70 bg-card/60 rounded-none">
+    <Card className="border-border/70 bg-card/60">
       <CardHeader className="space-y-1 border-b border-border/70 pb-4">
         <div className="flex items-center justify-between gap-2">
           <CardTitle className="flex items-center gap-2 text-[15px]">

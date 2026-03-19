@@ -94,7 +94,7 @@ export const EmailStatsCard = () => {
   const dormantInboxes = data?.dormantInboxes ?? [];
 
   return (
-    <Card className="min-w-0 border-border/70 bg-card/60 rounded-none">
+    <Card className="min-w-0 border-border/70 bg-card/60">
       <CardHeader className="space-y-0 pb-1 pt-3">
         <CardTitle className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
           <HugeiconsIcon

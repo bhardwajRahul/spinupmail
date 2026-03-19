@@ -821,7 +821,7 @@ const AddressListContent = ({ domains }: AddressListProps) => {
   }
 
   return (
-    <Card className="border-border/70 bg-card/60 rounded-none">
+    <Card className="border-border/70 bg-card/60">
       <CardHeader className="flex flex-col gap-2 border-b border-border/70 pb-4 sm:flex-row sm:items-center sm:justify-between">
         <CardTitle className="flex items-center gap-2 text-[15px]">
           <HugeiconsIcon
@@ -942,7 +942,7 @@ const AddressListContent = ({ domains }: AddressListProps) => {
                       </span>
                     </TableHead>
                     <TableHead className="text-right">
-                      <span className="inline-flex h-8 items-center text-xs font-medium">
+                      <span className="inline-flex h-8 items-center text-xs font-medium pr-1.5">
                         Actions
                       </span>
                     </TableHead>

@@ -150,7 +150,7 @@ export const AppSidebar = ({ user, onSignOut, ...props }: AppSidebarProps) => {
         <SidebarGroup>
           <OrganizationSwitcher />
           <SidebarGroupContent className="pt-2">
-            <SidebarMenu>
+            <SidebarMenu className="gap-1">
               {navItems.map(item => {
                 const isActive = item.end
                   ? location.pathname === item.to

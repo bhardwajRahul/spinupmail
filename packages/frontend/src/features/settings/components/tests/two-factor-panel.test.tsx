@@ -149,7 +149,7 @@ describe("TwoFactorPanel", () => {
     fireEvent.change(screen.getByLabelText("Current password"), {
       target: { value: "password-123" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "Start setup" }));
+    fireEvent.click(screen.getByRole("button", { name: "Enable 2FA" }));
 
     await waitFor(() =>
       expect(mockedEnable).toHaveBeenCalledWith({ password: "password-123" })

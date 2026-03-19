@@ -273,7 +273,7 @@ export const CreateAddressForm = ({
   });
 
   return (
-    <Card className="border-border/70 bg-card/60 rounded-none">
+    <Card className="border-border/70 bg-card/60">
       <CardHeader className="space-y-1 border-b border-border/70 pb-4">
         <CardTitle className="flex items-center gap-2 text-[15px]">
           <HugeiconsIcon
@@ -340,7 +340,7 @@ export const CreateAddressForm = ({
                                   strokeWidth={1.8}
                                   className="size-3.5"
                                 />
-                                <span className="text-[10px] font-semibold">
+                                <span className="text-[10px] font-mono">
                                   RANDOM
                                 </span>
                               </InputGroupButton>
@@ -554,7 +554,7 @@ export const CreateAddressForm = ({
                           <Button
                             disabled={createMutation.isPending}
                             type="submit"
-                            className="w-fit cursor-pointer mt-px"
+                            className="w-fit cursor-pointer mt-1"
                             onMouseEnter={() => {
                               sendIconRef.current?.startAnimation();
                             }}

@@ -83,7 +83,7 @@ export const InboxGrowthChart = () => {
   const totalInboxes = addresses?.length ?? 0;
 
   return (
-    <Card className="flex min-w-0 flex-col border-border/70 bg-card/60 gap-0 rounded-none">
+    <Card className="flex min-w-0 flex-col border-border/70 bg-card/60 gap-0">
       <CardHeader className="space-y-0.5 pb-1 pt-3">
         <div className="flex items-start justify-between">
           <CardTitle className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
@@ -96,7 +96,7 @@ export const InboxGrowthChart = () => {
           </CardTitle>
           <Badge
             variant="outline"
-            className="text-[10px] font-normal text-muted-foreground rounded-none"
+            className="text-[10px] font-normal text-muted-foreground"
           >
             Last 14 days
           </Badge>

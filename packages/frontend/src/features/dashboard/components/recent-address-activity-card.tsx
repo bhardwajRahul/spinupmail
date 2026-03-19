@@ -761,7 +761,7 @@ const RecentAddressActivityCardContent = () => {
   );
 
   return (
-    <Card className="border-border/70 bg-card/60 rounded-none">
+    <Card className="border-border/70 bg-card/60">
       <CardHeader className="border-b border-border/70">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <CardTitle className="flex items-center gap-2 text-[15px]">
@@ -1011,7 +1011,7 @@ const RecentAddressActivityCardContent = () => {
             {isPageTransitioning ? <UpdatingIndicator /> : null}
           </div>
           <p className="text-xs text-center text-muted-foreground sm:text-right">
-            {isTableLoading ? "Total -" : `Total ${pageTotalCount}`}
+            {isTableLoading ? "- Total" : `${pageTotalCount} Total`}
           </p>
         </div>
       </CardContent>

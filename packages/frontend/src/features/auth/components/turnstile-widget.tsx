@@ -208,9 +208,9 @@ export const TurnstileWidget = React.forwardRef<
 
   return (
     <div className={cn("space-y-2", className)}>
-      <div className="border border-input bg-transparent dark:bg-input/30 rounded-lg overflow-hidden relative isolate h-[65px] w-full flex items-start justify-center">
+      <div className="border border-input bg-transparent dark:bg-input/30 rounded-lg overflow-hidden relative isolate h-[65px] w-full">
         <div
-          className="min-h-[65px] w-full relative z-0 scale-101 -mt-px"
+          className="absolute -inset-px z-0"
           ref={containerRef}
           role="group"
           aria-label="Captcha challenge"

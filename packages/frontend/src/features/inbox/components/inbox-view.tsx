@@ -163,7 +163,7 @@ export const InboxView = ({
   }, [addressCommandOpen]);
 
   return (
-    <div className="flex min-h-0 max-h-[750px] flex-1 flex-col overflow-hidden rounded-none ring-1 ring-foreground/10 md:flex-row">
+    <div className="flex min-h-0 max-h-[750px] flex-1 flex-col overflow-hidden rounded-xl ring-1 ring-foreground/10 md:flex-row">
       {/* Left panel: Address selector + Email list */}
       <div className="flex w-full shrink-0 flex-col bg-card/40 md:w-[380px]">
         {/* Address selector */}

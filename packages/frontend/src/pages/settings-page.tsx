@@ -8,7 +8,7 @@ import { Separator } from "@/components/ui/separator";
 export const SettingsPage = () => {
   return (
     <div className="space-y-6 [&_button]:cursor-pointer">
-      <Card className="border-border/70 bg-card/60 rounded-none">
+      <Card className="border-border/70 bg-card/60">
         <div className="space-y-3 lg:grid lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] lg:grid-rows-[auto_1fr] lg:space-y-0">
           <UserProfilePanel
             withCard={false}
