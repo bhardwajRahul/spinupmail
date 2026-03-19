@@ -6,24 +6,11 @@ import { z } from "zod";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  ChevronsUpDownIcon,
-  type ChevronsUpDownIconHandle,
-} from "@/components/ui/chevrons-up-down";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/features/auth/hooks/use-auth";
-import {
-  shouldStopMenuTypeaheadKey,
-  useFilteredTimeZones,
-} from "@/features/settings/lib/timezone-picker";
-import { TimezoneCommandList } from "@/features/settings/components/timezone-picker";
+import { TimezonePickerField } from "@/features/settings/components/timezone-picker";
 import { UserProfileTimezoneSection } from "@/features/settings/components/user-profile-timezone-section";
 import { toFieldErrors } from "@/lib/forms/to-field-errors";
 import { useTimezone } from "@/features/timezone/hooks/use-timezone";
@@ -60,9 +47,6 @@ const changeEmailSchema = z.object({
   newEmail: z.string().email("Enter a valid email address."),
 });
 
-const TIMEZONE_INITIAL_RENDER_COUNT = 120;
-const TIMEZONE_RENDER_CHUNK = 120;
-
 const updateUserProfile = authClient.updateUser as unknown as (payload: {
   name?: string;
   timezone?: string | null;
@@ -75,10 +59,6 @@ const getChangeEmailCallbackURL = () => {
 
 const CHANGE_EMAIL_RETRY_LATER_MESSAGE =
   "Unable to send verification email right now. Please try again later.";
-
-type TimezonePopoverChangeDetails = Parameters<
-  NonNullable<React.ComponentProps<typeof Popover>["onOpenChange"]>
->[1];
 
 const getErrorStatusCode = (error: unknown) => {
   if (typeof error !== "object" || !error) return null;
@@ -151,19 +131,6 @@ const UserProfilePanelBody = ({
   refreshSession: () => Promise<void>;
   emailSection?: React.ReactNode;
 }) => {
-  const [searchValue, setSearchValue] = React.useState("");
-  const [isTimezoneMenuOpen, setIsTimezoneMenuOpen] = React.useState(false);
-  const timezoneTriggerRef = React.useRef<HTMLButtonElement | null>(null);
-  const timezoneChevronsRef = React.useRef<ChevronsUpDownIconHandle | null>(
-    null
-  );
-  const timezoneSearchInputRef = React.useRef<HTMLInputElement | null>(null);
-  const [visibleTimezoneCount, setVisibleTimezoneCount] = React.useState(
-    TIMEZONE_INITIAL_RENDER_COUNT
-  );
-  const { filteredTimeZones, normalizedSearchValue } =
-    useFilteredTimeZones(searchValue);
-
   const updateProfileMutation = useMutation({
     mutationFn: async (payload: {
       name?: string;
@@ -214,90 +181,6 @@ const UserProfilePanelBody = ({
       });
     },
   });
-
-  React.useEffect(() => {
-    if (!isTimezoneMenuOpen) {
-      setVisibleTimezoneCount(TIMEZONE_INITIAL_RENDER_COUNT);
-      return;
-    }
-
-    if (normalizedSearchValue.length > 0) {
-      setVisibleTimezoneCount(filteredTimeZones.length);
-      return;
-    }
-
-    setVisibleTimezoneCount(TIMEZONE_INITIAL_RENDER_COUNT);
-    let animationFrameId = 0;
-
-    const renderNextChunk = () => {
-      setVisibleTimezoneCount(previous => {
-        const next = Math.min(
-          filteredTimeZones.length,
-          previous + TIMEZONE_RENDER_CHUNK
-        );
-
-        if (next < filteredTimeZones.length) {
-          animationFrameId = requestAnimationFrame(renderNextChunk);
-        }
-
-        return next;
-      });
-    };
-
-    animationFrameId = requestAnimationFrame(renderNextChunk);
-
-    return () => {
-      cancelAnimationFrame(animationFrameId);
-    };
-  }, [filteredTimeZones.length, isTimezoneMenuOpen, normalizedSearchValue]);
-
-  const visibleTimeZones = React.useMemo(() => {
-    if (normalizedSearchValue.length > 0) return filteredTimeZones;
-    return filteredTimeZones.slice(0, visibleTimezoneCount);
-  }, [filteredTimeZones, normalizedSearchValue, visibleTimezoneCount]);
-
-  const restoreTimezoneTriggerFocus = React.useCallback(() => {
-    if (typeof window === "undefined") return;
-
-    window.requestAnimationFrame(() => {
-      timezoneTriggerRef.current?.focus({ preventScroll: true });
-    });
-  }, []);
-
-  React.useEffect(() => {
-    if (!isTimezoneMenuOpen || typeof window === "undefined") return;
-
-    window.requestAnimationFrame(() => {
-      timezoneSearchInputRef.current?.focus({ preventScroll: true });
-    });
-  }, [isTimezoneMenuOpen]);
-
-  const handleTimezoneTriggerMouseEnter = React.useCallback(() => {
-    if (isTimezoneMenuOpen) return;
-    timezoneChevronsRef.current?.startAnimation();
-  }, [isTimezoneMenuOpen]);
-
-  const handleTimezoneTriggerMouseLeave = React.useCallback(() => {
-    if (isTimezoneMenuOpen) return;
-    timezoneChevronsRef.current?.stopAnimation();
-  }, [isTimezoneMenuOpen]);
-
-  const handleTimezonePopoverOpenChange = React.useCallback(
-    (open: boolean, eventDetails: TimezonePopoverChangeDetails) => {
-      setIsTimezoneMenuOpen(open);
-      if (open) {
-        timezoneChevronsRef.current?.startAnimation();
-        return;
-      }
-
-      setSearchValue("");
-      timezoneChevronsRef.current?.stopAnimation();
-      if (eventDetails.reason === "escape-key") {
-        restoreTimezoneTriggerFocus();
-      }
-    },
-    [restoreTimezoneTriggerFocus]
-  );
 
   return (
     <form.Subscribe
@@ -397,10 +280,6 @@ const UserProfilePanelBody = ({
                         onCheckedChange={checked => {
                           const nextManualMode = Boolean(checked);
                           field.handleChange(nextManualMode);
-                          if (!nextManualMode) {
-                            setIsTimezoneMenuOpen(false);
-                            setSearchValue("");
-                          }
                         }}
                         disabled={
                           !isAuthenticated || updateProfileMutation.isPending
@@ -427,74 +306,15 @@ const UserProfilePanelBody = ({
                         field.state.meta.isTouched && !field.state.meta.isValid;
 
                       return (
-                        <Field data-invalid={isInvalid}>
-                          <FieldLabel className="text-muted-foreground">
-                            Timezone
-                          </FieldLabel>
-                          <Popover
-                            open={isTimezoneMenuOpen}
-                            modal={false}
-                            onOpenChange={handleTimezonePopoverOpenChange}
-                          >
-                            <PopoverTrigger
-                              ref={timezoneTriggerRef}
-                              render={
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  className="w-full justify-between font-normal"
-                                  disabled={
-                                    !isAuthenticated ||
-                                    updateProfileMutation.isPending
-                                  }
-                                  onMouseEnter={handleTimezoneTriggerMouseEnter}
-                                  onMouseLeave={handleTimezoneTriggerMouseLeave}
-                                />
-                              }
-                            >
-                              <span className="min-w-0 flex-1 truncate text-left">
-                                {field.state.value || "Select timezone"}
-                              </span>
-                              <ChevronsUpDownIcon
-                                ref={timezoneChevronsRef}
-                                size={16}
-                                className="ml-2 shrink-0 text-muted-foreground"
-                              />
-                            </PopoverTrigger>
-                            <PopoverContent
-                              align="start"
-                              className="p-0"
-                              initialFocus={false}
-                              finalFocus={false}
-                            >
-                              <TimezoneCommandList
-                                commandClassName="border-0 bg-card"
-                                inputRef={timezoneSearchInputRef}
-                                searchValue={searchValue}
-                                selectedTimeZone={field.state.value}
-                                timeZones={visibleTimeZones}
-                                onSearchValueChange={setSearchValue}
-                                onInputKeyDown={event => {
-                                  if (!shouldStopMenuTypeaheadKey(event.key)) {
-                                    return;
-                                  }
-                                  event.stopPropagation();
-                                }}
-                                onSelectTimeZone={timeZone => {
-                                  field.handleChange(timeZone);
-                                  setIsTimezoneMenuOpen(false);
-                                  setSearchValue("");
-                                  restoreTimezoneTriggerFocus();
-                                }}
-                              />
-                            </PopoverContent>
-                          </Popover>
-                          {isInvalid ? (
-                            <FieldError
-                              errors={toFieldErrors(field.state.meta.errors)}
-                            />
-                          ) : null}
-                        </Field>
+                        <TimezonePickerField
+                          value={field.state.value}
+                          disabled={
+                            !isAuthenticated || updateProfileMutation.isPending
+                          }
+                          isInvalid={isInvalid}
+                          errors={field.state.meta.errors}
+                          onChange={field.handleChange}
+                        />
                       );
                     }}
                   />

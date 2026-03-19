@@ -8,16 +8,15 @@ import { useFilteredTimeZones } from "@/features/settings/lib/timezone-picker";
 import { useTimezone } from "@/features/timezone/hooks/use-timezone";
 import { formatDateTimeInTimeZone } from "@/features/timezone/lib/date-format";
 
-export const TimezonePanel = () => {
-  const {
-    effectiveTimeZone,
-    savedTimeZone,
-    source,
-    isSaving,
-    error,
-    setTimeZone,
-    clearTimeZone,
-  } = useTimezone();
+const TimezonePanelEditor = ({
+  effectiveTimeZone,
+  savedTimeZone,
+  source,
+  isSaving,
+  error,
+  setTimeZone,
+  clearTimeZone,
+}: ReturnType<typeof useTimezone>) => {
   const [searchValue, setSearchValue] = React.useState("");
   const [localError, setLocalError] = React.useState<string | null>(null);
   const [manualMode, setManualMode] = React.useState(Boolean(savedTimeZone));
@@ -25,11 +24,6 @@ export const TimezonePanel = () => {
     savedTimeZone ?? effectiveTimeZone
   );
   const { filteredTimeZones } = useFilteredTimeZones(searchValue);
-
-  React.useEffect(() => {
-    setManualMode(Boolean(savedTimeZone));
-    setSelectedTimeZone(savedTimeZone ?? effectiveTimeZone);
-  }, [effectiveTimeZone, savedTimeZone]);
 
   const previewTimeZone = manualMode ? selectedTimeZone : effectiveTimeZone;
   const previewValue = formatDateTimeInTimeZone({
@@ -144,4 +138,11 @@ export const TimezonePanel = () => {
       </CardContent>
     </Card>
   );
+};
+
+export const TimezonePanel = () => {
+  const timezone = useTimezone();
+  const draftKey = `${timezone.savedTimeZone ?? ""}:${timezone.effectiveTimeZone}`;
+
+  return <TimezonePanelEditor key={draftKey} {...timezone} />;
 };

@@ -14,15 +14,37 @@ export const normalizeTimezoneSearchValue = (value: string) =>
 export const shouldStopMenuTypeaheadKey = (key: string) =>
   key.length === 1 || key === "Backspace" || key === "Delete";
 
+type SearchableTimeZone = {
+  timeZone: string;
+  normalized: string;
+};
+
+let timeZoneSearchIndexCache: {
+  supportedTimeZones: string[];
+  searchableTimeZones: SearchableTimeZone[];
+} | null = null;
+
+const getTimeZoneSearchIndex = () => {
+  if (timeZoneSearchIndexCache) return timeZoneSearchIndexCache;
+
+  const supportedTimeZones = getSupportedTimeZones();
+  const searchableTimeZones = supportedTimeZones.map(timeZone => ({
+    timeZone,
+    normalized: normalizeTimezoneSearchValue(timeZone),
+  }));
+
+  timeZoneSearchIndexCache = {
+    supportedTimeZones,
+    searchableTimeZones,
+  };
+
+  return timeZoneSearchIndexCache;
+};
+
 export const useFilteredTimeZones = (searchValue: string) => {
-  const supportedTimeZones = React.useMemo(() => getSupportedTimeZones(), []);
-  const searchableTimeZones = React.useMemo(
-    () =>
-      supportedTimeZones.map(timeZone => ({
-        timeZone,
-        normalized: normalizeTimezoneSearchValue(timeZone),
-      })),
-    [supportedTimeZones]
+  const { supportedTimeZones, searchableTimeZones } = React.useMemo(
+    () => getTimeZoneSearchIndex(),
+    []
   );
 
   const normalizedSearchValue = React.useMemo(
@@ -31,16 +53,17 @@ export const useFilteredTimeZones = (searchValue: string) => {
   );
 
   const filteredTimeZones = React.useMemo(() => {
-    if (!searchValue.trim()) return supportedTimeZones;
-    return searchableTimeZones
-      .filter(({ normalized }) => normalized.includes(normalizedSearchValue))
-      .map(({ timeZone }) => timeZone);
-  }, [
-    normalizedSearchValue,
-    searchValue,
-    searchableTimeZones,
-    supportedTimeZones,
-  ]);
+    if (normalizedSearchValue.length === 0) return supportedTimeZones;
+
+    const matches: string[] = [];
+
+    for (const { timeZone, normalized } of searchableTimeZones) {
+      if (!normalized.includes(normalizedSearchValue)) continue;
+      matches.push(timeZone);
+    }
+
+    return matches;
+  }, [normalizedSearchValue, searchableTimeZones, supportedTimeZones]);
 
   return {
     filteredTimeZones,
