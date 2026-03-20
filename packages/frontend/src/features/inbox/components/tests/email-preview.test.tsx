@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { toast } from "sonner";
 import { EmailPreview } from "@/features/inbox/components/email-preview";
 import { useAuth } from "@/features/auth/hooks/use-auth";
 import { useDeleteEmailMutation } from "@/features/inbox/hooks/use-inbox";
@@ -17,9 +18,26 @@ vi.mock("@/features/timezone/hooks/use-timezone", () => ({
   useTimezone: vi.fn(),
 }));
 
+vi.mock("sonner", () => ({
+  toast: {
+    promise: vi.fn(),
+  },
+}));
+
 const mockedUseAuth = vi.mocked(useAuth);
 const mockedUseDeleteEmailMutation = vi.mocked(useDeleteEmailMutation);
 const mockedUseTimezone = vi.mocked(useTimezone);
+const mockedToastPromise = vi.mocked(toast.promise);
+
+const resolveToastPromise = <T,>(
+  promise: Parameters<typeof toast.promise>[0]
+): Promise<T> => {
+  if (typeof promise === "function") {
+    return promise() as Promise<T>;
+  }
+
+  return promise as Promise<T>;
+};
 
 describe("EmailPreview", () => {
   beforeEach(() => {
@@ -32,6 +50,13 @@ describe("EmailPreview", () => {
     mockedUseTimezone.mockReturnValue({
       effectiveTimeZone: "UTC",
     } as unknown as ReturnType<typeof useTimezone>);
+
+    mockedToastPromise.mockImplementation(
+      ((promise: Parameters<typeof toast.promise>[0]) =>
+        ({
+          unwrap: () => resolveToastPromise(promise),
+        }) as ReturnType<typeof toast.promise>) as typeof toast.promise
+    );
 
     mockedUseDeleteEmailMutation.mockReturnValue({
       mutateAsync: vi.fn(),
@@ -177,6 +202,60 @@ describe("EmailPreview", () => {
     const deleteButton = screen.getByRole("button", { name: "Delete" });
     expect(screen.queryByText(/^Delete$/)).toBeNull();
     expect(deleteButton).toBeTruthy();
+  });
+
+  it("shows a promise toast after confirming email deletion", async () => {
+    const deleteMutateAsync = vi.fn().mockResolvedValue({
+      deleted: true,
+      id: "email-4",
+    });
+    mockedUseDeleteEmailMutation.mockReturnValue({
+      mutateAsync: deleteMutateAsync,
+      isPending: false,
+      error: null,
+    } as unknown as ReturnType<typeof useDeleteEmailMutation>);
+
+    render(
+      <EmailPreview
+        email={{
+          id: "email-4",
+          addressId: "address-1",
+          to: "inbox@example.com",
+          from: "sender@example.com",
+          sender: "John Smith <sender@example.com>",
+          senderLabel: "John Smith",
+          subject: "Delete action",
+          headers: [],
+          html: null,
+          text: "Hello",
+          raw: null,
+          rawSize: 10,
+          rawTruncated: false,
+          rawDownloadPath: undefined,
+          attachments: [],
+          receivedAt: "2026-03-09T00:00:00.000Z",
+          receivedAtMs: 1741478400000,
+        }}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Delete" }));
+    fireEvent.click(screen.getByRole("button", { name: "Delete" }));
+
+    await waitFor(() =>
+      expect(deleteMutateAsync).toHaveBeenCalledWith("email-4")
+    );
+    expect(mockedToastPromise).toHaveBeenCalledWith(
+      expect.any(Promise),
+      expect.objectContaining({
+        loading: "Deleting email...",
+        success: "Email deleted.",
+        error: expect.any(Function),
+      })
+    );
+    await waitFor(() =>
+      expect(screen.queryByText("Delete this email?")).toBeNull()
+    );
   });
 
   it("lets the html renderer fill remaining height while keeping attachments visible", () => {

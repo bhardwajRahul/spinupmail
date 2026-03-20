@@ -1,4 +1,5 @@
 import * as React from "react";
+import { toast } from "sonner";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -186,11 +187,21 @@ export const EmailPreview = ({
   };
   const attachments = email.attachments ?? [];
   const handleDeleteEmail = async () => {
+    const deleteEmailToast = toast.promise(
+      deleteMutation.mutateAsync(email.id),
+      {
+        loading: "Deleting email...",
+        success: "Email deleted.",
+        error: error =>
+          error instanceof Error ? error.message : "Unable to delete email",
+      }
+    );
+
     try {
-      await deleteMutation.mutateAsync(email.id);
+      await deleteEmailToast.unwrap();
       setPendingDeleteEmailId(null);
     } catch {
-      // Error shown from mutation state.
+      // Error is shown in toast.
     }
   };
 
