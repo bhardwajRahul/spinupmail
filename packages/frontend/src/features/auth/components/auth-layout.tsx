@@ -30,7 +30,7 @@ export function AuthLayout({
         <CardHeader className="text-center">
           <AppLogo
             className="mx-auto rounded-xl bg-muted/10 pl-1 pr-2"
-            textClassName="text-base"
+            textClassName="text-[15px]"
           />
           {title ? <h1 className="text-xl font-semibold">{title}</h1> : null}
           {subtitle ? (

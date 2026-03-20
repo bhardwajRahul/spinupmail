@@ -29,9 +29,7 @@ export const AppLogo = ({
         imageClassName
       )}
     />
-    <span
-      className={cn("font-mono font-semibold tracking-tight", textClassName)}
-    >
+    <span className={cn("font-semibold tracking-tight", textClassName)}>
       {APP_NAME}
     </span>
   </div>
