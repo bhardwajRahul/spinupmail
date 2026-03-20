@@ -22,7 +22,7 @@ export function CtaSection() {
     <section className="border-t border-border/60 py-20 md:py-24">
       <div className="mx-auto max-w-6xl px-6">
         <motion.div
-          className="relative overflow-hidden border border-border/70 bg-linear-to-br from-white/4 via-transparent to-black/10 p-px"
+          className="relative overflow-hidden rounded-xl border border-border/70 bg-linear-to-br from-white/4 via-transparent to-black/10 p-px"
           {...(reduceMotion
             ? {}
             : {

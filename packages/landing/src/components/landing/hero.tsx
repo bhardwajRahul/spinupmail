@@ -244,7 +244,7 @@ export function Hero() {
         </motion.div>
 
         <motion.div className="mx-auto mt-10 max-w-4xl" {...previewMotion}>
-          <div className="border border-border/70 bg-linear-to-br from-white/3 via-transparent to-black/10 p-px">
+          <div className="overflow-hidden rounded-xl border border-border/70 bg-card shadow-[0_20px_44px_-30px_rgba(0,0,0,0.22)] dark:shadow-[0_26px_56px_-34px_rgba(0,0,0,0.34)]">
             <InboxPreview reduceMotion={Boolean(reduceMotion)} />
           </div>
 
@@ -285,7 +285,7 @@ export function Hero() {
 
 function InboxPreview({ reduceMotion }: { reduceMotion: boolean }) {
   return (
-    <div className="bg-card shadow-[0_20px_44px_-30px_rgba(0,0,0,0.22)] dark:shadow-[0_26px_56px_-34px_rgba(0,0,0,0.34)]">
+    <div className="bg-card">
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/70 px-4 py-3">
         <div className="flex min-w-0 items-center gap-2.5">
           <HugeiconsIcon

@@ -274,7 +274,7 @@ export function HowItWorks() {
           </motion.div>
 
           <motion.div
-            className="overflow-hidden border border-border/70 bg-card"
+            className="overflow-hidden rounded-xl border border-border/70 bg-card"
             {...(reduceMotion
               ? {}
               : {

@@ -134,7 +134,7 @@ export function Nav() {
   return (
     <header className="pointer-events-none fixed inset-x-0 top-2 z-50 sm:top-3">
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
-        <div className="pointer-events-auto overflow-hidden rounded-none border border-border/70 bg-background/60 shadow-[0_10px_40px_-28px_rgba(0,0,0,0.8)] backdrop-blur-xl">
+        <div className="pointer-events-auto overflow-hidden rounded-xl border border-border/70 bg-background/60 shadow-[0_10px_40px_-28px_rgba(0,0,0,0.8)] backdrop-blur-xl">
           <div className="flex h-12 items-center justify-between gap-2 px-2.5 sm:h-14 sm:gap-3 sm:px-4">
             <a
               href="/"

@@ -25,7 +25,7 @@ function DocsEndpoint({ method, path, children }: EndpointProps) {
       <div className="flex flex-wrap items-center gap-2">
         <span
           className={cn(
-            "rounded-none border px-1.5 py-0.5 font-mono text-[11px] font-semibold",
+            "rounded-md border px-1.5 py-0.5 font-mono text-[11px] font-semibold",
             endpointTone[method]
           )}
         >

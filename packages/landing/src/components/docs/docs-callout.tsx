@@ -27,13 +27,13 @@ export function DocsCallout({
   return (
     <aside
       className={cn(
-        "docs-callout rounded-none border px-4 py-3",
+        "docs-callout rounded-xl border px-4 py-3",
         toneClassName[tone]
       )}
       role="note"
     >
       <div className="flex items-start gap-3">
-        <span className="inline-flex size-5 shrink-0 items-center justify-center border border-current/40 text-[11px] font-semibold">
+        <span className="inline-flex size-5 shrink-0 items-center justify-center rounded-md border border-current/40 text-[11px] font-semibold">
           {toneIcon[tone]}
         </span>
         <div>

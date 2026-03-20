@@ -2,25 +2,14 @@ import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
-  AddressBookIcon,
-  Alert02Icon,
   ArrowDown01Icon,
   ArrowUp01Icon,
-  ArrowUpRight01Icon,
-  BookOpen01Icon,
-  ComputerIcon,
-  DatabaseIcon,
   LayoutIcon,
-  Mail01Icon,
-  Mailbox01Icon,
-  Rocket01Icon,
   Search01Icon,
-  ShieldIcon,
-  UserMultiple02Icon,
 } from "@hugeicons/core-free-icons";
 import { docsNavGroups } from "./content/docs-nav";
 import { getDocPageBySlug } from "./content/docs-content";
-import { CloudflareCloudIcon } from "@/components/icons/cloudflare-cloud-icon";
+import { DocsGroupIcon, DocsPageIcon } from "./docs-icons";
 import { cn } from "@/lib/utils";
 
 type DocsSidebarProps = {
@@ -29,28 +18,6 @@ type DocsSidebarProps = {
   onNavigate?: () => void;
   onOpenSearch?: () => void;
 };
-
-const groupIconById = {
-  "get-started": Rocket01Icon,
-  "api-reference": DatabaseIcon,
-  configuration: ShieldIcon,
-  operations: Mail01Icon,
-} as const;
-
-const pageIconBySlug = {
-  quickstart: Rocket01Icon,
-  "api-overview": BookOpen01Icon,
-  "api-domains": DatabaseIcon,
-  "api-organizations": UserMultiple02Icon,
-  "api-email-addresses": AddressBookIcon,
-  "api-emails": Mailbox01Icon,
-  "auth-secrets": ShieldIcon,
-  "deploy-routing": ArrowUpRight01Icon,
-  "inbound-pipeline": Mail01Icon,
-  "multi-domain": LayoutIcon,
-  "local-development": ComputerIcon,
-  "limits-security": Alert02Icon,
-} as const;
 
 function initialOpenState(currentSlug?: string): Record<string, boolean> {
   return Object.fromEntries(
@@ -96,7 +63,7 @@ export function DocsSidebar({
         <button
           type="button"
           onClick={onOpenSearch}
-          className="inline-flex h-full w-full items-center gap-2 px-4 py-4 text-left text-[12px] text-muted-foreground transition-colors hover:bg-card/55 hover:text-foreground focus-visible:outline-0"
+          className="inline-flex h-full w-full items-center gap-2 rounded-none px-4 py-4 text-left text-[12px] text-muted-foreground transition-colors hover:bg-card/55 hover:text-foreground focus-visible:outline-0"
         >
           <HugeiconsIcon
             icon={Search01Icon}
@@ -127,7 +94,7 @@ export function DocsSidebar({
         <Link
           to="/docs"
           onClick={onNavigate}
-          className="docs-overview-link flex w-full items-center gap-2 px-4 py-2.5 text-[14px] font-medium tracking-tight transition-colors"
+          className="docs-overview-link flex w-full items-center gap-2 rounded-none px-4 py-2.5 text-[14px] font-medium tracking-tight transition-colors"
         >
           <HugeiconsIcon
             icon={LayoutIcon}
@@ -155,10 +122,9 @@ export function DocsSidebar({
                 aria-expanded={Boolean(openGroups[group.id])}
               >
                 <span className="flex items-start gap-2.5">
-                  <HugeiconsIcon
-                    icon={groupIconById[group.id]}
+                  <DocsGroupIcon
+                    groupId={group.id}
                     className="mt-1 size-4 shrink-0 text-foreground/65"
-                    strokeWidth={1.8}
                   />
                   <span>
                     <span className="block text-[15px] font-medium text-foreground/95">
@@ -177,16 +143,12 @@ export function DocsSidebar({
               </button>
 
               {openGroups[group.id] ? (
-                <ul className="pb-2.5 pl-9 pr-3 pt-1">
+                <ul className="space-y-1 pb-2.5 pl-9 pr-3 pt-1">
                   {group.slugs.map(slug => {
                     const page = getDocPageBySlug(slug);
                     if (!page) return null;
 
                     const isActive = slug === currentSlug;
-                    const isCloudflareResources =
-                      slug === "cloudflare-resources";
-                    const pageIcon =
-                      pageIconBySlug[slug as keyof typeof pageIconBySlug];
 
                     return (
                       <li key={slug}>
@@ -198,19 +160,14 @@ export function DocsSidebar({
                           className={cn(
                             "flex items-center gap-2 border-l-2 py-1.5 pl-3 pr-2.5 text-[13px] leading-relaxed transition-colors",
                             isActive
-                              ? "border-foreground bg-foreground/8 text-foreground"
-                              : "border-transparent text-muted-foreground hover:border-border/70 hover:bg-foreground/4 hover:text-foreground"
+                              ? "border-transparent bg-foreground/8 text-foreground"
+                              : "border-transparent text-muted-foreground hover:bg-foreground/4 hover:text-foreground"
                           )}
                         >
-                          {isCloudflareResources ? (
-                            <CloudflareCloudIcon className="h-2.5 shrink-0 text-current/75" />
-                          ) : (
-                            <HugeiconsIcon
-                              icon={pageIcon}
-                              className="size-3.5 shrink-0 text-current/75"
-                              strokeWidth={1.8}
-                            />
-                          )}
+                          <DocsPageIcon
+                            slug={slug}
+                            className="size-3.5 shrink-0 text-current/75"
+                          />
                           <span>{page.title}</span>
                         </Link>
                       </li>

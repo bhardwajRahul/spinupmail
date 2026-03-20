@@ -37,7 +37,7 @@ export function DocsCodeBlock({
   };
 
   return (
-    <figure className="docs-code-block docs-code-shell relative overflow-hidden rounded-2xl">
+    <figure className="docs-code-block docs-code-shell relative overflow-hidden rounded-xl">
       <figcaption className="docs-code-toolbar">
         <div className="flex min-w-0 items-center gap-2">
           <span className="docs-code-language-badge">{languageLabel}</span>

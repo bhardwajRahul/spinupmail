@@ -25,7 +25,7 @@ function ApiRequirementBadge({ required = false }: { required?: boolean }) {
   return (
     <span
       className={cn(
-        "inline-flex w-fit rounded-none border px-1.5 py-0.5 text-[11px] font-medium",
+        "inline-flex w-fit rounded-md border px-1.5 py-0.5 text-[11px] font-medium",
         requirementTone[required ? "required" : "optional"]
       )}
     >
@@ -45,7 +45,7 @@ function ApiMethodBadge({ method }: { method: ApiEndpointSpec["method"] }) {
   return (
     <span
       className={cn(
-        "inline-flex rounded-none border px-1.5 py-0.5 font-mono text-[11px] font-semibold",
+        "inline-flex rounded-md border px-1.5 py-0.5 font-mono text-[11px] font-semibold",
         toneClassName[method]
       )}
     >
@@ -56,13 +56,15 @@ function ApiMethodBadge({ method }: { method: ApiEndpointSpec["method"] }) {
 
 function ApiTableShell({
   title,
+  className,
   children,
 }: {
   title: string;
+  className?: string;
   children: ReactNode;
 }) {
   return (
-    <div className="docs-reference-table-wrap">
+    <div className={cn("docs-reference-table-wrap", className)}>
       <div className="docs-reference-table-header">
         <h3>{title}</h3>
       </div>
@@ -131,7 +133,10 @@ function ApiFieldTable({
 
 function ApiHeaderTable({ spec }: { spec: ApiEndpointSpec }) {
   return (
-    <ApiTableShell title="Request headers">
+    <ApiTableShell
+      title="Request headers"
+      className="docs-reference-table-wrap-flat-top"
+    >
       <table className="docs-reference-table">
         <caption className="sr-only">Request headers</caption>
         <thead>

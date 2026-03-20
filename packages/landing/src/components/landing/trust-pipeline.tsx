@@ -97,7 +97,7 @@ export function TrustPipeline() {
           {steps.map((step, index) => (
             <motion.article
               key={step.title}
-              className="group border border-border/70 bg-card p-4 pb-2"
+              className="group rounded-xl border border-border/70 bg-card p-4 pb-2"
               {...itemMotion(index * 0.05)}
               whileHover={reduceMotion ? undefined : { y: -3 }}
             >
@@ -136,7 +136,7 @@ export function TrustPipeline() {
           {storageTargets.map((target, index) => (
             <motion.div
               key={target.title}
-              className="border border-border/70 bg-card p-5"
+              className="rounded-xl border border-border/70 bg-card p-5"
               {...itemMotion(0.15 + index * 0.06)}
             >
               <div className="flex items-center justify-between gap-3">

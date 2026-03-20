@@ -56,42 +56,42 @@ export function Features() {
 
         <div className="mt-12 grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
           <motion.div
-            className="flex flex-col overflow-hidden border border-border/70 bg-card lg:col-span-2"
+            className="flex flex-col overflow-hidden rounded-xl border border-border/70 bg-card lg:col-span-2"
             {...cardMotion()}
           >
             <AddressControlsCard />
           </motion.div>
 
           <motion.div
-            className="flex flex-col overflow-hidden border border-border/70 bg-card"
+            className="flex flex-col overflow-hidden rounded-xl border border-border/70 bg-card"
             {...cardMotion(0.05)}
           >
             <TeamsCard />
           </motion.div>
 
           <motion.div
-            className="flex flex-col overflow-hidden border border-border/70 bg-card"
+            className="flex flex-col overflow-hidden rounded-xl border border-border/70 bg-card"
             {...cardMotion(0.1)}
           >
             <ApiCard />
           </motion.div>
 
           <motion.div
-            className="flex flex-col overflow-hidden border border-border/70 bg-card lg:col-span-2"
+            className="flex flex-col overflow-hidden rounded-xl border border-border/70 bg-card lg:col-span-2"
             {...cardMotion(0.15)}
           >
             <AnalyticsCard />
           </motion.div>
 
           <motion.div
-            className="flex flex-col overflow-hidden border border-border/70 bg-card lg:col-span-2"
+            className="flex flex-col overflow-hidden rounded-xl border border-border/70 bg-card lg:col-span-2"
             {...cardMotion(0.2)}
           >
             <CloudflareCard />
           </motion.div>
 
           <motion.div
-            className="flex flex-col overflow-hidden border border-border/70 bg-card"
+            className="flex flex-col overflow-hidden rounded-xl border border-border/70 bg-card"
             {...cardMotion(0.25)}
           >
             <SecurityCard />
@@ -114,7 +114,7 @@ function CardHeader({
   description: string;
 }) {
   return (
-    <div className="p-6 pb-4">
+    <div className="px-6 pt-4 pb-5">
       <div className="flex items-center gap-2.5">
         {iconNode ??
           (icon ? (
@@ -140,13 +140,13 @@ function AddressControlsCard() {
         title="Address controls"
         description="Create addresses with TTL, domain allowlists, and configurable inbox cleanup behavior."
       />
-      <div className="mt-auto border-t border-border/60 bg-muted/20 px-6 py-4">
+      <div className="mt-auto border-t border-border/60 bg-muted/20 px-6 py-5">
         <div className="space-y-2.5 font-mono text-xs">
           <div className="flex items-center gap-3">
             <span className="w-16 shrink-0 text-muted-foreground/60">
               Address
             </span>
-            <div className="flex-1 border border-border/70 bg-background px-2.5 py-1.5 text-foreground">
+            <div className="flex-1 rounded-lg border border-border/70 bg-background px-2.5 py-1.5 text-foreground">
               test-signup-flow@spinupmail.dev
             </div>
           </div>
@@ -156,7 +156,7 @@ function AddressControlsCard() {
               <span className="w-16 shrink-0 text-muted-foreground/60">
                 TTL
               </span>
-              <div className="flex-1 border border-border/70 bg-background px-2.5 py-1.5 text-foreground">
+              <div className="flex-1 rounded-lg border border-border/70 bg-background px-2.5 py-1.5 text-foreground">
                 120 minutes
               </div>
             </div>
@@ -164,7 +164,7 @@ function AddressControlsCard() {
               <span className="w-16 shrink-0 text-muted-foreground/60">
                 Max
               </span>
-              <div className="flex-1 border border-border/70 bg-background px-2.5 py-1.5 text-foreground">
+              <div className="flex-1 rounded-lg border border-border/70 bg-background px-2.5 py-1.5 text-foreground">
                 25 emails
               </div>
             </div>
@@ -175,7 +175,7 @@ function AddressControlsCard() {
               <span className="w-16 shrink-0 text-muted-foreground/60">
                 Action
               </span>
-              <div className="flex-1 border border-border/70 bg-background px-2.5 py-1.5 text-foreground">
+              <div className="flex-1 rounded-lg border border-border/70 bg-background px-2.5 py-1.5 text-foreground">
                 cleanAll on limit
               </div>
             </div>
@@ -187,7 +187,7 @@ function AddressControlsCard() {
                 {["gmail.com", "example.com"].map(domain => (
                   <span
                     key={domain}
-                    className="border border-border/70 bg-background px-2 py-0.5"
+                    className="rounded-lg border border-border/70 bg-background px-2 py-0.5"
                   >
                     {domain}
                   </span>
@@ -219,7 +219,7 @@ function TeamsCard() {
         title="Team workspaces"
         description="Role-based organizations, and shared inbox visibility keep projects isolated by default."
       />
-      <div className="mt-auto border-t border-border/60 bg-muted/20 px-6 py-4">
+      <div className="mt-auto border-t border-border/60 bg-muted/20 px-6 py-5">
         <div className="space-y-3">
           {orgs.map(org => (
             <div
@@ -276,7 +276,7 @@ function ApiCard() {
         title="REST API"
         description="Automate everything with API keys (`spin_...`) plus required `X-Org-Id` scoping."
       />
-      <div className="mt-auto border-t border-border/60 bg-muted/20 px-6 py-4">
+      <div className="mt-auto border-t border-border/60 bg-muted/20 px-6 py-5">
         <div className="space-y-1.5 font-mono text-xs">
           {endpoints.map(endpoint => (
             <div key={endpoint.path} className="flex gap-2">
@@ -307,7 +307,7 @@ function AnalyticsCard() {
         title="Operational visibility"
         description="Track org-level email volume, inbox growth, and recent address activity from the dashboard."
       />
-      <div className="mt-auto border-t border-border/60 bg-muted/20 px-6 py-4">
+      <div className="mt-auto border-t border-border/60 bg-muted/20 px-6 py-5">
         <div className="flex h-16 items-end gap-0.75">
           {bars.map((height, index) => (
             <div
@@ -349,7 +349,7 @@ function CloudflareCard() {
         title="Cloudflare-native architecture"
         description="Run API, intake, storage, and frontend on Cloudflare services."
       />
-      <div className="mt-auto border-t border-border/60 bg-muted/20 px-6 py-4">
+      <div className="mt-auto border-t border-border/60 bg-muted/20 px-6 py-5">
         <div className="flex flex-wrap gap-2">
           {stack.map(service => (
             <Badge
@@ -384,7 +384,7 @@ function SecurityCard() {
         title="Security defaults"
         description="Guardrails for identity, abuse prevention, and access control are available out of the box."
       />
-      <div className="mt-auto border-t border-border/60 bg-muted/20 px-6 py-4">
+      <div className="mt-auto border-t border-border/60 bg-muted/20 px-6 py-5">
         <div className="flex flex-wrap gap-1.5">
           {features.map(feature => (
             <Badge
