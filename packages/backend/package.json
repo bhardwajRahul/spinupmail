@@ -21,10 +21,10 @@
     "test:integration:workers": "pnpm exec vitest run --config vitest.workers.config.ts"
   },
   "dependencies": {
-    "@better-auth/api-key": "1.5.4",
+    "@better-auth/api-key": "1.5.5",
     "@cloudflare/workers-types": "4.20260226.1",
     "@hono/zod-validator": "^0.7.6",
-    "better-auth": "1.5.4",
+    "better-auth": "1.5.5",
     "better-auth-cloudflare": "^0.2.9",
     "css-tree": "^3.2.1",
     "dom-serializer": "^2.0.0",
