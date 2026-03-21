@@ -240,6 +240,7 @@ export const OrganizationSettingsPage = () => {
           members={members}
           isLoading={isMembersLoading}
           currentUserId={user?.id}
+          currentUserRole={currentUserRole}
           canManage={canManage}
           isUpdateRolePending={updateMemberRoleMutation.isPending}
           isRemoveMemberPending={removeMemberMutation.isPending}

@@ -316,6 +316,67 @@ describe("OrganizationSettingsPage", () => {
     );
   });
 
+  it("does not show remove action for owners when current user is admin", () => {
+    mockedUseAuth.mockReturnValue({
+      user: {
+        id: "user-admin",
+        name: "Admin",
+        email: "admin@example.com",
+      },
+    } as unknown as ReturnType<typeof useAuth>);
+
+    const organizationWithAdminViewer = {
+      ...baseActiveOrganization,
+      members: [
+        {
+          id: "member-owner",
+          role: "owner",
+          user: {
+            id: "user-owner",
+            name: "Owner",
+            email: "owner@example.com",
+          },
+        },
+        {
+          id: "member-admin",
+          role: "admin",
+          user: {
+            id: "user-admin",
+            name: "Admin",
+            email: "admin@example.com",
+          },
+        },
+        {
+          id: "member-2",
+          role: "member",
+          user: {
+            id: "user-2",
+            name: "Teammate",
+            email: "member@example.com",
+          },
+        },
+      ],
+    };
+
+    mockedUseActiveOrganizationQuery.mockReturnValue({
+      data: organizationWithAdminViewer,
+      isLoading: false,
+      error: null,
+    } as unknown as ReturnType<typeof useActiveOrganizationQuery>);
+
+    mockedUseOrganizationMembersQuery.mockReturnValue({
+      data: organizationWithAdminViewer.members,
+      isLoading: false,
+      error: null,
+    } as unknown as ReturnType<typeof useOrganizationMembersQuery>);
+
+    renderPage();
+
+    expect(screen.getByText("owner@example.com")).toBeTruthy();
+    expect(screen.getAllByRole("button", { name: "Remove" })).toHaveLength(1);
+    expect(screen.getByRole("button", { name: "Remove" })).toBeTruthy();
+  });
+
   it("renders mutation error messages", async () => {
     inviteMemberMutateAsync.mockRejectedValue(
       new Error("Unable to invite member")

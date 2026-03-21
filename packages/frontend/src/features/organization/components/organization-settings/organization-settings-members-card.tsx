@@ -19,6 +19,7 @@ type OrganizationMembersCardProps = {
   members: OrganizationMember[];
   isLoading?: boolean;
   currentUserId?: string;
+  currentUserRole?: string;
   canManage: boolean;
   isUpdateRolePending: boolean;
   isRemoveMemberPending: boolean;
@@ -30,6 +31,7 @@ export const OrganizationMembersCard = ({
   members,
   isLoading = false,
   currentUserId,
+  currentUserRole,
   canManage,
   isUpdateRolePending,
   isRemoveMemberPending,
@@ -116,6 +118,10 @@ export const OrganizationMembersCard = ({
             {members.map(member => {
               const isCurrentUser = member.user.id === currentUserId;
               const isOwner = member.role === "owner";
+              const canRemoveMember =
+                canManage &&
+                !isCurrentUser &&
+                (!isOwner || currentUserRole === "owner");
 
               return (
                 <TableRow key={member.id}>
@@ -147,7 +153,7 @@ export const OrganizationMembersCard = ({
                             : "Make member"}
                         </Button>
                       ) : null}
-                      {canManage && !isCurrentUser ? (
+                      {canRemoveMember ? (
                         <Button
                           disabled={isRemoveMemberPending}
                           onClick={() => onRemoveMember(member.id)}
