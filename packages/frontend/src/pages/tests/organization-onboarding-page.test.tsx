@@ -25,6 +25,10 @@ vi.mock("@/features/organization/hooks/use-organizations", () => ({
   useAcceptInvitationMutation: vi.fn(),
 }));
 
+vi.mock("@/components/mode-toggle", () => ({
+  ModeToggle: () => <button type="button">theme-toggle</button>,
+}));
+
 const mockedUseAuth = vi.mocked(useAuth);
 const mockedUseOrganizationInvitationQuery = vi.mocked(
   useOrganizationInvitationQuery
@@ -45,6 +49,7 @@ const createOrganizationMutateAsync = vi.fn();
 const setActiveOrganizationMutateAsync = vi.fn();
 const acceptInvitationMutateAsync = vi.fn();
 const refreshSession = vi.fn();
+const signOut = vi.fn();
 
 const renderPage = (initialEntries: string[]) =>
   renderWithRouter({
@@ -64,6 +69,7 @@ describe("OrganizationOnboardingPage", () => {
     vi.clearAllMocks();
 
     refreshSession.mockResolvedValue(undefined);
+    signOut.mockResolvedValue(undefined);
     createOrganizationMutateAsync.mockResolvedValue({ id: "org-new" });
     setActiveOrganizationMutateAsync.mockResolvedValue({ success: true });
     acceptInvitationMutateAsync.mockResolvedValue({ success: true });
@@ -71,6 +77,8 @@ describe("OrganizationOnboardingPage", () => {
     mockedUseAuth.mockReturnValue({
       activeOrganizationId: null,
       refreshSession,
+      signOut,
+      isSigningOut: false,
     } as unknown as ReturnType<typeof useAuth>);
 
     mockedUseOrganizationInvitationQuery.mockReturnValue({
@@ -110,7 +118,7 @@ describe("OrganizationOnboardingPage", () => {
   it("creates an organization, refreshes session, and navigates to sanitized next", async () => {
     const { router } = renderPage(["/onboarding/organization?next=//evil"]);
 
-    fireEvent.change(screen.getByPlaceholderText("Acme QA Team"), {
+    fireEvent.change(screen.getByPlaceholderText("E-Corp"), {
       target: { value: "My Org" },
     });
     fireEvent.click(
@@ -218,6 +226,8 @@ describe("OrganizationOnboardingPage", () => {
     mockedUseAuth.mockReturnValue({
       activeOrganizationId: "org-1",
       refreshSession,
+      signOut,
+      isSigningOut: false,
     } as unknown as ReturnType<typeof useAuth>);
 
     renderPage(["/onboarding/organization"]);
@@ -232,7 +242,7 @@ describe("OrganizationOnboardingPage", () => {
 
     renderPage(["/onboarding/organization"]);
 
-    fireEvent.change(screen.getByPlaceholderText("Acme QA Team"), {
+    fireEvent.change(screen.getByPlaceholderText("E-Corp"), {
       target: { value: "Failing Org" },
     });
     fireEvent.click(
@@ -242,5 +252,31 @@ describe("OrganizationOnboardingPage", () => {
     await waitFor(() =>
       expect(screen.getByText("Unable to create organization")).toBeTruthy()
     );
+  });
+
+  it("renders the onboarding footer and empty invitation state", () => {
+    renderPage(["/onboarding/organization"]);
+
+    expect(
+      screen.getByRole("heading", { name: "Let's get started" })
+    ).toBeTruthy();
+    expect(screen.getByText("No pending invitations")).toBeTruthy();
+    expect(
+      screen.getByRole("link", { name: "Terms" }).getAttribute("href")
+    ).toBe("/terms");
+    expect(
+      screen.getByRole("link", { name: "Privacy Policy" }).getAttribute("href")
+    ).toBe("/privacy");
+    expect(screen.getByRole("button", { name: "theme-toggle" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Logout" })).toBeTruthy();
+  });
+
+  it("signs out and redirects home when logout is clicked", async () => {
+    const { router } = renderPage(["/onboarding/organization?next=/inbox"]);
+
+    fireEvent.click(screen.getByRole("button", { name: "Logout" }));
+
+    await waitFor(() => expect(signOut).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(router.state.location.pathname).toBe("/"));
   });
 });

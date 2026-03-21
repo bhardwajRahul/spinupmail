@@ -1,9 +1,18 @@
 import * as React from "react";
 import { useMemo } from "react";
-import { useNavigate, useSearchParams } from "react-router";
+import { LogoutIcon, Mail01Icon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Link, useNavigate, useSearchParams } from "react-router";
+import { AppLogo } from "@/components/app-logo";
+import { ModeToggle } from "@/components/mode-toggle";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { useAuth } from "@/features/auth/hooks/use-auth";
 import {
   useAcceptInvitationMutation,
@@ -24,7 +33,8 @@ const safeNextPath = (value: string | null) => {
 export const OrganizationOnboardingPage = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { activeOrganizationId, refreshSession } = useAuth();
+  const { activeOrganizationId, refreshSession, signOut, isSigningOut } =
+    useAuth();
 
   const invitationId = searchParams.get("invitationId");
   const invitationQuery = useOrganizationInvitationQuery(invitationId);
@@ -70,10 +80,22 @@ export const OrganizationOnboardingPage = () => {
     }
   };
 
+  const handleSignOut = async () => {
+    setErrorMessage(null);
+
+    try {
+      await signOut();
+      await navigate("/", { replace: true });
+    } catch (error) {
+      setErrorMessage((error as Error).message);
+    }
+  };
+
   const isBusy =
     createOrganizationMutation.isPending ||
     acceptInvitationMutation.isPending ||
-    setActiveOrganizationMutation.isPending;
+    setActiveOrganizationMutation.isPending ||
+    isSigningOut;
 
   const organizations = organizationsQuery.data ?? [];
 
@@ -93,14 +115,27 @@ export const OrganizationOnboardingPage = () => {
   };
 
   return (
-    <div className="mx-auto flex min-h-screen w-full max-w-3xl items-center px-4 py-8">
-      <div className="grid w-full gap-5 md:grid-cols-2">
+    <div className="flex min-h-screen items-center justify-center bg-background px-4 py-8">
+      <div className="mx-auto flex w-full max-w-sm flex-col gap-6">
+        <div className="flex flex-col items-center gap-3 text-center">
+          <AppLogo className="mx-auto" textClassName="text-[15px]" />
+          <div className="space-y-2">
+            <h1 className="text-2xl font-semibold tracking-tight text-balance">
+              Let's get started
+            </h1>
+            <p className="text-sm text-muted-foreground text-balance">
+              Create a new organization or join an existing one to start
+              managing shared inboxes with your team.
+            </p>
+          </div>
+        </div>
+
         <Card className="border-border/70 bg-card/60">
           <CardHeader>
             <CardTitle className="text-xl">Create an organization</CardTitle>
             <p className="text-sm text-muted-foreground">
-              Create a new organization to start generating shared inbox
-              addresses.
+              You will be able to update the organization name and invite team
+              members later.
             </p>
           </CardHeader>
           <CardContent className="space-y-3">
@@ -108,11 +143,16 @@ export const OrganizationOnboardingPage = () => {
               <Input
                 value={organizationName}
                 onChange={event => setOrganizationName(event.target.value)}
-                placeholder="Acme QA Team"
+                placeholder="E-Corp"
+                aria-label="Organization name"
                 minLength={2}
                 required
               />
-              <Button className="w-full" disabled={isBusy} type="submit">
+              <Button
+                className="w-full cursor-pointer"
+                disabled={isBusy}
+                type="submit"
+              >
                 {createOrganizationMutation.isPending
                   ? "Creating..."
                   : "Create organization"}
@@ -199,9 +239,22 @@ export const OrganizationOnboardingPage = () => {
                 Checking pending invitations...
               </p>
             ) : pendingInvitations.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                No pending invitations.
-              </p>
+              <div className="rounded-xl border border-dashed border-border/80 bg-muted/25 p-5">
+                <div className="flex flex-row items-center justify-center gap-3 text-center">
+                  <div className="flex size-11 items-center justify-center rounded-full border border-border/70 shadow-sm">
+                    <HugeiconsIcon
+                      icon={Mail01Icon}
+                      className="h-5 w-5 text-muted-foreground"
+                      aria-hidden="true"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-sm text-muted-foreground font-medium">
+                      No pending invitations
+                    </p>
+                  </div>
+                </div>
+              </div>
             ) : (
               <div className="space-y-2">
                 {pendingInvitations.map(invitation => (
@@ -223,6 +276,7 @@ export const OrganizationOnboardingPage = () => {
                       size="sm"
                       type="button"
                       variant="outline"
+                      className="cursor-pointer"
                     >
                       Join
                     </Button>
@@ -232,6 +286,55 @@ export const OrganizationOnboardingPage = () => {
             )}
           </CardContent>
         </Card>
+
+        <div className="flex flex-col items-center justify-between gap-3 border-t border-border/70 pt-2 text-sm text-muted-foreground sm:flex-row">
+          <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2">
+            <Link
+              className="transition-colors hover:text-foreground"
+              target="_blank"
+              to="/terms"
+            >
+              Terms
+            </Link>
+            <Link
+              className="transition-colors hover:text-foreground"
+              target="_blank"
+              to="/privacy"
+            >
+              Privacy Policy
+            </Link>
+          </div>
+          <div className="flex items-center gap-3">
+            <Tooltip>
+              <TooltipTrigger render={<div className="flex" />}>
+                <ModeToggle />
+              </TooltipTrigger>
+              <TooltipContent side="top">Theme</TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="cursor-pointer border-border/50 bg-transparent hover:border-border/60 dark:border-input/50 dark:hover:border-input/60"
+                    aria-label="Logout"
+                    onClick={() => void handleSignOut()}
+                    disabled={isBusy}
+                  />
+                }
+              >
+                <HugeiconsIcon
+                  icon={LogoutIcon}
+                  strokeWidth={2}
+                  className="h-4 w-4"
+                />
+              </TooltipTrigger>
+              <TooltipContent side="top">Logout</TooltipContent>
+            </Tooltip>
+          </div>
+        </div>
       </div>
 
       {errorMessage ? (
