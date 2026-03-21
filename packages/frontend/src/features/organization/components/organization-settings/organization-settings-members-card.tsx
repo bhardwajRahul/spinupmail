@@ -13,6 +13,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import type { OrganizationMember } from "@/features/organization/hooks/use-organizations";
+import { MemberAvatar } from "@/features/organization/components/members/member-avatar";
 import { formatRole, roleBadgeVariant } from "./organization-settings-utils";
 
 type OrganizationMembersCardProps = {
@@ -67,9 +68,12 @@ export const OrganizationMembersCard = ({
               {Array.from({ length: 3 }).map((_, index) => (
                 <TableRow key={index}>
                   <TableCell>
-                    <div className="space-y-1 w-[180px]">
-                      <Skeleton className="h-4 w-28 max-w-full" />
-                      <Skeleton className="h-3 w-36 max-w-full" />
+                    <div className="flex items-center gap-3">
+                      <Skeleton className="h-[30px] w-[30px] rounded-md" />
+                      <div className="space-y-1 w-[180px]">
+                        <Skeleton className="h-4 w-28 max-w-full" />
+                        <Skeleton className="h-3 w-36 max-w-full" />
+                      </div>
                     </div>
                   </TableCell>
                   <TableCell>
@@ -126,11 +130,24 @@ export const OrganizationMembersCard = ({
               return (
                 <TableRow key={member.id}>
                   <TableCell>
-                    <div className="min-w-0">
-                      <p className="truncate font-medium">{member.user.name}</p>
-                      <p className="truncate text-xs text-muted-foreground">
-                        {member.user.email}
-                      </p>
+                    <div className="flex items-center gap-3">
+                      <MemberAvatar
+                        seed={
+                          member.user.id ||
+                          member.user.email ||
+                          member.user.name
+                        }
+                        imageUrl={member.user.image}
+                        name={member.user.name}
+                      />
+                      <div className="min-w-0">
+                        <p className="truncate font-medium">
+                          {member.user.name}
+                        </p>
+                        <p className="truncate text-xs text-muted-foreground">
+                          {member.user.email}
+                        </p>
+                      </div>
                     </div>
                   </TableCell>
                   <TableCell>

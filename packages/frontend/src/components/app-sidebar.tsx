@@ -9,10 +9,8 @@ import {
   DashboardSquare01Icon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import BoringAvatar from "boring-avatars";
 import { AppLogo } from "@/components/app-logo";
 import { OrganizationSwitcher } from "@/components/organization-switcher";
-import { useTheme } from "@/components/theme-provider";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -38,7 +36,7 @@ import {
   ChevronsUpDownIcon,
   type ChevronsUpDownIconHandle,
 } from "@/components/ui/chevrons-up-down";
-import { getAvatarColors } from "@/lib/avatar-colors";
+import { MemberAvatar } from "@/features/organization/components/members/member-avatar";
 import type { AuthUser } from "@/lib/auth";
 
 type AppSidebarProps = React.ComponentProps<typeof Sidebar> & {
@@ -84,7 +82,6 @@ const navItems: NavItem[] = [
 
 export const AppSidebar = ({ user, onSignOut, ...props }: AppSidebarProps) => {
   const { isMobile, state } = useSidebar();
-  const { theme } = useTheme();
   const location = useLocation();
   const navigate = useNavigate();
   const navigateIfNeeded = React.useCallback(
@@ -95,16 +92,6 @@ export const AppSidebar = ({ user, onSignOut, ...props }: AppSidebarProps) => {
     [location.pathname, navigate]
   );
   const userAvatarSeed = user?.id ?? user?.email ?? user?.name ?? "guest";
-  const resolvedTheme =
-    theme === "system"
-      ? window.matchMedia("(prefers-color-scheme: dark)").matches
-        ? "dark"
-        : "light"
-      : theme;
-  const userAvatarColors = React.useMemo(
-    () => getAvatarColors(userAvatarSeed, resolvedTheme),
-    [userAvatarSeed, resolvedTheme]
-  );
   const [isUserDropdownOpen, setIsUserDropdownOpen] = React.useState(false);
   const userChevronsRef = React.useRef<ChevronsUpDownIconHandle | null>(null);
 
@@ -191,16 +178,11 @@ export const AppSidebar = ({ user, onSignOut, ...props }: AppSidebarProps) => {
                   />
                 }
               >
-                <div className="h-[30px] w-[30px] shrink-0 overflow-hidden rounded-md border border-border/70 leading-none [&>svg]:block! [&>svg]:size-full!">
-                  <BoringAvatar
-                    size="100%"
-                    name={userAvatarSeed}
-                    variant="beam"
-                    colors={userAvatarColors}
-                    className="block! size-full!"
-                    square
-                  />
-                </div>
+                <MemberAvatar
+                  seed={userAvatarSeed}
+                  imageUrl={user?.image}
+                  name={user?.name ?? "User avatar"}
+                />
                 <div className="grid flex-1 text-left leading-tight group-data-[collapsible=icon]:hidden">
                   <span className="truncate text-sm font-medium">
                     {user?.name ?? "User"}
