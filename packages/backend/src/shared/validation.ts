@@ -113,9 +113,16 @@ export const normalizeAllowedFromDomains = (value: unknown) => {
   return Array.from(new Set(domains));
 };
 
+export const normalizeBlockedSenderDomains = normalizeAllowedFromDomains;
+
 export const getAllowedFromDomainsFromMeta = (meta: unknown) => {
   if (!isRecord(meta)) return [];
   return normalizeAllowedFromDomains(meta.allowedFromDomains);
+};
+
+export const getBlockedSenderDomainsFromMeta = (meta: unknown) => {
+  if (!isRecord(meta)) return [];
+  return normalizeBlockedSenderDomains(meta.blockedSenderDomains);
 };
 
 export const ADDRESS_MAX_RECEIVED_EMAIL_COUNT_MAX = 100_000;
@@ -125,6 +132,68 @@ export const ADDRESS_MAX_RECEIVED_EMAIL_ACTIONS = [
 ] as const;
 export type AddressMaxReceivedEmailAction =
   (typeof ADDRESS_MAX_RECEIVED_EMAIL_ACTIONS)[number];
+
+export type InboundRatePolicy = {
+  senderDomainSoftMax?: number;
+  senderDomainSoftWindowSeconds?: number;
+  senderDomainBlockMax?: number;
+  senderDomainBlockWindowSeconds?: number;
+  senderAddressBlockMax?: number;
+  senderAddressBlockWindowSeconds?: number;
+  inboxBlockMax?: number;
+  inboxBlockWindowSeconds?: number;
+  dedupeWindowSeconds?: number;
+  initialBlockSeconds?: number;
+  maxBlockSeconds?: number;
+};
+
+const INBOUND_RATE_POLICY_INT_MAX = 864_000;
+
+const normalizeInboundRatePolicyNumber = (value: unknown) => {
+  if (typeof value !== "number") return undefined;
+  if (!Number.isInteger(value) || value <= 0) return undefined;
+  return Math.min(value, INBOUND_RATE_POLICY_INT_MAX);
+};
+
+export const normalizeInboundRatePolicy = (
+  value: unknown
+): InboundRatePolicy | null => {
+  if (!isRecord(value)) return null;
+
+  const policy: InboundRatePolicy = {};
+
+  const assign = (key: keyof InboundRatePolicy, rawValue: unknown) => {
+    const normalized = normalizeInboundRatePolicyNumber(rawValue);
+    if (normalized !== undefined) {
+      policy[key] = normalized;
+    }
+  };
+
+  assign("senderDomainSoftMax", value.senderDomainSoftMax);
+  assign("senderDomainSoftWindowSeconds", value.senderDomainSoftWindowSeconds);
+  assign("senderDomainBlockMax", value.senderDomainBlockMax);
+  assign(
+    "senderDomainBlockWindowSeconds",
+    value.senderDomainBlockWindowSeconds
+  );
+  assign("senderAddressBlockMax", value.senderAddressBlockMax);
+  assign(
+    "senderAddressBlockWindowSeconds",
+    value.senderAddressBlockWindowSeconds
+  );
+  assign("inboxBlockMax", value.inboxBlockMax);
+  assign("inboxBlockWindowSeconds", value.inboxBlockWindowSeconds);
+  assign("dedupeWindowSeconds", value.dedupeWindowSeconds);
+  assign("initialBlockSeconds", value.initialBlockSeconds);
+  assign("maxBlockSeconds", value.maxBlockSeconds);
+
+  return Object.keys(policy).length > 0 ? policy : null;
+};
+
+export const getInboundRatePolicyFromMeta = (meta: unknown) => {
+  if (!isRecord(meta)) return null;
+  return normalizeInboundRatePolicy(meta.inboundRatePolicy);
+};
 
 const isAddressMaxReceivedEmailAction = (
   value: unknown
@@ -206,9 +275,34 @@ export const applyMaxReceivedEmailLimitToMeta = ({
 
 export const buildAddressMetaForStorage = (
   meta: unknown,
-  allowedFromDomains: string[]
+  options: {
+    allowedFromDomains?: string[];
+    blockedSenderDomains?: string[];
+    inboundRatePolicy?: InboundRatePolicy | null;
+  } = {}
 ): string | undefined | null => {
-  if (allowedFromDomains.length === 0) {
+  const hasAllowedFromDomainsOverlay = Object.prototype.hasOwnProperty.call(
+    options,
+    "allowedFromDomains"
+  );
+  const hasBlockedSenderDomainsOverlay = Object.prototype.hasOwnProperty.call(
+    options,
+    "blockedSenderDomains"
+  );
+  const hasInboundRatePolicyOverlay = Object.prototype.hasOwnProperty.call(
+    options,
+    "inboundRatePolicy"
+  );
+
+  const { allowedFromDomains, blockedSenderDomains, inboundRatePolicy } =
+    options;
+
+  const noOverlays =
+    !hasAllowedFromDomainsOverlay &&
+    !hasBlockedSenderDomainsOverlay &&
+    !hasInboundRatePolicyOverlay;
+
+  if (noOverlays) {
     if (meta === undefined) return undefined;
     if (typeof meta === "string") return meta;
     try {
@@ -218,22 +312,55 @@ export const buildAddressMetaForStorage = (
     }
   }
 
-  if (meta === undefined || meta === null) {
-    return JSON.stringify({ allowedFromDomains });
-  }
+  const nextAllowedFromDomains = allowedFromDomains ?? [];
+  const nextBlockedSenderDomains = blockedSenderDomains ?? [];
+  let record: Record<string, unknown>;
 
-  if (typeof meta === "string") {
+  if (meta === undefined || meta === null) {
+    record = {};
+  } else if (typeof meta === "string") {
     try {
       const parsed = JSON.parse(meta);
       if (!isRecord(parsed)) return null;
-      return JSON.stringify({ ...parsed, allowedFromDomains });
+      record = { ...parsed };
     } catch {
       return null;
     }
+  } else {
+    if (!isRecord(meta)) return null;
+    record = { ...meta };
   }
 
-  if (!isRecord(meta)) return null;
-  return JSON.stringify({ ...meta, allowedFromDomains });
+  if (hasAllowedFromDomainsOverlay && nextAllowedFromDomains.length > 0) {
+    record.allowedFromDomains = nextAllowedFromDomains;
+  } else if (hasAllowedFromDomainsOverlay) {
+    delete record.allowedFromDomains;
+  }
+
+  if (hasBlockedSenderDomainsOverlay && nextBlockedSenderDomains.length > 0) {
+    record.blockedSenderDomains = nextBlockedSenderDomains;
+  } else if (hasBlockedSenderDomainsOverlay) {
+    delete record.blockedSenderDomains;
+  }
+
+  if (hasInboundRatePolicyOverlay) {
+    const normalizedInboundRatePolicy =
+      inboundRatePolicy === null
+        ? null
+        : normalizeInboundRatePolicy(inboundRatePolicy);
+
+    if (normalizedInboundRatePolicy) {
+      record.inboundRatePolicy = normalizedInboundRatePolicy;
+    } else {
+      delete record.inboundRatePolicy;
+    }
+  }
+
+  if (Object.keys(record).length === 0) {
+    return meta === undefined ? undefined : JSON.stringify({});
+  }
+
+  return JSON.stringify(record);
 };
 
 export const extractSenderDomain = (value: string | null | undefined) => {
