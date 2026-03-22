@@ -125,4 +125,84 @@ describe("InboxView", () => {
     fireEvent.click(screen.getByRole("button", { name: "Clear email search" }));
     expect(onClearEmailSearch).toHaveBeenCalledTimes(1);
   });
+
+  it("shows received count and last received timing in the address selector", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-03-09T14:30:00.000Z"));
+    try {
+      render(
+        <MemoryRouter>
+          <InboxView
+            addresses={[
+              {
+                id: "address-1",
+                address: "inbox@example.com",
+                localPart: "inbox",
+                domain: "example.com",
+                emailCount: 12,
+                createdAt: null,
+                createdAtMs: null,
+                expiresAt: null,
+                expiresAtMs: null,
+                lastReceivedAt: "2026-03-09T13:05:00.000Z",
+                lastReceivedAtMs: Date.parse("2026-03-09T13:05:00.000Z"),
+                maxReceivedEmailCount: null,
+                maxReceivedEmailAction: null,
+              },
+              {
+                id: "address-2",
+                address: "sales@example.com",
+                localPart: "sales",
+                domain: "example.com",
+                emailCount: 3,
+                createdAt: null,
+                createdAtMs: null,
+                expiresAt: null,
+                expiresAtMs: null,
+                lastReceivedAt: "2026-03-08T10:00:00.000Z",
+                lastReceivedAtMs: Date.parse("2026-03-08T10:00:00.000Z"),
+                maxReceivedEmailCount: null,
+                maxReceivedEmailAction: null,
+              },
+            ]}
+            addressesLoading={false}
+            selectedAddressId="address-1"
+            onSelectAddress={vi.fn()}
+            emails={[]}
+            emailsLoading={false}
+            emailSearch=""
+            onEmailSearchChange={vi.fn()}
+            onEmailSearchFocusChange={vi.fn()}
+            selectedEmailId={null}
+            onSelectEmail={vi.fn()}
+            previewEmail={null}
+            previewEmailLoading={false}
+          />
+        </MemoryRouter>
+      );
+
+      const trigger = screen.getByRole("button", {
+        name: /inbox@example\.com/i,
+      });
+      expect(trigger.textContent).toContain("12 Total");
+      expect(trigger.textContent).toContain("Last: 13:05");
+
+      fireEvent.click(trigger);
+
+      const selectedAddressItem = screen
+        .getAllByText("inbox@example.com")
+        .at(-1)
+        ?.closest('[data-slot="command-item"]');
+      const secondaryAddressItem = screen
+        .getByText("sales@example.com")
+        .closest('[data-slot="command-item"]');
+
+      expect(selectedAddressItem?.textContent).toContain("12");
+      expect(selectedAddressItem?.textContent).toContain("Last: 13:05");
+      expect(secondaryAddressItem?.textContent).toContain("3");
+      expect(secondaryAddressItem?.textContent).toContain("Last: Yesterday");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });

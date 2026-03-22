@@ -3,9 +3,11 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import {
   ArrowDown01Icon,
   CursorMagicSelection03Icon,
-  Mail01Icon,
+  MailOpen01Icon,
+  MailOpenIcon,
   Mailbox01Icon,
 } from "@hugeicons/core-free-icons";
+import { Badge } from "@/components/ui/badge";
 import {
   Command,
   CommandEmpty,
@@ -121,6 +123,81 @@ const formatRelativeDate = (value: string | null, timeZone: string) => {
   return `${fullDate}, ${formattedTime}`;
 };
 
+const formatAddressLastReceived = (value: string | null, timeZone: string) => {
+  if (!value) return "No mail yet";
+
+  const calendarDayDiff = getCalendarDayDiff({
+    value,
+    timeZone,
+  });
+
+  if (calendarDayDiff === 0) {
+    return formatDateTimeInTimeZone({
+      value,
+      timeZone,
+      options: {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+      },
+      fallback: "Recent",
+    });
+  }
+
+  if (calendarDayDiff === 1) {
+    return "Yesterday";
+  }
+
+  if ((calendarDayDiff ?? Number.POSITIVE_INFINITY) < 7) {
+    return formatDateTimeInTimeZone({
+      value,
+      timeZone,
+      options: {
+        weekday: "short",
+      },
+      fallback: "Recent",
+    });
+  }
+
+  const nowDayKey = getDayKey(new Date(), timeZone);
+  const dateDayKey = getDayKey(value, timeZone);
+  const isCurrentYear = Boolean(
+    nowDayKey && dateDayKey && nowDayKey.slice(0, 4) === dateDayKey.slice(0, 4)
+  );
+
+  return formatDateTimeInTimeZone({
+    value,
+    timeZone,
+    options: isCurrentYear
+      ? {
+          month: "short",
+          day: "numeric",
+        }
+      : {
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+        },
+    fallback: "Recent",
+  });
+};
+
+const formatAddressLastReceivedExact = (
+  value: string | null,
+  timeZone: string
+) =>
+  value
+    ? formatDateTimeInTimeZone({
+        value,
+        timeZone,
+        options: {
+          dateStyle: "medium",
+          timeStyle: "short",
+        },
+        fallback: "Recent",
+      })
+    : "No received mail yet";
+
 export const InboxView = ({
   addresses,
   addressesLoading,
@@ -196,6 +273,31 @@ export const InboxView = ({
                 </span>
               )}
             </div>
+            {addressesLoading ? (
+              <div className="hidden shrink-0 space-y-1 text-right sm:block">
+                <Skeleton className="ml-auto h-3 w-16" />
+                <Skeleton className="ml-auto h-3 w-20" />
+              </div>
+            ) : selectedAddress ? (
+              <div
+                className="mt-0.5 hidden min-w-0 shrink-0 text-right sm:block"
+                title={formatAddressLastReceivedExact(
+                  selectedAddress.lastReceivedAt,
+                  effectiveTimeZone
+                )}
+              >
+                <p className="text-xs font-medium tabular-nums text-foreground">
+                  {selectedAddress.emailCount.toLocaleString()} Total
+                </p>
+                <p className="truncate text-[11px] text-muted-foreground">
+                  Last:{" "}
+                  {formatAddressLastReceived(
+                    selectedAddress.lastReceivedAt,
+                    effectiveTimeZone
+                  )}
+                </p>
+              </div>
+            ) : null}
             <HugeiconsIcon
               icon={ArrowDown01Icon}
               strokeWidth={2}
@@ -216,7 +318,7 @@ export const InboxView = ({
                   <CommandGroup>
                     {addresses.map(address => (
                       <CommandItem
-                        className="cursor-pointer"
+                        className="cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 data-[checked=true]:bg-primary/6"
                         key={address.id}
                         value={address.address}
                         data-checked={
@@ -228,11 +330,60 @@ export const InboxView = ({
                         }}
                       >
                         <HugeiconsIcon
-                          icon={Mail01Icon}
+                          icon={
+                            address.emailCount > 0
+                              ? MailOpenIcon
+                              : MailOpen01Icon
+                          }
                           strokeWidth={2}
-                          className="size-4 text-muted-foreground"
+                          className="mt-0.5 size-4 self-start text-muted-foreground"
                         />
-                        <span className="truncate">{address.address}</span>
+                        <div className="min-w-0 flex-1 self-start">
+                          <div className="flex items-start justify-between gap-3">
+                            <div
+                              className="min-w-0"
+                              title={formatAddressLastReceivedExact(
+                                address.lastReceivedAt,
+                                effectiveTimeZone
+                              )}
+                            >
+                              <p className="truncate font-medium">
+                                {address.address}
+                              </p>
+                              <p className="truncate text-[11px] text-muted-foreground">
+                                Last:{" "}
+                                {formatAddressLastReceived(
+                                  address.lastReceivedAt,
+                                  effectiveTimeZone
+                                )}
+                              </p>
+                            </div>
+                            <div
+                              className="shrink-0"
+                              title={formatAddressLastReceivedExact(
+                                address.lastReceivedAt,
+                                effectiveTimeZone
+                              )}
+                            >
+                              <Badge
+                                variant={
+                                  address.emailCount > 0
+                                    ? "secondary"
+                                    : "outline"
+                                }
+                                className={cn(
+                                  "mt-2 min-w-8 justify-center rounded-md border-border/70 px-2 font-medium tabular-nums",
+                                  address.emailCount > 0
+                                    ? "bg-primary/8 text-foreground"
+                                    : "bg-transparent text-muted-foreground"
+                                )}
+                                title={`${address.emailCount.toLocaleString()} received emails`}
+                              >
+                                {address.emailCount.toLocaleString()}
+                              </Badge>
+                            </div>
+                          </div>
+                        </div>
                       </CommandItem>
                     ))}
                   </CommandGroup>

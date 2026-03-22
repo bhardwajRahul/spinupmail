@@ -375,7 +375,7 @@ const RecentAddressLinkCell = ({
       <div className="min-w-0 flex-1">
         <div className="relative inline-flex max-w-full items-center">
           <Link
-            className="block max-w-full truncate font-mono text-xs sm:text-sm hover:underline"
+            className="block max-w-full truncate text-xs sm:text-sm hover:underline"
             to={`/inbox/${encodeURIComponent(addressId)}`}
           >
             {highlightAddressMatch(address, filterQuery)}
