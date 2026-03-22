@@ -13,6 +13,7 @@ const DAY_CURSOR_STEP_MS = 12 * 60 * 60 * 1000;
 const ACTIVITY_WINDOW_SAFETY_DAYS = 2;
 const ACTIVITY_QUERY_BUFFER_MS = 60 * 1000;
 const DAY_KEY_FORMATTER_LOCALE = "en-US";
+const DORMANT_INBOX_MIN_AGE_MS = DAY_MS;
 
 const dayKeyFormatters = new Map<string, Intl.DateTimeFormat>();
 
@@ -239,6 +240,9 @@ export const getEmailSummaryStats = async ({
   env: CloudflareBindings;
   organizationId: string;
 }) => {
+  const dormantInboxCreatedBefore = new Date(
+    Date.now() - DORMANT_INBOX_MIN_AGE_MS
+  );
   const db = getDb(env);
   const {
     emailCountRow,
@@ -246,7 +250,7 @@ export const getEmailSummaryStats = async ({
     topDomainsRows,
     busiestInboxesRows,
     dormantInboxesRows,
-  } = await findEmailSummary(db, organizationId);
+  } = await findEmailSummary(db, organizationId, dormantInboxCreatedBefore);
 
   const totalEmailCount = Number(emailCountRow[0]?.count ?? 0) || 0;
   const attachmentCount =
@@ -267,11 +271,16 @@ export const getEmailSummaryStats = async ({
     count: Number(row.count) || 0,
   }));
 
-  const dormantInboxes = dormantInboxesRows.map(row => ({
-    addressId: String(row.addressId ?? ""),
-    address: String(row.address ?? ""),
-    createdAt: row.createdAt ? row.createdAt.toISOString() : null,
-  }));
+  const dormantInboxes = dormantInboxesRows
+    .filter(row => {
+      if (!row.createdAt) return false;
+      return row.createdAt.getTime() <= dormantInboxCreatedBefore.getTime();
+    })
+    .map(row => ({
+      addressId: String(row.addressId ?? ""),
+      address: String(row.address ?? ""),
+      createdAt: row.createdAt ? row.createdAt.toISOString() : null,
+    }));
 
   return {
     totalEmailCount,

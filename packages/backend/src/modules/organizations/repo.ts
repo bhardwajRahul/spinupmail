@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gte, inArray, lt, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, inArray, lte, lt, sql } from "drizzle-orm";
 import { emailAddresses, emailAttachments, emails, members } from "@/db";
 import type { AppDb } from "@/platform/db/client";
 
@@ -80,7 +80,11 @@ export const findEmailActivity = async (
     .orderBy(asc(minuteBucketExpr));
 };
 
-export const findEmailSummary = async (db: AppDb, organizationId: string) => {
+export const findEmailSummary = async (
+  db: AppDb,
+  organizationId: string,
+  dormantInboxCreatedBefore: Date
+) => {
   const senderDomainExpr = sql<string>`lower(trim(replace(substr(${emails.from}, instr(${emails.from}, '@') + 1), '>', '')))`;
 
   const [
@@ -137,7 +141,8 @@ export const findEmailSummary = async (db: AppDb, organizationId: string) => {
       .where(
         and(
           eq(emailAddresses.organizationId, organizationId),
-          sql`${emailAddresses.lastReceivedAt} is null`
+          sql`${emailAddresses.lastReceivedAt} is null`,
+          lte(emailAddresses.createdAt, dormantInboxCreatedBefore)
         )
       )
       .orderBy(asc(emailAddresses.createdAt)),
