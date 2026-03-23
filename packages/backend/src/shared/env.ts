@@ -2,11 +2,15 @@ export const normalizeDomain = (value: string) =>
   value.trim().toLowerCase().replace(/^@+/, "").replace(/\.+$/, "");
 
 const MAX_ADDRESSES_PER_ORGANIZATION_DEFAULT = 100;
+const CLOUDFLARE_KV_MINIMUM_TTL_SECONDS = 60;
 const API_KEY_RATE_LIMIT_WINDOW_DEFAULT = 60;
 const API_KEY_RATE_LIMIT_MAX_DEFAULT = 120;
 const AUTH_RATE_LIMIT_WINDOW_DEFAULT = 60;
 const AUTH_CHANGE_EMAIL_RATE_LIMIT_WINDOW_DEFAULT = 60 * 60;
 const AUTH_CHANGE_EMAIL_RATE_LIMIT_MAX_DEFAULT = 2;
+
+const clampKvBackedRateLimitWindow = (windowSeconds: number) =>
+  Math.max(windowSeconds, CLOUDFLARE_KV_MINIMUM_TTL_SECONDS);
 
 export const getAllowedOrigins = (env: CloudflareBindings) => {
   const configured = env.CORS_ORIGIN?.split(",")
@@ -78,14 +82,16 @@ export const getAuthRateLimitConfig = (
     | "AUTH_CHANGE_EMAIL_RATE_LIMIT_MAX"
   >
 ) => ({
-  window:
+  window: clampKvBackedRateLimitWindow(
     parsePositiveInteger(env?.AUTH_RATE_LIMIT_WINDOW?.trim()) ??
-    AUTH_RATE_LIMIT_WINDOW_DEFAULT,
+      AUTH_RATE_LIMIT_WINDOW_DEFAULT
+  ),
   max: parsePositiveInteger(env?.AUTH_RATE_LIMIT_MAX?.trim()),
   changeEmail: {
-    window:
+    window: clampKvBackedRateLimitWindow(
       parsePositiveInteger(env?.AUTH_CHANGE_EMAIL_RATE_LIMIT_WINDOW?.trim()) ??
-      AUTH_CHANGE_EMAIL_RATE_LIMIT_WINDOW_DEFAULT,
+        AUTH_CHANGE_EMAIL_RATE_LIMIT_WINDOW_DEFAULT
+    ),
     max:
       parsePositiveInteger(env?.AUTH_CHANGE_EMAIL_RATE_LIMIT_MAX?.trim()) ??
       AUTH_CHANGE_EMAIL_RATE_LIMIT_MAX_DEFAULT,
@@ -98,9 +104,10 @@ export const getApiKeyUsageRateLimitConfig = (
     "API_KEY_RATE_LIMIT_WINDOW" | "API_KEY_RATE_LIMIT_MAX"
   >
 ) => ({
-  window:
+  window: clampKvBackedRateLimitWindow(
     parsePositiveInteger(env?.API_KEY_RATE_LIMIT_WINDOW?.trim()) ??
-    API_KEY_RATE_LIMIT_WINDOW_DEFAULT,
+      API_KEY_RATE_LIMIT_WINDOW_DEFAULT
+  ),
   max:
     parsePositiveInteger(env?.API_KEY_RATE_LIMIT_MAX?.trim()) ??
     API_KEY_RATE_LIMIT_MAX_DEFAULT,

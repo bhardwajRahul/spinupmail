@@ -97,6 +97,22 @@ function createAuth(
   const authAllowedEmailDomain = getAuthAllowedEmailDomain(env);
   const authRateLimit = getAuthRateLimitConfig(env);
   const apiKeyRateLimit = getApiKeyUsageRateLimitConfig(env);
+  const signInRateLimitRule =
+    authRateLimit.max !== undefined
+      ? {
+          window: authRateLimit.window,
+          max: authRateLimit.max,
+        }
+      : (
+          _request: Request,
+          currentRule: {
+            window: number;
+            max: number;
+          }
+        ) => ({
+          ...currentRule,
+          window: authRateLimit.window,
+        });
   const trustedOrigins = env?.CORS_ORIGIN?.split(",")
     .map(origin => origin.trim())
     .filter(Boolean);
@@ -247,6 +263,10 @@ function createAuth(
             ? { max: authRateLimit.max }
             : {}),
           customRules: {
+            // Better Auth ships shorter built-in sign-in windows that cause
+            // Cloudflare KV TTL warnings unless they are explicitly raised.
+            "/sign-in/email": signInRateLimitRule,
+            "/sign-in/social": signInRateLimitRule,
             // It's here to prevent abuse,
             // you might not need this based on your service provider's limits.
             "/change-email": {

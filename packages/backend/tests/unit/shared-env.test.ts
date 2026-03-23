@@ -118,6 +118,22 @@ describe("shared env helpers", () => {
     });
   });
 
+  it("clamps KV-backed Better Auth rate limit windows to Cloudflare's minimum TTL", () => {
+    expect(
+      getAuthRateLimitConfig({
+        AUTH_RATE_LIMIT_WINDOW: "10",
+        AUTH_CHANGE_EMAIL_RATE_LIMIT_WINDOW: "30",
+      } as CloudflareBindings)
+    ).toEqual({
+      window: 60,
+      max: undefined,
+      changeEmail: {
+        window: 60,
+        max: 2,
+      },
+    });
+  });
+
   it("parses API key usage rate limit env overrides and preserves defaults", () => {
     expect(
       getApiKeyUsageRateLimitConfig({
@@ -140,6 +156,18 @@ describe("shared env helpers", () => {
     });
 
     expect(getApiKeyUsageRateLimitConfig({} as CloudflareBindings)).toEqual({
+      window: 60,
+      max: 120,
+    });
+  });
+
+  it("clamps KV-backed API key rate limit windows to Cloudflare's minimum TTL", () => {
+    expect(
+      getApiKeyUsageRateLimitConfig({
+        API_KEY_RATE_LIMIT_WINDOW: "10",
+        API_KEY_RATE_LIMIT_MAX: "120",
+      } as CloudflareBindings)
+    ).toEqual({
       window: 60,
       max: 120,
     });

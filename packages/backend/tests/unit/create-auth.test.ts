@@ -33,6 +33,30 @@ type AuthWithApiKeyPluginConfig = {
   }>;
   rateLimit?: {
     customRules?: {
+      "/sign-in/email"?:
+        | {
+            window?: number;
+            max?: number;
+          }
+        | ((
+            request: Request,
+            currentRule: { window: number; max: number }
+          ) => {
+            window?: number;
+            max?: number;
+          });
+      "/sign-in/social"?:
+        | {
+            window?: number;
+            max?: number;
+          }
+        | ((
+            request: Request,
+            currentRule: { window: number; max: number }
+          ) => {
+            window?: number;
+            max?: number;
+          });
       "/get-session"?: {
         window?: number;
         max?: number;
@@ -43,6 +67,32 @@ type AuthWithApiKeyPluginConfig = {
       };
     };
   };
+};
+
+const resolveRateLimitRule = (
+  rule:
+    | {
+        window?: number;
+        max?: number;
+      }
+    | ((
+        request: Request,
+        currentRule: { window: number; max: number }
+      ) => {
+        window?: number;
+        max?: number;
+      })
+    | undefined,
+  fallback: {
+    window: number;
+    max: number;
+  }
+) => {
+  if (typeof rule === "function") {
+    return rule(new Request("http://localhost"), fallback);
+  }
+
+  return rule;
 };
 
 const assertApiKeyPluginConfig = (
@@ -63,6 +113,24 @@ const assertApiKeyPluginConfig = (
   });
   expect(apiKeyPlugin?.configurations?.[0]?.storage).toBe("secondary-storage");
   expect(apiKeyPlugin?.configurations?.[0]?.fallbackToDatabase).toBe(true);
+  expect(
+    resolveRateLimitRule(auth.rateLimit?.customRules?.["/sign-in/email"], {
+      window: 10,
+      max: 100,
+    })
+  ).toEqual({
+    window: 60,
+    max: 100,
+  });
+  expect(
+    resolveRateLimitRule(auth.rateLimit?.customRules?.["/sign-in/social"], {
+      window: 10,
+      max: 100,
+    })
+  ).toEqual({
+    window: 60,
+    max: 100,
+  });
   expect(auth.rateLimit?.customRules?.["/get-session"]).toEqual({
     window: expected.window,
     max: expected.max,
@@ -207,6 +275,14 @@ describe("createAuth", () => {
         window?: number;
         max?: number;
         customRules?: {
+          "/sign-in/email"?: {
+            window?: number;
+            max?: number;
+          };
+          "/sign-in/social"?: {
+            window?: number;
+            max?: number;
+          };
           "/change-email"?: {
             window?: number;
             max?: number;
@@ -228,6 +304,14 @@ describe("createAuth", () => {
       window: 120,
       max: 25,
       customRules: {
+        "/sign-in/email": {
+          window: 120,
+          max: 25,
+        },
+        "/sign-in/social": {
+          window: 120,
+          max: 25,
+        },
         "/change-email": {
           window: 7200,
           max: 5,
@@ -264,6 +348,89 @@ describe("createAuth", () => {
       maxRequests: 250,
       window: 120,
       max: 250,
+    });
+  });
+
+  it("clamps short KV-backed auth windows before passing them to Better Auth", async () => {
+    const { createAuth } = await import("@/platform/auth/create-auth");
+
+    const auth = createAuth({
+      AUTH_RATE_LIMIT_WINDOW: "10",
+      AUTH_CHANGE_EMAIL_RATE_LIMIT_WINDOW: "30",
+      API_KEY_RATE_LIMIT_WINDOW: "15",
+    } as CloudflareBindings) as AuthWithApiKeyPluginConfig & {
+      rateLimit?: {
+        window?: number;
+        customRules?: {
+          "/sign-in/email"?:
+            | {
+                window?: number;
+                max?: number;
+              }
+            | ((
+                request: Request,
+                currentRule: { window: number; max: number }
+              ) => {
+                window?: number;
+                max?: number;
+              });
+          "/sign-in/social"?:
+            | {
+                window?: number;
+                max?: number;
+              }
+            | ((
+                request: Request,
+                currentRule: { window: number; max: number }
+              ) => {
+                window?: number;
+                max?: number;
+              });
+          "/change-email"?: {
+            window?: number;
+          };
+          "/get-session"?: {
+            window?: number;
+          };
+          "/organization/get-full-organization"?: {
+            window?: number;
+          };
+        };
+      };
+    };
+
+    expect(auth.rateLimit?.window).toBe(60);
+    expect(
+      resolveRateLimitRule(auth.rateLimit?.customRules?.["/sign-in/email"], {
+        window: 10,
+        max: 100,
+      })
+    ).toEqual({
+      window: 60,
+      max: 100,
+    });
+    expect(
+      resolveRateLimitRule(auth.rateLimit?.customRules?.["/sign-in/social"], {
+        window: 10,
+        max: 100,
+      })
+    ).toEqual({
+      window: 60,
+      max: 100,
+    });
+    expect(auth.rateLimit?.customRules?.["/change-email"]).toEqual({
+      window: 60,
+      max: 2,
+    });
+    expect(auth.rateLimit?.customRules?.["/get-session"]).toEqual({
+      window: 60,
+      max: 120,
+    });
+    expect(
+      auth.rateLimit?.customRules?.["/organization/get-full-organization"]
+    ).toEqual({
+      window: 60,
+      max: 120,
     });
   });
 
