@@ -17,7 +17,8 @@ const REFRESH_AFTER_MS = 24 * 60 * 60 * 1000;
 const HARD_EXPIRE_AFTER_MS = 7 * 24 * 60 * 60 * 1000;
 const STORAGE_TTL_SECONDS = 10 * 24 * 60 * 60;
 const REFRESH_LOCK_TTL_SECONDS = 5 * 60;
-const SHARD_PREFIX_LENGTH = 2;
+// Keep refresh fan-out low enough for Workers subrequest limits on auth flows.
+const SHARD_PREFIX_LENGTH = 1;
 const MAX_SOURCE_BYTES = 2 * 1024 * 1024;
 
 type DisposableDomainsManifest = {
