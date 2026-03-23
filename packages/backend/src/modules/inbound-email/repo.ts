@@ -1,5 +1,5 @@
 import { and, eq, lt, sql } from "drizzle-orm";
-import { emailAddresses } from "@/db";
+import { emailAddresses, emails } from "@/db";
 import type { AppDb } from "@/platform/db/client";
 import {
   buildDeleteEmailSearchEntriesByAddressIdStatement,
@@ -19,6 +19,21 @@ export const findAddressByRecipient = (db: AppDb, recipient: string) =>
     .where(eq(emailAddresses.address, recipient))
     .get();
 
+export const findInboundEmailByAddressAndMessageId = (
+  db: AppDb,
+  addressId: string,
+  messageId: string
+) =>
+  db
+    .select({
+      id: emails.id,
+    })
+    .from(emails)
+    .where(
+      and(eq(emails.addressId, addressId), eq(emails.messageId, messageId))
+    )
+    .get();
+
 export const insertInboundEmail = async (
   db: AppDb,
   values: {
@@ -36,12 +51,13 @@ export const insertInboundEmail = async (
     rawSize: number;
     rawTruncated: boolean;
     receivedAt: Date;
+    countAlreadyReserved: boolean;
   }
 ) => {
   const insertEmailStatement = db.$client
     .prepare(
       `
-        INSERT INTO emails (
+        INSERT OR IGNORE INTO emails (
           id,
           address_id,
           message_id,
@@ -77,8 +93,14 @@ export const insertInboundEmail = async (
       values.receivedAt.getTime()
     );
 
-  await db.$client.batch([
-    insertEmailStatement,
+  const insertResults = await db.$client.batch([insertEmailStatement]);
+  const inserted = Number(insertResults[0]?.meta?.changes ?? 0) > 0;
+
+  if (!inserted) {
+    return { inserted: false };
+  }
+
+  const followUpStatements = [
     buildInsertEmailSearchEntryStatement({
       db,
       emailId: values.id,
@@ -87,7 +109,25 @@ export const insertInboundEmail = async (
       senderAddress: values.from,
       bodyText: values.bodyText,
     }),
-  ]);
+  ];
+
+  if (!values.countAlreadyReserved) {
+    followUpStatements.unshift(
+      db.$client
+        .prepare(
+          `
+            UPDATE email_addresses
+            SET email_count = email_count + 1
+            WHERE id = ?
+          `
+        )
+        .bind(values.addressId)
+    );
+  }
+
+  await db.$client.batch(followUpStatements);
+
+  return { inserted: true };
 };
 
 export const reserveInboxSlot = ({
