@@ -3,6 +3,7 @@ import {
   getAuthAllowedEmailDomain,
   getAuthRateLimitConfig,
   getAllowedDomains,
+  isEmailAttachmentsEnabled,
   getMaxAddressesPerOrganization,
   normalizeDomain,
   parseBooleanEnv,
@@ -82,6 +83,32 @@ describe("shared env helpers", () => {
     expect(parseBooleanEnv("no", true)).toBe(false);
     expect(parseBooleanEnv("invalid", true)).toBe(true);
     expect(parseBooleanEnv(undefined, false)).toBe(false);
+  });
+
+  it("enables attachments by default and supports opt-out env values", () => {
+    const originalValue = process.env.EMAIL_ATTACHMENTS_ENABLED;
+
+    try {
+      delete process.env.EMAIL_ATTACHMENTS_ENABLED;
+
+      expect(isEmailAttachmentsEnabled({} as CloudflareBindings)).toBe(true);
+      expect(
+        isEmailAttachmentsEnabled({
+          EMAIL_ATTACHMENTS_ENABLED: "false",
+        } as CloudflareBindings)
+      ).toBe(false);
+      expect(
+        isEmailAttachmentsEnabled({
+          EMAIL_ATTACHMENTS_ENABLED: "0",
+        } as CloudflareBindings)
+      ).toBe(false);
+    } finally {
+      if (originalValue === undefined) {
+        delete process.env.EMAIL_ATTACHMENTS_ENABLED;
+      } else {
+        process.env.EMAIL_ATTACHMENTS_ENABLED = originalValue;
+      }
+    }
   });
 
   it("parses Better Auth rate limit env overrides and preserves defaults", () => {
