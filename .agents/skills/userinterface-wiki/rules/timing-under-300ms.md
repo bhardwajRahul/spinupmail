@@ -12,15 +12,11 @@ User-initiated animations must complete within 300ms.
 **Incorrect (exceeds 300ms limit):**
 
 ```css
-.button {
-  transition: transform 400ms;
-}
+.button { transition: transform 400ms; }
 ```
 
 **Correct (within 300ms):**
 
 ```css
-.button {
-  transition: transform 200ms;
-}
+.button { transition: transform 200ms; }
 ```

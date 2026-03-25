@@ -32,7 +32,9 @@ function Editor() {
     <div>
       <BasicTools />
       {showAdvanced && <AdvancedTools />}
-      <button onClick={() => setShowAdvanced(!showAdvanced)}>Toggle</button>
+      <button onClick={() => setShowAdvanced(!showAdvanced)}>
+        Toggle
+      </button>
     </div>
   );
 }

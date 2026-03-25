@@ -29,7 +29,7 @@ function useMeasure(ref) {
 function useMeasure() {
   const [element, setElement] = useState(null);
   const [bounds, setBounds] = useState({ width: 0, height: 0 });
-  const ref = useCallback(node => setElement(node), []);
+  const ref = useCallback((node) => setElement(node), []);
 
   useEffect(() => {
     if (!element) return;

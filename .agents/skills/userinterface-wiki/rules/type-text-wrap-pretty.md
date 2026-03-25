@@ -11,12 +11,6 @@ Use text-wrap: pretty for body text to reduce orphans. Use text-wrap: balance fo
 **Correct:**
 
 ```css
-p {
-  text-wrap: pretty;
-}
-h1,
-h2,
-h3 {
-  text-wrap: balance;
-}
+p { text-wrap: pretty; }
+h1, h2, h3 { text-wrap: balance; }
 ```

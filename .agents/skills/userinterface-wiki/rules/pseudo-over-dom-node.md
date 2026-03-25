@@ -20,9 +20,10 @@ Use pseudo-elements for decorative content instead of extra DOM nodes.
 **Correct (pseudo-element):**
 
 ```tsx
-<button className={styles.button}>Click me</button>
+<button className={styles.button}>
+  Click me
+</button>
 ```
-
 ```css
 .button::before {
   content: "";

@@ -13,7 +13,11 @@ useIsPresent must be called from child of AnimatePresence, not parent.
 ```tsx
 function Parent() {
   const isPresent = useIsPresent();
-  return <AnimatePresence>{show && <Child />}</AnimatePresence>;
+  return (
+    <AnimatePresence>
+      {show && <Child />}
+    </AnimatePresence>
+  );
 }
 ```
 

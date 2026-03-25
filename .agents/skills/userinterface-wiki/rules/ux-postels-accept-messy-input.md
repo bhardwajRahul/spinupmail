@@ -33,7 +33,11 @@ function DateInput({ onChange }) {
   }
 
   return (
-    <input type="text" placeholder="Any date format" onChange={handleChange} />
+    <input
+      type="text"
+      placeholder="Any date format"
+      onChange={handleChange}
+    />
   );
 }
 ```

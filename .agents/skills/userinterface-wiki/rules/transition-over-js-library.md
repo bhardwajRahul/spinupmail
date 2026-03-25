@@ -14,7 +14,9 @@ Prefer View Transitions API over JavaScript animation libraries for page transit
 import { motion } from "motion/react";
 
 function ImageLightbox() {
-  return <motion.img layoutId="hero" />;
+  return (
+    <motion.img layoutId="hero" />
+  );
 }
 ```
 

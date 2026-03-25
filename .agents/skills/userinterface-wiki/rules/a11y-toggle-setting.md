@@ -21,6 +21,10 @@ function App() {
 ```tsx
 function App() {
   const { soundEnabled } = usePreferences();
-  return <SoundProvider enabled={soundEnabled}>{children}</SoundProvider>;
+  return (
+    <SoundProvider enabled={soundEnabled}>
+      {children}
+    </SoundProvider>
+  );
 }
 ```

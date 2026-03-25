@@ -13,7 +13,10 @@ Touch devices have no cursor. Fall back to viewport or touch-start strategies au
 ```tsx
 function PrefetchLink({ href, children }) {
   return (
-    <Link href={href} onMouseMove={() => prefetch(href)}>
+    <Link
+      href={href}
+      onMouseMove={() => prefetch(href)}
+    >
       {children}
     </Link>
   );

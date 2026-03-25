@@ -14,9 +14,7 @@ People interpret complex visuals as the simplest form possible. Reduce visual no
 .card {
   border: 2px dashed red;
   background: linear-gradient(45deg, #f0f, #0ff);
-  box-shadow:
-    5px 5px 0 black,
-    10px 10px 0 gray;
+  box-shadow: 5px 5px 0 black, 10px 10px 0 gray;
   outline: 3px dotted blue;
 }
 ```

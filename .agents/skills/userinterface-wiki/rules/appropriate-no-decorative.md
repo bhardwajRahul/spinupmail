@@ -12,6 +12,10 @@ Do not add sound to decorative moments with no informational value.
 
 ```tsx
 function Card({ onHover }) {
-  return <div onMouseEnter={() => playSound("hover")}>{children}</div>;
+  return (
+    <div onMouseEnter={() => playSound("hover")}>
+      {children}
+    </div>
+  );
 }
 ```

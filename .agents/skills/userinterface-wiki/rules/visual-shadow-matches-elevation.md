@@ -17,13 +17,7 @@ Larger blur and offset means higher elevation. Use a consistent shadow scale acr
   --shadow-3: 0 8px 24px rgba(0, 0, 0, 0.12);
 }
 
-.card {
-  box-shadow: var(--shadow-1);
-}
-.dropdown {
-  box-shadow: var(--shadow-2);
-}
-.modal {
-  box-shadow: var(--shadow-3);
-}
+.card { box-shadow: var(--shadow-1); }
+.dropdown { box-shadow: var(--shadow-2); }
+.modal { box-shadow: var(--shadow-3); }
 ```

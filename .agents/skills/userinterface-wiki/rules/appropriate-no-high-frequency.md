@@ -12,7 +12,7 @@ Do not add sound to high-frequency interactions (typing, keyboard navigation).
 
 ```tsx
 function Input({ onChange }) {
-  const handleChange = e => {
+  const handleChange = (e) => {
     playSound("keystroke");
     onChange(e);
   };

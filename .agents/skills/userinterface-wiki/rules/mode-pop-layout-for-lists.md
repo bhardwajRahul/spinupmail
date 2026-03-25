@@ -12,9 +12,7 @@ Use popLayout mode for list reordering animations.
 
 ```tsx
 <AnimatePresence>
-  {items.map(item => (
-    <ListItem key={item.id} />
-  ))}
+  {items.map(item => <ListItem key={item.id} />)}
 </AnimatePresence>
 ```
 
@@ -22,8 +20,6 @@ Use popLayout mode for list reordering animations.
 
 ```tsx
 <AnimatePresence mode="popLayout">
-  {items.map(item => (
-    <ListItem key={item.id} />
-  ))}
+  {items.map(item => <ListItem key={item.id} />)}
 </AnimatePresence>
 ```

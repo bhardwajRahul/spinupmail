@@ -14,9 +14,7 @@ tags: ux, pareto, prioritization, features
 function Toolbar() {
   return (
     <div>
-      {allFeatures.map(f => (
-        <Button key={f.id}>{f.label}</Button>
-      ))}
+      {allFeatures.map(f => <Button key={f.id}>{f.label}</Button>)}
     </div>
   );
 }
@@ -28,9 +26,7 @@ function Toolbar() {
 function Toolbar() {
   return (
     <div>
-      {criticalFeatures.map(f => (
-        <Button key={f.id}>{f.label}</Button>
-      ))}
+      {criticalFeatures.map(f => <Button key={f.id}>{f.label}</Button>)}
       <MoreMenu features={secondaryFeatures} />
     </div>
   );

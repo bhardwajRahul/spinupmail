@@ -12,15 +12,11 @@ Linear easing should only be used for progress indicators, not motion.
 **Incorrect (linear for motion):**
 
 ```css
-.card {
-  transition: transform 200ms linear;
-}
+.card { transition: transform 200ms linear; }
 ```
 
 **Correct (linear for progress only):**
 
 ```css
-.progress-bar {
-  transition: width 100ms linear;
-}
+.progress-bar { transition: width 100ms linear; }
 ```

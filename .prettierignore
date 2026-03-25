@@ -11,3 +11,4 @@ build
 .wrangler
 
 packages/backend/drizzle
+.agents/skills

@@ -24,13 +24,13 @@ function SubmitButton({ onClick }) {
 ```tsx
 function SubmitButton({ onClick }) {
   const [status, setStatus] = useState("idle");
-
+  
   const handleClick = () => {
     playSound("success");
     setStatus("success");
     onClick();
   };
-
+  
   return <button data-status={status}>Submit</button>;
 }
 ```

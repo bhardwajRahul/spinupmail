@@ -14,7 +14,6 @@ Comprehensive UI/UX best practices guide for web interfaces. Contains 152 rules 
 ## When to Apply
 
 Reference these guidelines when:
-
 - Implementing or reviewing animations (CSS transitions, Motion/Framer Motion)
 - Choosing between springs, easing curves, or no animation
 - Working with AnimatePresence and exit animations
@@ -28,20 +27,20 @@ Reference these guidelines when:
 
 ## Rule Categories by Priority
 
-| Priority | Category               | Impact   | Prefixes                                     |
-| -------- | ---------------------- | -------- | -------------------------------------------- |
-| 1        | Animation Principles   | CRITICAL | `timing-`, `physics-`, `staging-`            |
-| 2        | Timing Functions       | HIGH     | `spring-`, `easing-`, `duration-`, `none-`   |
-| 3        | Exit Animations        | HIGH     | `exit-`, `presence-`, `mode-`, `nested-`     |
-| 4        | CSS Pseudo Elements    | MEDIUM   | `pseudo-`, `transition-`, `native-`          |
-| 5        | Audio Feedback         | MEDIUM   | `a11y-`, `appropriate-`, `impl-`, `weight-`  |
-| 6        | Sound Synthesis        | MEDIUM   | `context-`, `envelope-`, `design-`, `param-` |
-| 7        | Morphing Icons         | LOW      | `morphing-`                                  |
-| 8        | Container Animation    | MEDIUM   | `container-`                                 |
-| 9        | Laws of UX             | HIGH     | `ux-`                                        |
-| 10       | Predictive Prefetching | MEDIUM   | `prefetch-`                                  |
-| 11       | Typography             | MEDIUM   | `type-`                                      |
-| 12       | Visual Design          | HIGH     | `visual-`                                    |
+| Priority | Category | Impact | Prefixes |
+|----------|----------|--------|----------|
+| 1 | Animation Principles | CRITICAL | `timing-`, `physics-`, `staging-` |
+| 2 | Timing Functions | HIGH | `spring-`, `easing-`, `duration-`, `none-` |
+| 3 | Exit Animations | HIGH | `exit-`, `presence-`, `mode-`, `nested-` |
+| 4 | CSS Pseudo Elements | MEDIUM | `pseudo-`, `transition-`, `native-` |
+| 5 | Audio Feedback | MEDIUM | `a11y-`, `appropriate-`, `impl-`, `weight-` |
+| 6 | Sound Synthesis | MEDIUM | `context-`, `envelope-`, `design-`, `param-` |
+| 7 | Morphing Icons | LOW | `morphing-` |
+| 8 | Container Animation | MEDIUM | `container-` |
+| 9 | Laws of UX | HIGH | `ux-` |
+| 10 | Predictive Prefetching | MEDIUM | `prefetch-` |
+| 11 | Typography | MEDIUM | `type-` |
+| 12 | Visual Design | HIGH | `visual-` |
 
 ## Quick Reference
 
@@ -245,7 +244,6 @@ rules/type-tabular-nums-for-data.md
 ```
 
 Each rule file contains:
-
 - Brief explanation of why it matters
 - Incorrect code example with explanation
 - Correct code example with explanation

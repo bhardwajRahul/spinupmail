@@ -23,9 +23,7 @@ function Onboarding({ step, totalSteps }) {
   return (
     <div>
       <ProgressBar value={step} max={totalSteps} />
-      <span>
-        Step {step} of {totalSteps}
-      </span>
+      <span>Step {step} of {totalSteps}</span>
       <OnboardingStep step={step} />
     </div>
   );

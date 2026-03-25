@@ -22,7 +22,7 @@ useEffect(() => {
 
 ```tsx
 const [element, setElement] = useState(null);
-const ref = useCallback(node => setElement(node), []);
+const ref = useCallback((node) => setElement(node), []);
 useEffect(() => {
   if (!element) return;
   observer.observe(element);

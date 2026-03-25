@@ -12,15 +12,11 @@ Modal/dialog backgrounds should dim to direct focus.
 **Incorrect (transparent overlay):**
 
 ```css
-.overlay {
-  background: transparent;
-}
+.overlay { background: transparent; }
 ```
 
 **Correct (dimmed overlay):**
 
 ```css
-.overlay {
-  background: var(--black-a6);
-}
+.overlay { background: var(--black-a6); }
 ```
