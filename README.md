@@ -1,11 +1,22 @@
-# Spinupmail
+---
+
+<h3 align="center">
+<sub>
+<p align="center"><img src="./packages/frontend/public/logo.png" height="60" width="60"></p>
+</sub>
+SpinupMail
+</h3>
+<p align="center">
+Create unlimited email addresses in shareable workspaces for free, hosted on Cloudflare.
+</p>
+
+---
 
 Spinupmail is a Cloudflare Email Routing + Workers app for generating disposable
-email addresses, storing inbound messages, and reading them via API (session
-cookies or API keys). It includes a Hono API backend and a React + shadcn UI
-frontend.
+email addresses, storing inbound messages, and reading them via API. It includes
+a Better Auth + Hono API backend and a React + shadcn UI frontend.
 
-## What You Get
+## Features
 
 - Create unlimited email addresses scoped to an organization
 - Create and join organizations (max 3 per user, max 10 members per org)
@@ -13,13 +24,11 @@ frontend.
 - Browse organization-scoped emails in the UI
 - Store inbound mail attachments in Cloudflare R2 and download them in UI/API
 - Generate API keys for automation (e.g., test suites)
-- Require verified email before account access (verification sent via Resend)
 
 ## Prerequisites
 
 - A Cloudflare account with a domain using Cloudflare nameservers
 - Email Routing enabled for the domain
-- `pnpm` installed
 
 ## Repo Layout
 
@@ -40,6 +49,8 @@ frontend.
 - Prefer `@/shared/...`, `@/modules/...`, `@/platform/...`, and `@/app/...` for cross-folder imports.
 - Keep `./...` imports for files in the same folder.
 
+# Installation
+
 ## 1. Install Dependencies
 
 From the repo root:
@@ -50,42 +61,54 @@ pnpm install
 
 ## 2. Configure Cloudflare Resources
 
-### D1 Database
+### Create D1 Database
 
 ```bash
 pnpm exec wrangler d1 create SUM_DB
 ```
 
-### KV Namespace
+Save the returned `binding`, `database_name`, and `database_id` for the next steps.
+
+### Create KV Namespace
 
 ```bash
 pnpm exec wrangler kv namespace create SUM_KV
 ```
 
-### R2 Bucket (Attachments)
+Save the returned `binding` and `id` for the next steps.
+
+### Create R2 Bucket (Attachments)
 
 Create buckets for attachment storage:
 
 ```bash
 pnpm exec wrangler r2 bucket create spinupmail-attachments
-pnpm exec wrangler r2 bucket create spinupmail-attachments-preview
 ```
 
-Copy the example config and update IDs:
+Save the returned `bucket_name` and `binding` for the next steps.
 
-```bash
-cp packages/backend/wrangler.toml.example \
-  packages/backend/wrangler.toml
-```
+### Durable Objects
 
-Edit `packages/backend/wrangler.toml` with:
+This backend already includes the Durable Object binding and migration in
+`packages/backend/wrangler.toml.example`:
+
+- `[[durable_objects.bindings]]`
+- `[[migrations]]` with `new_sqlite_classes = ["InboundAbuseCounterDurableObject"]`
+
+For a fresh project, you do **not** run a separate "create durable object"
+command. Cloudflare creates the Durable Object namespace when you deploy the
+Worker with that migration, and individual Durable Object instances are created
+automatically the first time the backend uses them.
+
+Edit `packages/backend/wrangler.toml` with the created resource values:
 
 - `[[d1_databases]].database_id`
 - `[[kv_namespaces]].id`
 - `[[r2_buckets]].bucket_name` (e.g. `spinupmail-attachments`)
 - `[[r2_buckets]].preview_bucket_name` (e.g. `spinupmail-attachments-preview`)
-- `[vars].EMAIL_DOMAINS` (comma-separated inbound domains)
-- Optional: `[vars].AUTH_ALLOWED_EMAIL_DOMAIN` (restrict auth to one email domain)
+- `[vars].EMAIL_DOMAINS` (comma-separated inbound domains, can be single domain like `spinupmail.com` or multiple domains like `spinupmail.com,spinupmail.dev`)
+- `[vars].RESEND_FROM_EMAIL` (e.g. `Spinupmail <verify@spinupmail.com>`. Will be used when sending Verification/Password Reset emails.)
+- Optional: `[vars].AUTH_ALLOWED_EMAIL_DOMAIN` (restrict auth to one email domain. **Useful when you want to deploy an internal tool for your organization and restrict access to a specific domain.**)
 - Optional:
   - `[vars].EMAIL_MAX_BYTES`
   - `[vars].EMAIL_BODY_MAX_BYTES`
@@ -99,7 +122,6 @@ Edit `packages/backend/wrangler.toml` with:
   - `[vars].AUTH_RATE_LIMIT_MAX` (optional Better Auth global max override)
   - `[vars].AUTH_CHANGE_EMAIL_RATE_LIMIT_WINDOW` (default: `3600`)
   - `[vars].AUTH_CHANGE_EMAIL_RATE_LIMIT_MAX` (default: `2`)
-  - `[vars].RESEND_FROM_EMAIL` (e.g. `Spinupmail <verify@your-domain.com>`)
   - `[vars].EMAIL_STORE_HEADERS_IN_DB`
   - `[vars].EMAIL_STORE_RAW_IN_DB`
   - `[vars].EMAIL_STORE_RAW_IN_R2`
@@ -110,9 +132,11 @@ Set the secrets for the Worker:
 
 ```bash
 pnpm exec wrangler secret put BETTER_AUTH_SECRET
+# You can generate a new secret from the docs: https://better-auth.com/docs/installation
 pnpm exec wrangler secret put BETTER_AUTH_BASE_URL
 pnpm exec wrangler secret put GOOGLE_CLIENT_ID
 pnpm exec wrangler secret put GOOGLE_CLIENT_SECRET
+# See detailed Google OAuth setup instructions below
 pnpm exec wrangler secret put RESEND_API_KEY
 pnpm exec wrangler secret put TURNSTILE_SECRET_KEY
 ```
@@ -212,8 +236,8 @@ In `packages/backend/wrangler.toml`:
 
 ```
 [vars]
-EMAIL_DOMAINS = "spinupmail.com,spinuptestdomain.com"
-AUTH_ALLOWED_EMAIL_DOMAIN = "spinupmail.com"
+EMAIL_DOMAINS = "spinupmail.com,spinupmail.dev"
+AUTH_ALLOWED_EMAIL_DOMAIN = "example.com" # Optional if you want to restrict sign-ups/sign-ins to a domain
 MAX_ADDRESSES_PER_ORGANIZATION = "100"
 API_KEY_RATE_LIMIT_WINDOW = "60"
 API_KEY_RATE_LIMIT_MAX = "120"
@@ -255,8 +279,8 @@ Build settings:
 
 If you route the Worker on the same domain at `/api/*`, you can set:
 
-- `VITE_AUTH_BASE_URL = /api/auth`
-- `VITE_API_BASE_URL = /api`
+- `VITE_AUTH_BASE_URL = https://your-domain.com/api/auth`
+- `VITE_API_BASE_URL = https://your-domain.com/api`
 - `VITE_TURNSTILE_SITE_KEY = <Cloudflare Turnstile site key>`
 
 If you prefer a separate API domain:
