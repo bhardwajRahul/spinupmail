@@ -23,13 +23,42 @@ import { Link } from "react-router";
 import { useEmailSummaryQuery } from "@/features/dashboard/hooks/use-email-summary";
 import { useTimezone } from "@/features/timezone/hooks/use-timezone";
 import { formatDateTimeInTimeZone } from "@/features/timezone/lib/date-format";
+import { cn } from "@/lib/utils";
 
-const formatBytes = (bytes: number) => {
-  if (bytes === 0) return "0 B";
-  const k = 1024;
-  const sizes = ["B", "KB", "MB", "GB"];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
+const BYTE_UNITS = ["B", "KB", "MB", "GB", "TB", "PB"] as const;
+
+const formatBytes = (bytes: number | bigint) => {
+  const normalizedBytes =
+    typeof bytes === "bigint" ? bytes : BigInt(Math.trunc(bytes));
+
+  if (normalizedBytes <= 0n) return "0 B";
+
+  let unitIndex = 0;
+  let whole = normalizedBytes;
+  let remainder = 0n;
+
+  while (whole >= 1024n && unitIndex < BYTE_UNITS.length - 1) {
+    remainder = whole % 1024n;
+    whole /= 1024n;
+    unitIndex += 1;
+  }
+
+  if (unitIndex === 0 || remainder === 0n) {
+    return `${whole} ${BYTE_UNITS[unitIndex]}`;
+  }
+
+  const roundedTenth = Number((remainder * 10n + 512n) / 1024n);
+
+  if (roundedTenth === 10) {
+    whole += 1n;
+    if (whole === 1024n && unitIndex < BYTE_UNITS.length - 1) {
+      whole = 1n;
+      unitIndex += 1;
+    }
+    return `${whole} ${BYTE_UNITS[unitIndex]}`;
+  }
+
+  return `${whole}.${roundedTenth} ${BYTE_UNITS[unitIndex]}`;
 };
 
 const getAddressLocalPart = (address: string) =>
@@ -52,19 +81,54 @@ const formatDormantCreatedAt = (createdAt: string | null, timeZone: string) => {
 const buildInboxAddressPath = (addressId: string) =>
   addressId ? `/inbox/${encodeURIComponent(addressId)}` : "/inbox";
 
+const getAttachmentUsageRatio = (usedBytes: number, limitBytes: number) => {
+  if (limitBytes <= 0) return 0;
+  return Math.min(usedBytes / limitBytes, 1);
+};
+
+const getAttachmentUsageTone = (ratio: number) => {
+  if (ratio >= 1) {
+    return {
+      valueClassName: "text-destructive",
+      barClassName: "bg-destructive",
+      trackClassName: "bg-destructive/15",
+    };
+  }
+
+  if (ratio >= 0.5) {
+    return {
+      valueClassName: "text-amber-600",
+      barClassName: "bg-amber-500",
+      trackClassName: "bg-amber-100",
+    };
+  }
+
+  return {
+    valueClassName: "text-muted-foreground",
+    barClassName: "bg-emerald-500",
+    trackClassName: "bg-emerald-100",
+  };
+};
+
 const StatBlock = ({
   icon: Icon,
   label,
   value,
+  valueClassName,
 }: {
   icon: React.ComponentType<{ className?: string }>;
   label: string;
   value: React.ReactNode;
+  valueClassName?: string;
 }) => (
   <div className="flex min-w-0 flex-1 flex-col items-center gap-0.5">
-    <div className="flex items-center justify-center gap-2.5">
+    <div className="flex items-center justify-center gap-2.5 min-h-[35px] mb-0.5">
       <Icon className="size-4 shrink-0 text-muted-foreground" />
-      <span className="text-lg font-semibold tabular-nums">{value}</span>
+      <span
+        className={cn("text-lg font-semibold tabular-nums", valueClassName)}
+      >
+        {value}
+      </span>
     </div>
     <span className="text-[10px] text-muted-foreground">{label}</span>
   </div>
@@ -78,6 +142,17 @@ export const EmailStatsCard = () => {
   const dormantInboxes = data?.dormantInboxes ?? [];
   const totalEmailCount = data?.totalEmailCount ?? 0;
   const attachmentCount = data?.attachmentCount ?? 0;
+  const attachmentSizeTotal = data?.attachmentSizeTotal ?? 0;
+  const attachmentSizeLimit = data?.attachmentSizeLimit ?? 0;
+  const attachmentUsageRatio = getAttachmentUsageRatio(
+    attachmentSizeTotal,
+    attachmentSizeLimit
+  );
+  const attachmentUsagePercent = Math.round(attachmentUsageRatio * 100);
+  const attachmentUsageTone = getAttachmentUsageTone(attachmentUsageRatio);
+  const attachmentUsageLabel = formatBytes(attachmentSizeTotal);
+  const attachmentUsageLimitLabel =
+    attachmentSizeLimit > 0 ? `of ${formatBytes(attachmentSizeLimit)}` : null;
 
   return (
     <Card className="min-w-0 border-border/70 bg-card/60">
@@ -119,11 +194,59 @@ export const EmailStatsCard = () => {
             <StatBlock
               icon={HardDrive}
               label="Total size"
-              value={formatBytes(
-                isLoading ? 0 : (data?.attachmentSizeTotal ?? 0)
-              )}
+              value={
+                <span className="flex min-w-0 flex-col items-center leading-none">
+                  <span
+                    className={cn(
+                      "max-w-full truncate whitespace-nowrap",
+                      !isLoading && attachmentUsageTone.valueClassName
+                    )}
+                  >
+                    {isLoading ? "0 B" : attachmentUsageLabel}
+                  </span>
+                  {attachmentUsageLimitLabel ? (
+                    <span className="mt-1 text-[10px] font-medium text-muted-foreground tabular-nums whitespace-nowrap">
+                      {isLoading ? "of 0 B" : attachmentUsageLimitLabel}
+                    </span>
+                  ) : null}
+                </span>
+              }
             />
           </div>
+          {!isLoading && attachmentSizeLimit > 0 ? (
+            <div className="space-y-1 px-1">
+              <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+                <span>Attachment storage</span>
+                <span
+                  className={cn(
+                    "font-medium tabular-nums",
+                    attachmentUsageTone.valueClassName
+                  )}
+                >
+                  {attachmentUsagePercent}%
+                </span>
+              </div>
+              <div
+                aria-label="Attachment storage usage"
+                aria-valuemax={100}
+                aria-valuemin={0}
+                aria-valuenow={attachmentUsagePercent}
+                className={cn(
+                  "h-1.5 overflow-hidden rounded-full",
+                  attachmentUsageTone.trackClassName
+                )}
+                role="progressbar"
+              >
+                <div
+                  className={cn(
+                    "h-full rounded-full transition-[width]",
+                    attachmentUsageTone.barClassName
+                  )}
+                  style={{ width: `${attachmentUsagePercent}%` }}
+                />
+              </div>
+            </div>
+          ) : null}
           {isLoading ? (
             <>
               <Separator className="my-2" />
