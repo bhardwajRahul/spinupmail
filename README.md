@@ -1,5 +1,4 @@
 ---
-
 <h3 align="center">
 <sub>
 <p align="center"><img src="./packages/frontend/public/logo.png" height="60" width="60"></p>
@@ -9,7 +8,6 @@ SpinupMail
 <p align="center">
 Create unlimited email addresses in shareable workspaces for free, hosted on Cloudflare.
 </p>
-
 ---
 
 Spinupmail is a Cloudflare Email Routing + Workers app for generating disposable
@@ -61,6 +59,12 @@ pnpm install
 
 ## 2. Configure Cloudflare Resources
 
+Open the backend folder:
+
+```bash
+cd packages/backend
+```
+
 ### Create D1 Database
 
 ```bash
@@ -85,7 +89,9 @@ Create buckets for attachment storage:
 pnpm exec wrangler r2 bucket create spinupmail-attachments
 ```
 
-Save the returned `bucket_name` and `binding` for the next steps.
+Save the returned `bucket_name` values for the next steps. In
+`packages/backend/wrangler.toml`, keep the Worker binding as `R2_BUCKET` and
+set `bucket_name` to the actual Cloudflare bucket names.
 
 ### Durable Objects
 
@@ -126,20 +132,37 @@ Edit `packages/backend/wrangler.toml` with the created resource values:
   - `[vars].EMAIL_STORE_RAW_IN_DB`
   - `[vars].EMAIL_STORE_RAW_IN_R2`
 
-## 3. Better Auth Secrets
+For local development, create `.dev.vars` file in `packages/backend`. Here is a sample file:
 
-Set the secrets for the Worker:
+```env
+BETTER_AUTH_BASE_URL="http://localhost:8787/api/auth"
+BETTER_AUTH_SECRET="" # Run `openssl rand -base64 32` to generate, or you can generate from https://better-auth.com/docs/installation
+CORS_ORIGIN="http://localhost:5173,http://127.0.0.1:5173"
+RESEND_API_KEY="" # Get from Resend
+TURNSTILE_SECRET_KEY="" # Get from Cloudflare
+GOOGLE_CLIENT_ID="" # Get from Google Cloud Console
+GOOGLE_CLIENT_SECRET="" # Get from Google Cloud Console
+```
+
+## 3. Backend Environment Variables and Secrets
+
+Set the secrets for the Worker (for Production):
 
 ```bash
-pnpm exec wrangler secret put BETTER_AUTH_SECRET
-# You can generate a new secret from the docs: https://better-auth.com/docs/installation
 pnpm exec wrangler secret put BETTER_AUTH_BASE_URL
+# e.g. https://api.spinupmail.com/api/auth
+pnpm exec wrangler secret put BETTER_AUTH_SECRET
+# Run `openssl rand -base64 32` to generate a secret, or you can generate from https://better-auth.com/docs/installation
+pnpm exec wrangler secret put CORS_ORIGIN
+# e.g. https://app.spinupmail.com
+pnpm exec wrangler secret put RESEND_API_KEY
+pnpm exec wrangler secret put TURNSTILE_SECRET_KEY
 pnpm exec wrangler secret put GOOGLE_CLIENT_ID
 pnpm exec wrangler secret put GOOGLE_CLIENT_SECRET
 # See detailed Google OAuth setup instructions below
-pnpm exec wrangler secret put RESEND_API_KEY
-pnpm exec wrangler secret put TURNSTILE_SECRET_KEY
 ```
+
+Run each of these commands in the `packages/backend` folder and provide the corresponding value when prompted.
 
 Use the Worker URL or your API route URL:
 
@@ -150,6 +173,74 @@ Use the Worker URL or your API route URL:
 - `TURNSTILE_SECRET_KEY = <Cloudflare Turnstile secret key>`
 - `RESEND_FROM_EMAIL` should be configured in `wrangler.toml` `[vars]` with a verified sender/domain.
 
+### Creating Turnstile Key
+
+1. Open Cloudflare dashboard and select your account.
+2. Use dashboard search and open **Turnstile**.
+3. Click **Add widget**.
+4. Fill widget configuration:
+   - **Widget name**: `Spinupmail` (or any name).
+   - **Hostname management**: add your frontend hostname(s), for example:
+     - `localhost` (for local frontend)
+     - `127.0.0.1` (optional, for local frontend)
+     - `your-frontend-domain.com` (production)
+   - **Widget mode**: **Managed**.
+5. Click **Create**.
+6. Copy generated keys:
+   - **Site key** (public key)
+   - **Secret key** (private key)
+7. Set backend secret (Worker):
+
+```bash
+pnpm exec wrangler secret put TURNSTILE_SECRET_KEY
+```
+
+8. Set frontend env:
+   - Cloudflare Pages env var: `VITE_TURNSTILE_SITE_KEY=<your site key>`
+   - Local dev (`packages/frontend/.env`): `VITE_TURNSTILE_SITE_KEY=<your site key>`
+
+Notes:
+
+- Use the **secret key** only on backend/Worker side (`TURNSTILE_SECRET_KEY`).
+- Use the **site key** only in frontend (`VITE_TURNSTILE_SITE_KEY`).
+- If Turnstile validation fails in production, confirm your deployed frontend hostname is listed in the widget hostnames.
+
+### Add Domain to Resend and Get API Key
+
+Spinupmail uses Resend for verification and password-reset emails sent by Better Auth.
+
+1. Create or sign in to your Resend account:
+   - Open `https://resend.com/`
+2. Add your sending domain in Resend:
+   - Go to **Domains** -> **Add Domain**
+   - Enter your domain
+3. Add required DNS records in Cloudflare DNS:
+   - Click on Auto Configure button to get redirected to Cloudflare.
+   - Save the records on Cloudflare.
+4. Wait for domain verification in Resend:
+   - In Resend **Domains**, click **Verify DNS Records** (or wait for auto-check)
+   - Continue only after status becomes **Verified**
+5. Create a Resend API key:
+   - Go to **API Keys** -> **Create API Key**
+   - Create a new API Key here with a permission to send emails.
+   - Copy the generated key (`re_...`)
+6. Save API key to backend Worker secret:
+
+```bash
+pnpm exec wrangler secret put RESEND_API_KEY
+```
+
+7. Configure sender in `packages/backend/wrangler.toml`:
+   - Set `[vars].RESEND_FROM_EMAIL` to a verified sender on your Resend domain, for example:
+   - `Spinupmail <verify@mail.your-domain.com>`
+8. Local development:
+   - Add `RESEND_API_KEY=...` in `packages/backend/.dev.vars`
+
+Notes:
+
+- `RESEND_API_KEY` is a backend secret only; do not expose it in frontend env vars.
+- The email in `RESEND_FROM_EMAIL` must belong to a verified Resend domain, otherwise mail sending will fail.
+
 ### Google OAuth Setup (Sign in / Sign up with Google)
 
 Spinupmail uses Better Auth social login with Google OAuth.
@@ -159,22 +250,26 @@ Spinupmail uses Better Auth social login with Google OAuth.
    - Select or create a project.
 2. Configure OAuth consent screen:
    - Go to **APIs & Services** -> **OAuth consent screen**
-   - Choose user type (usually **External**)
-   - Fill app name, support email, and developer contact email
+   - Click **Get Started** button
+   - Fill **App Name**, this will be shown to users during Google sign-in.
+   - Choose a User support email
+   - Choose **External** user type in Audience selection step
+   - Fill contact email and save
+   - On the opened page, click **Create OAuth client**
 3. Create OAuth client credentials:
-   - Go to **APIs & Services** -> **Credentials**
-   - Click **Create Credentials** -> **OAuth client ID**
+   - On the opened page, click **Create OAuth client**
    - Application type: **Web application**
+   - Name: `Spinupmail Auth` (or any name you want)
 4. Add authorized JavaScript Origins:
-
-- `http://127.0.0.1:5173`
-- `https://your-domain.com`
+   - `http://127.0.0.1:5173`
+   - `http://localhost:5173`
+   - `https://<your-frontend-domain>.com` (or your production frontend domain)
 
 5. Add authorized redirect URI(s):
    - Local backend:
      - `http://localhost:8787/api/auth/callback/google`
    - Production backend (pick the one you deploy):
-     - `https://<your-api-domain>/api/auth/callback/google`
+     - `https://<your-api-domain>/api/auth/callback/google` **Preferred**
      - or `https://<your-frontend-domain>/api/auth/callback/google` (if Worker is routed on the frontend domain under `/api/*`)
 6. Copy values:
    - `Client ID` -> `GOOGLE_CLIENT_ID`
@@ -204,7 +299,8 @@ Do **not** hand-edit migrations.
 
 ```bash
 pnpm -C packages/backend db:generate
-pnpm exec wrangler d1 migrations apply SUM_DB --remote
+pnpm -C packages/backend db:migrate:dev
+# for production, run `pnpm -C packages/backend db:migrate:prod`
 ```
 
 ## 5. Deploy the Backend Worker
@@ -213,22 +309,42 @@ pnpm exec wrangler d1 migrations apply SUM_DB --remote
 pnpm -C packages/backend deploy
 ```
 
+To setup automatic deployments:
+
+1. Open Build -> Compute -> Workers&Pages section in Cloudflare dashboard
+2. Click on your Worker (e.g. `spinupmail`)
+3. Open **Settings** tab
+4. Under **Build** -> **Git Repository** section, Click **Connect**
+5. Choose the repository (you should fork this repo to your Github account first)
+6. You can uncheck **Builds for non-production branches**
+7. Leave **Build command** empty
+8. Fill **Deploy command** with `pnpm run deploy`
+9. Fill **Root directory** with `packages/backend`
+10. You can enable Build Cache if you want
+11. Click **Connect**
+
 ## 6. Configure Email Routing (Cloudflare Dashboard)
 
-1. Enable **Email Routing** for your domain
-2. Add at least one destination address (verification email required)
-3. Create a **Routing rule**:
-   - Address: `*@your-domain.com`
-   - Action: **Send to Worker**
-   - Worker: `spinupmail` (or your deployed Worker name)
+1. Open Build -> Email Service -> Email Routing in Cloudflare dashboard
+2. Click on **Onboard Domain**
+3. Select correct **zone** and click **Done**
+4. Open the added domain in the list
+5. Open **Routing Rules** tab and create a Catch-all rule:
+   - Custom Address: Catch All
+   - Action: **Send to a worker**
+   - Destination: your deployed worker (e.g. `spinupmail`)
 
 If you use multiple domains, repeat the routing rule for each domain you add to
-`EMAIL_DOMAINS`.
+`EMAIL_DOMAINS` and add the domains in the `EMAIL_DOMAINS` variable in `wrangler.toml` as comma separated values.
 
-## Multiple Domains
+## 7. Configure Custom Domain for Worker API
 
-To support multiple inbound domains, configure them in the Worker and add Email
-Routing rules for each domain.
+1. Open Build -> Compute -> Workers&Pages section in Cloudflare dashboard
+2. Click on your deployed Worker (e.g. `spinupmail`)
+3. Open **Settings** tab
+4. In the **Domains & Routes** section, click **Add**
+5. Choose **Custom domain**
+6. Enter your API domain (e.g. `api.spinupmail.com`). If everything is OK, a DNS preview will show up. Click **Add domain**.
 
 ### 1) Worker config
 
@@ -249,63 +365,51 @@ EMAIL_ATTACHMENTS_ENABLED = "true"
 EMAIL_ATTACHMENT_MAX_TOTAL_BYTES_PER_ORGANIZATION = "104857600"
 ```
 
-### 2) Email Routing rules
-
-For **each domain** listed in `EMAIL_DOMAINS`:
-
-1. Enable Email Routing for that domain in Cloudflare.
-2. Add a destination address (verify it once per domain).
-3. Create a routing rule:
-   - Address: `*@that-domain.com`
-   - Action: **Send to Worker**
-   - Worker: your deployed Worker name.
-
-### 3) UI behavior
+### 2) UI behavior
 
 When multiple domains are configured, the UI shows a **domain selector** during
 address creation. If only one domain is configured, it is used automatically.
 
-## 7. Deploy the Frontend (Cloudflare Pages)
+## 8. Deploy the Frontend (Cloudflare Pages)
 
 Create a **Pages** project (not a Worker). The UI can be confusing, explicitly choose "Pages".
 
-Build settings:
+1. Open Build -> Compute -> Workers&Pages section in Cloudflare dashboard
+2. Click on **Looking to deploy Pages? Get started** link at the bottom
+3. Make sure to fork this repository to you Github account
+4. Click on **Import an existing Git repository**
+5. Connect your Github account and select the forked repository
+6. In **Set up builds and deployments**:
 
-- Root directory: `packages/frontend`
+- Project name: e.g. `spinupmail`
+- Framework preset: **None**
 - Build command: `pnpm run build`
 - Build output directory: `dist`
+- Root directory -> Path: `packages/frontend`
+- Environment variables:
+  - VITE_AUTH_BASE_URL -> e.g. `https://api.spinupmail.com/api/auth`
+  - VITE_API_BASE_URL -> e.g. `https://api.spinupmail.com`
+  - VITE_TURNSTILE_SITE_KEY -> your Cloudflare Turnstile site key
 
-### Environment Variables (Pages)
+### Local Environment Variables
 
-If you route the Worker on the same domain at `/api/*`, you can set:
+Create `.env` file for frontend development in `packages/frontend`:
 
-- `VITE_AUTH_BASE_URL = https://your-domain.com/api/auth`
-- `VITE_API_BASE_URL = https://your-domain.com/api`
-- `VITE_TURNSTILE_SITE_KEY = <Cloudflare Turnstile site key>`
+```env
+VITE_AUTH_BASE_URL=http://localhost:8787/api/auth
+VITE_API_BASE_URL=http://localhost:8787
+VITE_TURNSTILE_SITE_KEY=<Your Site Key>
+```
 
-If you prefer a separate API domain:
+## 9. Setting up Custom Domain
 
-- `VITE_AUTH_BASE_URL = https://api.your-domain.com/api/auth`
-- `VITE_API_BASE_URL = https://api.your-domain.com`
-- `VITE_TURNSTILE_SITE_KEY = <Cloudflare Turnstile site key>`
+After the Pages deployment is successful, set up a custom domain for the frontend:
 
-## 8. Route API Requests to the Worker
-
-If your frontend is on `https://your-domain.com`, add a Worker route:
-
-- `your-domain.com/api/*` → `spinupmail` Worker
-- (Optional) `www.your-domain.com/api/*` → `spinupmail` Worker
-
-This keeps the frontend and API on the same domain.
-
-## Using the App
-
-1. Open the Pages URL
-2. Sign up / sign in
-3. Create a new organization or join one using an invitation link
-4. Create a new email address
-5. Send an email to that address
-6. View emails in the UI
+1. Open **Custom domains** tab in your Pages project dashboard
+2. Click **Set up a custom domain**
+3. Enter your domain (e.g. `app.spinupmail.com`) and click **Continue**
+4. Check the DNS record and click **Activate domain**
+5. Wait for the domain to be active (can take a few minutes)
 
 ## API Usage (Automation)
 
@@ -417,10 +521,12 @@ Subject: Testing Email Workers Local Dev
 Content-Type: text/html; charset="windows-1252"
 X-Mailer: Curl
 Date: Tue, 27 Aug 2024 08:49:44 -0700
-Message-ID: <6114391943504294873000@ZSH-GHOSTTY>
+Message-ID: <MAKE-THIS-UNIQUE-6114391943504294873000@ZSH-GHOSTTY>
 
 Hi there'
 ```
+
+**Make sure** to set a unique Message-ID for each test email.
 
 To receive **real** emails, use a real domain in Cloudflare Email Routing (you
 can create a dev subdomain like `dev.your-domain.com`) and point the routing

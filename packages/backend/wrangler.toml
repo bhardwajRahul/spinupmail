@@ -23,12 +23,12 @@ class_name = "InboundAbuseCounterDurableObject"
 [[d1_databases]]
 binding = "SUM_DB"
 database_name = "SUM_DB"
-database_id = "a5ed1fb3-600a-45bb-991f-ad8be7170c49"
+database_id = "34c5ddb6-1c54-4aff-b307-5a104509a4ce"
 migrations_dir = "drizzle"
 
 [[kv_namespaces]]
 binding = "SUM_KV"
-id = "442502dbafb4409999092c94e7784fad"
+id = "2b0a16741ce345a4a177b48bbf2bfc30"
 
 [[r2_buckets]]
 bucket_name = "spinupmail-attachments"
