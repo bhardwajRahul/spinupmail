@@ -59,7 +59,10 @@ describe("EmailStatsCard", () => {
     renderCard();
 
     expect(screen.getByText("15 MB")).toBeTruthy();
-    expect(screen.getByText("of 100 MB")).toBeTruthy();
+    expect(screen.getByText("Total: 100 MB")).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: "Attachment storage policy" })
+    ).toBeTruthy();
     expect(
       screen
         .getByRole("progressbar", { name: "Attachment storage usage" })
@@ -67,7 +70,7 @@ describe("EmailStatsCard", () => {
     ).toBe("15");
   });
 
-  it("turns the storage usage yellow at halfway", () => {
+  it("darkens the storage usage tone at halfway", () => {
     mockedUseTimezone.mockReturnValue({
       effectiveTimeZone: "UTC",
     } as ReturnType<typeof useTimezone>);
@@ -80,11 +83,11 @@ describe("EmailStatsCard", () => {
 
     renderCard();
 
-    expect(screen.getByText("50 MB").className).toContain("text-amber-600");
-    expect(screen.getByText("of 100 MB")).toBeTruthy();
+    expect(screen.getByText("50 MB").className).toContain("text-foreground/80");
+    expect(screen.getByText("Total: 100 MB")).toBeTruthy();
   });
 
-  it("turns the storage usage red at the limit", () => {
+  it("uses the strongest neutral tone at the limit", () => {
     mockedUseTimezone.mockReturnValue({
       effectiveTimeZone: "UTC",
     } as ReturnType<typeof useTimezone>);
@@ -97,8 +100,8 @@ describe("EmailStatsCard", () => {
 
     renderCard();
 
-    expect(screen.getByText("100 MB").className).toContain("text-destructive");
-    expect(screen.getByText("of 100 MB")).toBeTruthy();
+    expect(screen.getByText("100 MB").className).toContain("text-foreground");
+    expect(screen.getByText("Total: 100 MB")).toBeTruthy();
     expect(
       screen
         .getByRole("progressbar", { name: "Attachment storage usage" })
@@ -120,7 +123,7 @@ describe("EmailStatsCard", () => {
     renderCard();
 
     expect(screen.getByText("1 TB")).toBeTruthy();
-    expect(screen.getByText("of 2 TB")).toBeTruthy();
+    expect(screen.getByText("Total: 2 TB")).toBeTruthy();
     expect(
       screen
         .getByRole("progressbar", { name: "Attachment storage usage" })

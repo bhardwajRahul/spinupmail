@@ -3,6 +3,7 @@ import NumberFlow from "@number-flow/react";
 import { ChartAnalysisIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   HoverCard,
@@ -18,7 +19,15 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { HardDrive, Inbox, Mail, Mailbox, Paperclip, Send } from "lucide-react";
+import {
+  CircleHelp,
+  HardDrive,
+  Inbox,
+  Mail,
+  Mailbox,
+  Paperclip,
+  Send,
+} from "lucide-react";
 import { Link } from "react-router";
 import { useEmailSummaryQuery } from "@/features/dashboard/hooks/use-email-summary";
 import { useTimezone } from "@/features/timezone/hooks/use-timezone";
@@ -89,24 +98,24 @@ const getAttachmentUsageRatio = (usedBytes: number, limitBytes: number) => {
 const getAttachmentUsageTone = (ratio: number) => {
   if (ratio >= 1) {
     return {
-      valueClassName: "text-destructive",
-      barClassName: "bg-destructive",
-      trackClassName: "bg-destructive/15",
+      valueClassName: "text-foreground",
+      barClassName: "bg-foreground/75",
+      trackClassName: "bg-foreground/16",
     };
   }
 
   if (ratio >= 0.5) {
     return {
-      valueClassName: "text-amber-600",
-      barClassName: "bg-amber-500",
-      trackClassName: "bg-amber-100",
+      valueClassName: "text-foreground/80",
+      barClassName: "bg-foreground/50",
+      trackClassName: "bg-foreground/12",
     };
   }
 
   return {
     valueClassName: "text-muted-foreground",
-    barClassName: "bg-emerald-500",
-    trackClassName: "bg-emerald-100",
+    barClassName: "bg-foreground/32",
+    trackClassName: "bg-foreground/8",
   };
 };
 
@@ -152,7 +161,12 @@ export const EmailStatsCard = () => {
   const attachmentUsageTone = getAttachmentUsageTone(attachmentUsageRatio);
   const attachmentUsageLabel = formatBytes(attachmentSizeTotal);
   const attachmentUsageLimitLabel =
-    attachmentSizeLimit > 0 ? `of ${formatBytes(attachmentSizeLimit)}` : null;
+    attachmentSizeLimit > 0
+      ? `Total: ${formatBytes(attachmentSizeLimit)}`
+      : null;
+  const attachmentUsageStatLabel = isLoading
+    ? "Total: 0 B"
+    : (attachmentUsageLimitLabel ?? "Total size");
 
   return (
     <Card className="min-w-0 border-border/70 bg-card/60">
@@ -193,22 +207,15 @@ export const EmailStatsCard = () => {
             <Separator orientation="vertical" className="mx-2" />
             <StatBlock
               icon={HardDrive}
-              label="Total size"
+              label={attachmentUsageStatLabel}
               value={
-                <span className="flex min-w-0 flex-col items-center leading-none">
-                  <span
-                    className={cn(
-                      "max-w-full truncate whitespace-nowrap",
-                      !isLoading && attachmentUsageTone.valueClassName
-                    )}
-                  >
-                    {isLoading ? "0 B" : attachmentUsageLabel}
-                  </span>
-                  {attachmentUsageLimitLabel ? (
-                    <span className="mt-1 text-[10px] font-medium text-muted-foreground tabular-nums whitespace-nowrap">
-                      {isLoading ? "of 0 B" : attachmentUsageLimitLabel}
-                    </span>
-                  ) : null}
+                <span
+                  className={cn(
+                    "max-w-full truncate whitespace-nowrap",
+                    !isLoading && attachmentUsageTone.valueClassName
+                  )}
+                >
+                  {isLoading ? "0 B" : attachmentUsageLabel}
                 </span>
               }
             />
@@ -216,7 +223,30 @@ export const EmailStatsCard = () => {
           {!isLoading && attachmentSizeLimit > 0 ? (
             <div className="space-y-1 px-1">
               <div className="flex items-center justify-between text-[10px] text-muted-foreground">
-                <span>Attachment storage</span>
+                <TooltipProvider delay={200}>
+                  <div className="flex items-center gap-1">
+                    <span>Attachment storage</span>
+                    <Tooltip>
+                      <TooltipTrigger
+                        render={
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon-xs"
+                            className="size-4 rounded-md bg-foreground/8 text-muted-foreground hover:bg-foreground/14 hover:text-foreground"
+                            aria-label="Attachment storage policy"
+                          />
+                        }
+                      >
+                        <CircleHelp className="size-3" aria-hidden="true" />
+                      </TooltipTrigger>
+                      <TooltipContent side="top">
+                        Please note that attachments received after reaching the
+                        storage limit will be rejected.
+                      </TooltipContent>
+                    </Tooltip>
+                  </div>
+                </TooltipProvider>
                 <span
                   className={cn(
                     "font-medium tabular-nums",
