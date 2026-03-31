@@ -35,6 +35,14 @@ const createEmailSummaryQueryResult = (overrides: {
     error: null,
   }) as unknown as ReturnType<typeof useEmailSummaryQuery>;
 
+const createLoadingEmailSummaryQueryResult = () =>
+  ({
+    data: undefined,
+    isLoading: true,
+    isFetching: true,
+    error: null,
+  }) as unknown as ReturnType<typeof useEmailSummaryQuery>;
+
 const renderCard = () =>
   render(
     <TestRouterProvider>
@@ -129,5 +137,35 @@ describe("EmailStatsCard", () => {
         .getByRole("progressbar", { name: "Attachment storage usage" })
         .getAttribute("aria-valuenow")
     ).toBe("50");
+  });
+
+  it("keeps the attachment storage section visible with fixed-size skeletons while loading", () => {
+    mockedUseTimezone.mockReturnValue({
+      effectiveTimeZone: "UTC",
+    } as ReturnType<typeof useTimezone>);
+    mockedUseEmailSummaryQuery.mockReturnValue(
+      createLoadingEmailSummaryQueryResult()
+    );
+
+    const { container } = renderCard();
+
+    expect(screen.getByText("Attachment Storage")).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: "Attachment storage policy" })
+    ).toBeTruthy();
+    expect(
+      screen.queryByRole("progressbar", { name: "Attachment storage usage" })
+    ).toBeNull();
+
+    const skeletons = container.querySelectorAll('[data-slot="skeleton"]');
+    expect(
+      Array.from(skeletons).some(node => node.className.includes("w-8"))
+    ).toBe(true);
+    expect(
+      Array.from(skeletons).some(
+        node =>
+          node.className.includes("h-1.5") && node.className.includes("w-full")
+      )
+    ).toBe(true);
   });
 });

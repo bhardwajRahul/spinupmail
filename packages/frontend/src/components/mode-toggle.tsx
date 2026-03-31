@@ -46,7 +46,7 @@ export function ModeToggle() {
           <Button
             variant="outline"
             size="icon"
-            className="cursor-pointer border-border/50 bg-transparent hover:border-border/60 dark:border-input/50 dark:hover:border-input/60"
+            className="cursor-pointer border-border/90 bg-transparent hover:border-border/90 dark:border-border/90 dark:hover:border-border/90"
             onMouseEnter={startTriggerAnimation}
             onMouseLeave={stopTriggerAnimation}
             onFocus={startTriggerAnimation}

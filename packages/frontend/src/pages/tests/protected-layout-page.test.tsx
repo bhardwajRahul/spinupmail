@@ -42,6 +42,15 @@ vi.mock("@/components/ui/sidebar", () => ({
     <div data-testid="sidebar-inset">{children}</div>
   ),
   SidebarTrigger: () => <button type="button">trigger</button>,
+  useSidebar: () => ({
+    state: "expanded" as const,
+    open: true,
+    setOpen: vi.fn(),
+    openMobile: false,
+    setOpenMobile: vi.fn(),
+    isMobile: false,
+    toggleSidebar: vi.fn(),
+  }),
 }));
 
 const mockedUseAuth = vi.mocked(useAuth);

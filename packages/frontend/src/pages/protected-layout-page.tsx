@@ -7,10 +7,44 @@ import {
   SidebarInset,
   SidebarProvider,
   SidebarTrigger,
+  useSidebar,
 } from "@/components/ui/sidebar";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { useAuth } from "@/features/auth/hooks/use-auth";
 import { useHashNavigation } from "@/hooks/use-hash-navigation";
 import { resolveRouteTitle } from "@/lib/route-title";
+import { cn } from "@/lib/utils";
+
+const HeaderSidebarTrigger = () => {
+  const { state } = useSidebar();
+  const tooltipLabel =
+    state === "collapsed" ? "Expand sidebar" : "Collapse sidebar";
+
+  return (
+    <TooltipProvider delay={120}>
+      <Tooltip>
+        <TooltipTrigger
+          render={
+            <SidebarTrigger
+              className={cn(
+                "-ml-1.5",
+                state === "collapsed"
+                  ? "hover:cursor-e-resize"
+                  : "hover:cursor-w-resize"
+              )}
+            />
+          }
+        />
+        <TooltipContent side="bottom">{tooltipLabel}</TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+};
 
 export const ProtectedLayoutPage = () => {
   const navigate = useNavigate();
@@ -45,7 +79,7 @@ export const ProtectedLayoutPage = () => {
         <header className="sticky top-0 z-20 border-b border-border/65 bg-sidebar px-4 md:px-6 lg:px-8">
           <div className="mx-auto flex h-16 max-w-7xl items-center justify-between">
             <div className="flex items-center gap-3">
-              <SidebarTrigger />
+              <HeaderSidebarTrigger />
               <div>
                 <p className="text-sm font-medium">{pageTitle}</p>
               </div>

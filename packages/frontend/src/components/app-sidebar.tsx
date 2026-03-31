@@ -30,6 +30,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarRail,
   useSidebar,
 } from "@/components/ui/sidebar";
 import {
@@ -126,7 +127,7 @@ export const AppSidebar = ({ user, onSignOut, ...props }: AppSidebarProps) => {
             >
               <AppLogo
                 className="group-data-[collapsible=icon]:gap-0"
-                textClassName="text-[15px] group-data-[collapsible=icon]:hidden"
+                textClassName="text-[14px] group-data-[collapsible=icon]:hidden"
               />
             </SidebarMenuButton>
           </SidebarMenuItem>
@@ -229,6 +230,8 @@ export const AppSidebar = ({ user, onSignOut, ...props }: AppSidebarProps) => {
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarFooter>
+
+      <SidebarRail />
     </Sidebar>
   );
 };

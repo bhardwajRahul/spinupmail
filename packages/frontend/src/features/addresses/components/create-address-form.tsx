@@ -552,6 +552,7 @@ export const CreateAddressForm = ({
                             </span>
                           </label>
                           <Button
+                            variant="outline"
                             disabled={createMutation.isPending}
                             type="submit"
                             className="w-fit cursor-pointer mt-1"

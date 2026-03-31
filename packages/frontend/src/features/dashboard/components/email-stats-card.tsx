@@ -167,6 +167,7 @@ export const EmailStatsCard = () => {
   const attachmentUsageStatLabel = isLoading
     ? "Total: 0 B"
     : (attachmentUsageLimitLabel ?? "Total size");
+  const showAttachmentStorageSection = isLoading || attachmentSizeLimit > 0;
 
   return (
     <Card className="min-w-0 border-border/70 bg-card/60">
@@ -220,12 +221,12 @@ export const EmailStatsCard = () => {
               }
             />
           </div>
-          {!isLoading && attachmentSizeLimit > 0 ? (
-            <div className="space-y-1 px-1">
+          {showAttachmentStorageSection ? (
+            <div className="space-y-1">
               <div className="flex items-center justify-between text-[10px] text-muted-foreground">
                 <TooltipProvider delay={200}>
                   <div className="flex items-center gap-1">
-                    <span>Attachment storage</span>
+                    <span>Attachment Storage</span>
                     <Tooltip>
                       <TooltipTrigger
                         render={
@@ -247,34 +248,48 @@ export const EmailStatsCard = () => {
                     </Tooltip>
                   </div>
                 </TooltipProvider>
-                <span
-                  className={cn(
-                    "font-medium tabular-nums",
-                    attachmentUsageTone.valueClassName
-                  )}
-                >
-                  {attachmentUsagePercent}%
-                </span>
-              </div>
-              <div
-                aria-label="Attachment storage usage"
-                aria-valuemax={100}
-                aria-valuemin={0}
-                aria-valuenow={attachmentUsagePercent}
-                className={cn(
-                  "h-1.5 overflow-hidden rounded-full",
-                  attachmentUsageTone.trackClassName
+                {isLoading ? (
+                  <Skeleton
+                    aria-hidden="true"
+                    className="h-[1.125rem] w-8 rounded-sm"
+                  />
+                ) : (
+                  <span
+                    className={cn(
+                      "inline-flex h-[1.125rem] w-8 items-center justify-end font-medium tabular-nums",
+                      attachmentUsageTone.valueClassName
+                    )}
+                  >
+                    {attachmentUsagePercent}%
+                  </span>
                 )}
-                role="progressbar"
-              >
-                <div
-                  className={cn(
-                    "h-full rounded-full transition-[width]",
-                    attachmentUsageTone.barClassName
-                  )}
-                  style={{ width: `${attachmentUsagePercent}%` }}
-                />
               </div>
+              {isLoading ? (
+                <Skeleton
+                  aria-hidden="true"
+                  className="h-1.5 w-full rounded-full"
+                />
+              ) : (
+                <div
+                  aria-label="Attachment storage usage"
+                  aria-valuemax={100}
+                  aria-valuemin={0}
+                  aria-valuenow={attachmentUsagePercent}
+                  className={cn(
+                    "h-1.5 overflow-hidden rounded-full",
+                    attachmentUsageTone.trackClassName
+                  )}
+                  role="progressbar"
+                >
+                  <div
+                    className={cn(
+                      "h-full rounded-full transition-[width]",
+                      attachmentUsageTone.barClassName
+                    )}
+                    style={{ width: `${attachmentUsagePercent}%` }}
+                  />
+                </div>
+              )}
             </div>
           ) : null}
           {isLoading ? (
@@ -284,26 +299,26 @@ export const EmailStatsCard = () => {
                 <div className="flex flex-wrap items-center gap-1.5">
                   <Inbox className="size-3.5 shrink-0 text-muted-foreground" />
                   <span className="text-xs text-muted-foreground">
-                    Busiest inboxes:
+                    Busiest Inboxes:
                   </span>
-                  <Skeleton className="h-5 w-[4.5rem] rounded-sm" />
-                  <Skeleton className="h-5 w-14 rounded-sm" />
+                  <Skeleton className="h-4 w-[4.5rem] rounded-sm" />
+                  <Skeleton className="h-4 w-14 rounded-sm" />
                 </div>
                 <div className="flex flex-wrap items-center gap-1.5">
                   <Send className="size-3.5 shrink-0 text-muted-foreground" />
                   <span className="text-xs text-muted-foreground">
-                    Top domains:
+                    Top Senders:
                   </span>
-                  <Skeleton className="h-5 w-20 rounded-sm" />
-                  <Skeleton className="h-5 w-16 rounded-sm" />
+                  <Skeleton className="h-4 w-20 rounded-sm" />
+                  <Skeleton className="h-4 w-16 rounded-sm" />
                 </div>
                 <div className="flex flex-wrap items-center gap-1.5">
                   <Mailbox className="size-3.5 shrink-0 text-muted-foreground" />
                   <span className="text-xs text-muted-foreground">
-                    Dormant inboxes:
+                    Dormant Inboxes:
                   </span>
-                  <Skeleton className="h-5 w-14 rounded-sm" />
-                  <Skeleton className="h-5 w-12 rounded-sm" />
+                  <Skeleton className="h-4 w-14 rounded-sm" />
+                  <Skeleton className="h-4 w-12 rounded-sm" />
                 </div>
               </div>
             </>
@@ -408,7 +423,7 @@ export const EmailStatsCard = () => {
                   <div className="flex flex-wrap items-center gap-1.5">
                     <Send className="size-3.5 shrink-0 text-muted-foreground" />
                     <span className="text-xs text-muted-foreground">
-                      Top domains:
+                      Top Senders:
                     </span>
                     <Badge
                       variant="outline"
@@ -448,7 +463,7 @@ export const EmailStatsCard = () => {
                         </HoverCardTrigger>
                         <HoverCardContent align="start" className="w-56 p-0">
                           <p className="border-b px-2 py-1.5 text-xs font-medium text-muted-foreground">
-                            Other top domains
+                            Other top senders
                           </p>
                           <ScrollArea className="max-h-48">
                             <div className="flex flex-wrap gap-1.5 p-2">
@@ -524,7 +539,7 @@ export const EmailStatsCard = () => {
                           </HoverCardTrigger>
                           <HoverCardContent align="start" className="w-56 p-0">
                             <p className="border-b px-2 py-1.5 text-xs font-medium text-muted-foreground">
-                              Other dormant inboxes
+                              Other Dormant Inboxes
                             </p>
                             <ScrollArea className="max-h-48">
                               <div className="flex flex-wrap gap-1.5 p-2">

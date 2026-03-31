@@ -792,7 +792,7 @@ const RecentAddressActivityCardContent = () => {
                 searchIconRef.current?.startAnimation();
               }}
               className={cn(
-                "w-full pl-8",
+                "w-full border-border/90 pl-8",
                 searchInputValue && "pr-8",
                 searchInputValue &&
                   "border-primary/50 bg-muted/40 ring-1 ring-primary/25"

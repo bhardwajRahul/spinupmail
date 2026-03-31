@@ -409,7 +409,7 @@ export const TwoFactorPanel = ({
                   <h3 className="text-[15px] font-semibold leading-tight text-balance">
                     Secure your sign-in with 2FA
                   </h3>
-                  <div className="inline-flex items-center gap-2 border border-border/70 bg-background/70 px-2.5 py-1 text-[12px] rounded-full font-medium text-muted-foreground">
+                  <div className="inline-flex items-center gap-2 border border-border/70 bg-background/70 px-2 py-0.5 text-[12px] rounded-full font-medium text-muted-foreground">
                     <HugeiconsIcon
                       aria-hidden="true"
                       icon={Tick02Icon}
