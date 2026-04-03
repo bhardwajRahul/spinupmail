@@ -64,7 +64,8 @@ export function DocsIndexPage() {
         {docsNavGroups.map(group => (
           <section
             key={group.id}
-            className="rounded-xl border border-border/70 bg-card/45 p-4 sm:p-5"
+            id={group.id}
+            className="scroll-mt-28 rounded-xl border border-border/70 bg-card/45 p-4 sm:p-5"
           >
             <h2 className="text-xl font-semibold tracking-tight text-foreground">
               {group.title}
