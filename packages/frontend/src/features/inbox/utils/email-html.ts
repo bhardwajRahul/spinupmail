@@ -91,9 +91,12 @@ const BLOCKED_CSS_PROPERTIES = new Set(["behavior", "-moz-binding"]);
 const REMOTE_CONTENT_ATTRIBUTES = ["background", "poster", "src"] as const;
 const HOST_STYLES = `
   :host {
+    contain: inline-size;
     display: block;
     color: inherit;
     height: 100%;
+    max-width: 100%;
+    min-width: 0;
   }
 
   *, *::before, *::after {
@@ -102,16 +105,23 @@ const HOST_STYLES = `
 
   [data-email-content-root] {
     min-height: 100%;
+    max-width: 100%;
+    min-width: 0;
     padding: 0.75rem;
+    width: 100%;
   }
 
+  html,
   body {
     margin: 0;
+    max-width: 100%;
+    min-width: 0;
     overflow-wrap: anywhere;
     word-break: break-word;
   }
 
   img {
+    display: block;
     height: auto;
     max-width: 100%;
   }
