@@ -38,7 +38,7 @@ binding = "R2_BUCKET"
 name = "EMAIL"
 
 [vars]
-EMAIL_DOMAINS = "spinupmail.com"
+EMAIL_DOMAINS = "spinupmail.dev"
 MAX_ADDRESSES_PER_ORGANIZATION = "100"
 RESEND_FROM_EMAIL = "Spinupmail <verify@spinupmail.com>"
 EMAIL_MAX_BYTES = "10485760"
