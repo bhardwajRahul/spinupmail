@@ -3,6 +3,7 @@ import { useForm } from "@tanstack/react-form";
 import { z } from "zod";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Field,
   FieldDescription,
@@ -74,71 +75,92 @@ type EditAddressSheetProps = {
   onOpenChange: (open: boolean) => void;
 };
 
+const hasUsernameChanged = (nextLocalPart: string, initialLocalPart: string) =>
+  nextLocalPart.trim() !== initialLocalPart.trim();
+
 const editAddressSchema = (
   availableDomains: string[],
-  localPartMaxLength: number
+  localPartMaxLength: number,
+  initialLocalPart: string
 ) =>
-  z.object({
-    localPart: z
-      .string()
-      .trim()
-      .min(1, "Username is required")
-      .max(localPartMaxLength, {
-        message: `Username must be ${localPartMaxLength} characters or fewer`,
-      })
-      .refine(value => addressPartRegex.test(value), {
-        message:
-          "Username can contain letters, numbers, dot, underscore, plus, and dash",
-      })
-      .refine(value => !hasReservedLocalPartKeyword(value), {
-        message: "This username is reserved and cannot be used",
-      }),
-    domain: z
-      .string()
-      .trim()
-      .min(1, "Domain is required")
-      .refine(
-        value => availableDomains.includes(normalizeDomainToken(value)),
-        "Select one of the available domains"
-      ),
-    ttlMinutes: z.union([
-      z
-        .number()
-        .int({ message: "TTL must be a whole number" })
-        .positive({ message: "TTL must be a positive number" })
-        .max(ADDRESS_TTL_MAX_MINUTES, {
-          message: `TTL must be ${ADDRESS_TTL_MAX_MINUTES} minutes or less`,
+  z
+    .object({
+      localPart: z
+        .string()
+        .trim()
+        .min(1, "Username is required")
+        .max(localPartMaxLength, {
+          message: `Username must be ${localPartMaxLength} characters or fewer`,
+        })
+        .refine(value => addressPartRegex.test(value), {
+          message:
+            "Username can contain letters, numbers, dot, underscore, plus, and dash",
+        })
+        .refine(value => !hasReservedLocalPartKeyword(value), {
+          message: "This username is reserved and cannot be used",
         }),
-      z.undefined(),
-    ]),
-    allowedFromDomains: z
-      .array(z.string().trim())
-      .max(ALLOWED_FROM_DOMAINS_MAX_ITEMS, {
-        message: `You can add up to ${ALLOWED_FROM_DOMAINS_MAX_ITEMS} allowed sender domains`,
-      })
-      .refine(
-        values =>
-          values.every(
-            domain => domain.length <= ALLOWED_FROM_DOMAIN_MAX_LENGTH
-          ),
-        `Each allowed sender domain must be ${ALLOWED_FROM_DOMAIN_MAX_LENGTH} characters or fewer`
-      )
-      .refine(
-        values => values.every(domain => domainRegex.test(domain)),
-        "Use valid hostnames like `example.com`"
-      ),
-    maxReceivedEmailCount: z.union([
-      z
-        .number()
-        .int({ message: "Max received emails must be a whole number" })
-        .positive({ message: "Max received emails must be a positive number" })
-        .max(ADDRESS_MAX_RECEIVED_EMAIL_COUNT_MAX, {
-          message: `Max received emails must be ${ADDRESS_MAX_RECEIVED_EMAIL_COUNT_MAX} or less`,
-        }),
-      z.undefined(),
-    ]),
-    maxReceivedEmailAction: z.enum(ADDRESS_MAX_RECEIVED_EMAIL_ACTIONS),
-  });
+      domain: z
+        .string()
+        .trim()
+        .min(1, "Domain is required")
+        .refine(
+          value => availableDomains.includes(normalizeDomainToken(value)),
+          "Select one of the available domains"
+        ),
+      ttlMinutes: z.union([
+        z
+          .number()
+          .int({ message: "TTL must be a whole number" })
+          .positive({ message: "TTL must be a positive number" })
+          .max(ADDRESS_TTL_MAX_MINUTES, {
+            message: `TTL must be ${ADDRESS_TTL_MAX_MINUTES} minutes or less`,
+          }),
+        z.undefined(),
+      ]),
+      allowedFromDomains: z
+        .array(z.string().trim())
+        .max(ALLOWED_FROM_DOMAINS_MAX_ITEMS, {
+          message: `You can add up to ${ALLOWED_FROM_DOMAINS_MAX_ITEMS} allowed sender domains`,
+        })
+        .refine(
+          values =>
+            values.every(
+              domain => domain.length <= ALLOWED_FROM_DOMAIN_MAX_LENGTH
+            ),
+          `Each allowed sender domain must be ${ALLOWED_FROM_DOMAIN_MAX_LENGTH} characters or fewer`
+        )
+        .refine(
+          values => values.every(domain => domainRegex.test(domain)),
+          "Use valid hostnames like `example.com`"
+        ),
+      maxReceivedEmailCount: z.union([
+        z
+          .number()
+          .int({ message: "Max received emails must be a whole number" })
+          .positive({
+            message: "Max received emails must be a positive number",
+          })
+          .max(ADDRESS_MAX_RECEIVED_EMAIL_COUNT_MAX, {
+            message: `Max received emails must be ${ADDRESS_MAX_RECEIVED_EMAIL_COUNT_MAX} or less`,
+          }),
+        z.undefined(),
+      ]),
+      maxReceivedEmailAction: z.enum(ADDRESS_MAX_RECEIVED_EMAIL_ACTIONS),
+      usernameChangeConfirmed: z.boolean(),
+    })
+    .superRefine((value, ctx) => {
+      if (
+        hasUsernameChanged(value.localPart, initialLocalPart) &&
+        !value.usernameChangeConfirmed
+      ) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["usernameChangeConfirmed"],
+          message:
+            "You must confirm that changing the username disables the old address",
+        });
+      }
+    });
 
 const deriveTtlMinutes = (expiresAt: string | null) => {
   if (!expiresAt) return undefined;
@@ -187,6 +209,7 @@ const EditAddressSheetForm = ({
       allowedFromDomains: address.allowedFromDomains ?? ([] as string[]),
       maxReceivedEmailCount: address.maxReceivedEmailCount ?? undefined,
       maxReceivedEmailAction: address.maxReceivedEmailAction ?? "cleanAll",
+      usernameChangeConfirmed: false,
     }),
     [address, domains, forcedLocalPartPrefix]
   );
@@ -194,7 +217,11 @@ const EditAddressSheetForm = ({
   const form = useForm({
     defaultValues: initialValues,
     validators: {
-      onSubmit: editAddressSchema(availableDomains, localPartMaxLength),
+      onSubmit: editAddressSchema(
+        availableDomains,
+        localPartMaxLength,
+        initialValues.localPart
+      ),
     },
     onSubmit: async ({ value }) => {
       const updateAddressToast = toast.promise(
@@ -352,6 +379,68 @@ const EditAddressSheetForm = ({
             }}
           />
         </div>
+
+        <form.Subscribe
+          selector={state =>
+            hasUsernameChanged(state.values.localPart, initialValues.localPart)
+          }
+        >
+          {isUsernameChanged => {
+            if (!isUsernameChanged) return null;
+
+            return (
+              <form.Field
+                name="usernameChangeConfirmed"
+                children={field => {
+                  const isInvalid =
+                    field.state.meta.isTouched && !field.state.meta.isValid;
+
+                  return (
+                    <Field data-invalid={isInvalid}>
+                      <div className="space-y-3 rounded-lg border border-amber-500/25 bg-amber-500/10 px-3 py-3">
+                        <div className="space-y-1">
+                          <p className="text-sm font-medium">
+                            Changing the username replaces this address
+                          </p>
+                          <FieldDescription className="text-sm text-foreground/80">
+                            The old address will stop working after you save
+                            this change.
+                          </FieldDescription>
+                        </div>
+
+                        <label
+                          htmlFor="edit-address-username-change-confirmed"
+                          className="flex items-start gap-3 text-sm"
+                        >
+                          <Checkbox
+                            checked={field.state.value}
+                            className="mt-0.5 cursor-pointer"
+                            id="edit-address-username-change-confirmed"
+                            name={field.name}
+                            onBlur={field.handleBlur}
+                            onCheckedChange={checked =>
+                              field.handleChange(Boolean(checked))
+                            }
+                            aria-invalid={isInvalid}
+                          />
+                          <span>
+                            I understand the consequences of changing username.
+                          </span>
+                        </label>
+                      </div>
+
+                      {isInvalid ? (
+                        <FieldError
+                          errors={toFieldErrors(field.state.meta.errors)}
+                        />
+                      ) : null}
+                    </Field>
+                  );
+                }}
+              />
+            );
+          }}
+        </form.Subscribe>
 
         <div className="grid gap-3 sm:grid-cols-[minmax(0,9rem)_minmax(0,1fr)]">
           <form.Field
