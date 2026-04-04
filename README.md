@@ -28,11 +28,18 @@ attachments), and manage everything through a secure Better Auth + Hono API and 
 ## Features
 
 - Create unlimited email addresses scoped to an organization
-- Create and join organizations (max 3 per user, max 10 members per org)
+- Create and join organizations (max 3 per user, max 10 members per org, both configurable)
 - Receive emails via Cloudflare Email Routing and store them in D1
 - Browse organization-scoped emails in the UI
 - Store inbound mail attachments in Cloudflare R2 and download them in UI/API
 - Generate API keys for automation (e.g., test suites)
+
+## Screenshots
+
+<img width="200" alt="Image of SpinupMail Dashboard - Overview page" src="https://github.com/user-attachments/assets/8951e9d0-92a8-41ee-87db-bd480e4d3b73" />
+<img width="200" alt="Image of SpinupMail Dashboard - Inbox page" src="https://github.com/user-attachments/assets/31d5b16f-c86f-4ea4-ad80-f8ae8b9b922b" />
+<img width="200" alt="Image of SpinupMail Dashboard - Addresses page" src="https://github.com/user-attachments/assets/26425c77-c8e9-4600-90ee-410720a16b71" />
+<img width="200" alt="Image of SpinupMail Dashboard - Organization page" src="https://github.com/user-attachments/assets/ed9bbe19-96bd-4175-ad6c-51b73b50d54f" />
 
 ## Prerequisites
 
