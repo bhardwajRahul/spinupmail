@@ -8,6 +8,7 @@ import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
 import { TanStackDevtools } from "@tanstack/react-devtools";
 
 import appCss from "../styles.css?url";
+import { siteConfig } from "@/lib/site";
 
 export const Route = createRootRoute({
   head: () => ({
@@ -20,12 +21,15 @@ export const Route = createRootRoute({
         content: "width=device-width, initial-scale=1",
       },
       {
-        title: "Self-host disposable emails on Cloudflare | SpinupMail",
+        title: siteConfig.siteName,
       },
       {
         name: "description",
-        content:
-          "Create unlimited, highly configurable email addresses with attachment support for you/your team, hosted on Cloudflare.",
+        content: siteConfig.description,
+      },
+      {
+        name: "robots",
+        content: "max-image-preview:large",
       },
     ],
     links: [
