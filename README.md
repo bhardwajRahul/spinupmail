@@ -1,18 +1,29 @@
----
-<h3 align="center">
-<sub>
-<p align="center"><img src="./packages/frontend/public/logo.png" height="60" width="60"></p>
-</sub>
-SpinupMail
-</h3>
-<p align="center">
-Create unlimited email addresses in shareable workspaces for free, hosted on Cloudflare.
-</p>
----
+<hr />
 
-Spinupmail is a Cloudflare Email Routing + Workers app for generating disposable
-email addresses, storing inbound messages, and reading them via API. It includes
-a Better Auth + Hono API backend and a React + shadcn UI frontend.
+<h3 align="center">
+  <sub>
+    <p align="center">
+      <img src="./packages/frontend/public/logo.png" height="60" width="60" />
+    </p>
+  </sub>
+  SpinupMail
+</h3>
+
+<p align="center">
+  Unlimited email addresses for shared workspaces, free on Cloudflare.
+</p>
+
+<p align="center">
+  <a href="https://github.com/ridvan/spinupmail/actions/workflows/test.yml"><img alt="CI Test Pipeline" src="https://img.shields.io/github/actions/workflow/status/ridvan/spinupmail/test.yml?branch=main&label=CI" /></a>
+  <a href="https://github.com/ridvan/spinupmail/blob/main/LICENSE"><img alt="License: MIT" src="https://img.shields.io/github/license/ridvan/spinupmail" /></a>
+</p>
+
+<hr />
+
+Spinupmail is an open-source temporary email platform for teams, built on
+Cloudflare Email Routing and Workers. It lets organizations create unlimited
+mailboxes on their own domains, capture inbound messages (including
+attachments), and manage everything through a secure Better Auth + Hono API and a modern React + Shadcn dashboard.
 
 ## Features
 
@@ -531,9 +542,3 @@ Hi there'
 To receive **real** emails, use a real domain in Cloudflare Email Routing (you
 can create a dev subdomain like `dev.your-domain.com`) and point the routing
 rule to your Worker.
-
-## Notes
-
-- Email addresses **must** be created before email is sent. Unknown addresses
-  are rejected.
-- HTML is sanitized on the backend, re-checked on the frontend, and rendered inside a Shadow DOM container instead of an iframe.
