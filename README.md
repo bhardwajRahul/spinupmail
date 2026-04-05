@@ -15,7 +15,7 @@
 
 <p align="center">
   <a href="https://github.com/ridvan/spinupmail/actions/workflows/test.yml"><img alt="CI Test Pipeline" src="https://img.shields.io/github/actions/workflow/status/ridvan/spinupmail/test.yml?branch=main&label=CI" /></a>
-  <a href="https://github.com/ridvan/spinupmail/blob/main/LICENSE"><img alt="License: MIT" src="https://img.shields.io/github/license/ridvan/spinupmail" /></a>
+  <a href="https://github.com/ridvan/spinupmail/blob/main/LICENSE"><img alt="License: MIT" src="https://img.shields.io/github/license/ridvan/spinupmail?temp=true" /></a>
 </p>
 
 <hr />
@@ -36,7 +36,7 @@ attachments), and manage everything through a secure Better Auth + Hono API and 
 
 ## Screenshots
 
-<img width="200" alt="Image of SpinupMail Dashboard - Overview page" src="https://github.com/user-attachments/assets/8951e9d0-92a8-41ee-87db-bd480e4d3b73" />
+<img width="200" alt="Image of SpinupMail Dashboard - Overview page" src="https://github.com/user-attachments/assets/53de357b-e4e5-472c-8350-f3455352ab6c" />
 <img width="200" alt="Image of SpinupMail Dashboard - Inbox page" src="https://github.com/user-attachments/assets/31d5b16f-c86f-4ea4-ad80-f8ae8b9b922b" />
 <img width="200" alt="Image of SpinupMail Dashboard - Addresses page" src="https://github.com/user-attachments/assets/26425c77-c8e9-4600-90ee-410720a16b71" />
 <img width="200" alt="Image of SpinupMail Dashboard - Organization page" src="https://github.com/user-attachments/assets/ed9bbe19-96bd-4175-ad6c-51b73b50d54f" />
