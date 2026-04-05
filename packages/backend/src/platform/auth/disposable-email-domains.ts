@@ -6,8 +6,10 @@ import {
 } from "./email-address";
 import { getAllowedDomains } from "@/shared/env";
 
-const SOURCE_URL =
-  "https://raw.githubusercontent.com/disposable/disposable-email-domains/master/domains.txt";
+const SOURCE_URLS = [
+  "https://disposable.github.io/disposable-email-domains/domains.txt",
+  "https://raw.githubusercontent.com/disposable/disposable-email-domains/master/domains.txt",
+] as const;
 const MANIFEST_KEY = "auth:disposable-email-domains:manifest";
 const LOCK_KEY = "auth:disposable-email-domains:refresh-lock";
 const RAW_KEY_PREFIX = "auth:disposable-email-domains:raw";
@@ -167,43 +169,70 @@ const isManifestExpired = (manifest: DisposableDomainsManifest) =>
 const isManifestStale = (manifest: DisposableDomainsManifest) =>
   Date.parse(manifest.refreshAfter) <= Date.now();
 
-const fetchSourceText = async (manifest: DisposableDomainsManifest | null) => {
-  const response = await fetch(SOURCE_URL, {
-    headers: manifest?.sourceEtag
-      ? {
-          "if-none-match": manifest.sourceEtag,
-        }
-      : undefined,
-    redirect: "manual",
+const logRefreshFailure = (error: unknown) => {
+  console.error("[auth] Failed to refresh disposable domain cache", {
+    error,
   });
+};
 
-  if (response.status >= 300 && response.status < 400) {
-    throw new Error("Disposable domain source attempted redirect");
+const fetchSourceText = async (manifest: DisposableDomainsManifest | null) => {
+  const failures: string[] = [];
+
+  for (const sourceUrl of SOURCE_URLS) {
+    try {
+      const response = await fetch(sourceUrl, {
+        headers:
+          manifest?.sourceUrl === sourceUrl && manifest.sourceEtag
+            ? {
+                "if-none-match": manifest.sourceEtag,
+              }
+            : undefined,
+        redirect: "manual",
+      });
+
+      if (response.status >= 300 && response.status < 400) {
+        failures.push(
+          `${sourceUrl} redirected to ${response.headers.get("location") ?? "unknown"}`
+        );
+        continue;
+      }
+
+      if (response.status === 304) {
+        return {
+          status: 304 as const,
+          etag: manifest?.sourceEtag ?? null,
+          rawText: null,
+          sourceUrl,
+        };
+      }
+
+      if (!response.ok) {
+        failures.push(`${sourceUrl} returned ${response.status}`);
+        continue;
+      }
+
+      const contentLength = Number(response.headers.get("content-length"));
+      if (Number.isFinite(contentLength) && contentLength > MAX_SOURCE_BYTES) {
+        throw new Error("Disposable domain source exceeded maximum size");
+      }
+
+      const rawText = await response.text();
+      return {
+        status: 200 as const,
+        etag: response.headers.get("etag"),
+        rawText,
+        sourceUrl,
+      };
+    } catch (error) {
+      failures.push(
+        `${sourceUrl} failed: ${error instanceof Error ? error.message : String(error)}`
+      );
+    }
   }
 
-  if (response.status === 304) {
-    return {
-      status: 304 as const,
-      etag: manifest?.sourceEtag ?? null,
-      rawText: null,
-    };
-  }
-
-  if (!response.ok) {
-    throw new Error(`Failed to refresh disposable domains: ${response.status}`);
-  }
-
-  const contentLength = Number(response.headers.get("content-length"));
-  if (Number.isFinite(contentLength) && contentLength > MAX_SOURCE_BYTES) {
-    throw new Error("Disposable domain source exceeded maximum size");
-  }
-
-  const rawText = await response.text();
-  return {
-    status: 200 as const,
-    etag: response.headers.get("etag"),
-    rawText,
-  };
+  throw new Error(
+    `Failed to refresh disposable domains: ${failures.join("; ")}`
+  );
 };
 
 const writeManifest = async (
@@ -285,7 +314,7 @@ const refreshWithManifest = async (
     fetchedAt: new Date(nowMs).toISOString(),
     refreshAfter: plusMs(nowMs, REFRESH_AFTER_MS),
     hardExpireAt: plusMs(nowMs, HARD_EXPIRE_AFTER_MS),
-    sourceUrl: SOURCE_URL,
+    sourceUrl: source.sourceUrl,
     sourceEtag: source.etag,
     sourceSha256,
     shardPrefixes: Array.from(shards.keys()).sort(),
@@ -352,11 +381,7 @@ const scheduleRefresh = (
   env: CloudflareBindings,
   runInBackground?: (promise: Promise<unknown>) => void
 ) => {
-  const promise = refreshDisposableEmailDomains(env).catch(error => {
-    console.error("[auth] Failed to refresh disposable domain cache", {
-      error,
-    });
-  });
+  const promise = refreshDisposableEmailDomains(env).catch(logRefreshFailure);
 
   if (runInBackground) {
     runInBackground(promise);
@@ -378,7 +403,11 @@ export const isDisposableEmailDomain = async (
 
   let manifest = await readManifest(env);
   if (!manifest || isManifestExpired(manifest)) {
-    manifest = await refreshDisposableEmailDomains(env, { force: true });
+    try {
+      manifest = await refreshDisposableEmailDomains(env, { force: true });
+    } catch (error) {
+      logRefreshFailure(error);
+    }
     if (!manifest) {
       return false;
     }

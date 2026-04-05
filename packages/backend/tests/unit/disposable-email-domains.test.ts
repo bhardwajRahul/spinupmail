@@ -91,6 +91,54 @@ describe("disposable email domains", () => {
     expect(runInBackground).toHaveBeenCalledTimes(1);
   });
 
+  it("falls back to an alternate upstream source when the preferred source redirects", async () => {
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockImplementationOnce(
+        async () =>
+          new Response(null, {
+            status: 302,
+            headers: {
+              location:
+                "https://raw.githubusercontent.com/disposable/disposable-email-domains/master/domains.txt",
+            },
+          })
+      )
+      .mockImplementationOnce(async () => buildResponse("remote-temp.test\n"));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const {
+      isDisposableEmailDomain,
+      resetDisposableEmailDomainCachesForTests,
+    } = await import("@/platform/auth/disposable-email-domains");
+    resetDisposableEmailDomainCachesForTests();
+
+    const env = {
+      SUM_KV: new FakeKvNamespace(),
+    } as unknown as CloudflareBindings;
+
+    await expect(
+      isDisposableEmailDomain("remote-temp.test", env)
+    ).resolves.toBe(true);
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock.mock.calls[0]?.[0]).toBe(
+      "https://disposable.github.io/disposable-email-domains/domains.txt"
+    );
+    expect(fetchMock.mock.calls[1]?.[0]).toBe(
+      "https://raw.githubusercontent.com/disposable/disposable-email-domains/master/domains.txt"
+    );
+
+    const manifest = JSON.parse(
+      (await env.SUM_KV.get("auth:disposable-email-domains:manifest")) ?? "{}"
+    ) as {
+      sourceUrl?: string;
+    };
+    expect(manifest.sourceUrl).toBe(
+      "https://raw.githubusercontent.com/disposable/disposable-email-domains/master/domains.txt"
+    );
+  });
+
   it("clears refreshInFlight after a failed lock acquisition", async () => {
     const fetchMock = vi
       .fn<typeof fetch>()
@@ -120,6 +168,33 @@ describe("disposable email domains", () => {
       domainCount: 1,
     });
     expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("fails open instead of throwing when a cold-cache refresh cannot reach any upstream source", async () => {
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockRejectedValue(new Error("upstream unavailable"));
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    vi.stubGlobal("fetch", fetchMock);
+
+    const {
+      isDisposableEmailDomain,
+      resetDisposableEmailDomainCachesForTests,
+    } = await import("@/platform/auth/disposable-email-domains");
+    resetDisposableEmailDomainCachesForTests();
+
+    const env = {
+      SUM_KV: new FakeKvNamespace(),
+    } as unknown as CloudflareBindings;
+
+    await expect(
+      isDisposableEmailDomain("remote-temp.test", env)
+    ).resolves.toBe(false);
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(consoleError).toHaveBeenCalledTimes(1);
   });
 
   it("never blocks configured service domains from EMAIL_DOMAINS", async () => {
