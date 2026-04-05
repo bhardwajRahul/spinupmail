@@ -71,6 +71,7 @@ const renderEditAddressSheet = (onOpenChange = vi.fn()) =>
     <EditAddressSheet
       address={baseAddress as never}
       domains={["example.com"]}
+      maxReceivedEmailsPerAddress={100}
       open
       onOpenChange={onOpenChange}
     />
@@ -128,6 +129,57 @@ describe("EditAddressSheet", () => {
     ).toBeNull();
   });
 
+  it("prefills the default inbox limit for addresses that do not have one yet", () => {
+    mockedUseUpdateAddressMutation.mockReturnValue(
+      updateMutation as unknown as ReturnType<typeof useUpdateAddressMutation>
+    );
+
+    renderEditAddressSheet();
+
+    expect(
+      (screen.getByLabelText("Max emails") as HTMLInputElement).value
+    ).toBe("100");
+    expect(screen.getByText("Required")).toBeTruthy();
+    expect(screen.queryByText("Unlimited")).toBeNull();
+    expect(
+      (screen.getByLabelText("Delete all") as HTMLInputElement).checked
+    ).toBe(true);
+  });
+
+  it("refreshes the inherited inbox limit when the parent default changes", () => {
+    mockedUseUpdateAddressMutation.mockReturnValue(
+      updateMutation as unknown as ReturnType<typeof useUpdateAddressMutation>
+    );
+
+    const { rerender } = render(
+      <EditAddressSheet
+        address={baseAddress as never}
+        domains={["example.com"]}
+        maxReceivedEmailsPerAddress={100}
+        open
+        onOpenChange={vi.fn()}
+      />
+    );
+
+    expect(
+      (screen.getByLabelText("Max emails") as HTMLInputElement).value
+    ).toBe("100");
+
+    rerender(
+      <EditAddressSheet
+        address={baseAddress as never}
+        domains={["example.com"]}
+        maxReceivedEmailsPerAddress={250}
+        open
+        onOpenChange={vi.fn()}
+      />
+    );
+
+    expect(
+      (screen.getByLabelText("Max emails") as HTMLInputElement).value
+    ).toBe("250");
+  });
+
   it("blocks submit until the username change is acknowledged", async () => {
     updateMutation.mutateAsync.mockResolvedValue(undefined);
     mockedUseUpdateAddressMutation.mockReturnValue(
@@ -151,7 +203,7 @@ describe("EditAddressSheet", () => {
     ).toBeTruthy();
   });
 
-  it("allows submit without the extra acknowledgment when the username is unchanged", async () => {
+  it("submits with the backend default limit action for legacy addresses", async () => {
     const onOpenChange = vi.fn();
 
     updateMutation.mutateAsync.mockResolvedValue(undefined);
@@ -170,8 +222,36 @@ describe("EditAddressSheet", () => {
           domain: "example.com",
           ttlMinutes: null,
           allowedFromDomains: [],
-          maxReceivedEmailCount: null,
-          maxReceivedEmailAction: undefined,
+          maxReceivedEmailCount: 100,
+          maxReceivedEmailAction: "cleanAll",
+        },
+      })
+    );
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
+
+  it("allows submit without the extra acknowledgment when the username is unchanged", async () => {
+    const onOpenChange = vi.fn();
+
+    updateMutation.mutateAsync.mockResolvedValue(undefined);
+    mockedUseUpdateAddressMutation.mockReturnValue(
+      updateMutation as unknown as ReturnType<typeof useUpdateAddressMutation>
+    );
+    renderEditAddressSheet(onOpenChange);
+
+    fireEvent.click(screen.getByLabelText("Delete all"));
+    fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
+
+    await waitFor(() =>
+      expect(updateMutation.mutateAsync).toHaveBeenCalledWith({
+        addressId: "address-1",
+        payload: {
+          localPart: "hello",
+          domain: "example.com",
+          ttlMinutes: null,
+          allowedFromDomains: [],
+          maxReceivedEmailCount: 100,
+          maxReceivedEmailAction: "cleanAll",
         },
       })
     );
@@ -195,6 +275,7 @@ describe("EditAddressSheet", () => {
         "I understand the consequences of changing username."
       )
     );
+    fireEvent.click(screen.getByLabelText("Delete all"));
     fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
 
     await waitFor(() =>
@@ -205,8 +286,8 @@ describe("EditAddressSheet", () => {
           domain: "example.com",
           ttlMinutes: null,
           allowedFromDomains: [],
-          maxReceivedEmailCount: null,
-          maxReceivedEmailAction: undefined,
+          maxReceivedEmailCount: 100,
+          maxReceivedEmailAction: "cleanAll",
         },
       })
     );
