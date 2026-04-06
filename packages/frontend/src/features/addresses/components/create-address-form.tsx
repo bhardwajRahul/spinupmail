@@ -156,6 +156,12 @@ const generateRandomLocalPart = (
 
 const DEFAULT_MAX_RECEIVED_EMAILS_PER_ADDRESS = 100;
 
+const getNormalizedSelectedDomain = (value: string) =>
+  normalizeDomainToken(value);
+
+const getSingleAvailableDomain = (availableDomains: string[]) =>
+  availableDomains.length === 1 ? (availableDomains[0] ?? "") : "";
+
 const createAddressSchema = (
   availableDomains: string[],
   localPartMaxLength: number,
@@ -186,14 +192,26 @@ const createAddressSchema = (
         }),
       z.undefined(),
     ]),
-    domain: z
-      .string()
-      .trim()
-      .min(1, "Domain is required")
-      .refine(
-        value => availableDomains.includes(normalizeDomainToken(value)),
-        "Select one of the available domains"
-      ),
+    domain: z.string().superRefine((value, ctx) => {
+      const normalizedDomain = getNormalizedSelectedDomain(value);
+      const selectedDomain =
+        normalizedDomain || getSingleAvailableDomain(availableDomains);
+
+      if (!selectedDomain) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Domain is required",
+        });
+        return;
+      }
+
+      if (!availableDomains.includes(selectedDomain)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Select one of the available domains",
+        });
+      }
+    }),
     allowedFromDomains: z
       .array(z.string().trim())
       .max(ALLOWED_FROM_DOMAINS_MAX_ITEMS, {
@@ -251,6 +269,7 @@ export const CreateAddressForm = ({
     resolvedMaxReceivedEmailsPerAddress
   );
   const availableDomains = useMemo(() => uniqueDomains(domains), [domains]);
+  const defaultDomain = availableDomains[0] ?? "";
   const localPartMaxLength = getCustomLocalPartMaxLength(
     ADDRESS_LOCAL_PART_MAX_LENGTH,
     forcedLocalPartPrefix
@@ -271,7 +290,7 @@ export const CreateAddressForm = ({
   const defaultValues: CreateAddressFormValues = {
     localPart: "",
     ttlMinutes: undefined,
-    domain: domains[0] ?? "",
+    domain: defaultDomain,
     allowedFromDomains: [],
     maxReceivedEmailCount: resolvedMaxReceivedEmailsPerAddress,
     maxReceivedEmailAction: "",
@@ -288,7 +307,11 @@ export const CreateAddressForm = ({
       ),
     },
     onSubmit: async ({ value }) => {
-      const selectedDomain = value.domain?.trim() || domains[0] || undefined;
+      const normalizedDomain = getNormalizedSelectedDomain(value.domain);
+      const selectedDomain =
+        normalizedDomain ||
+        getSingleAvailableDomain(availableDomains) ||
+        undefined;
       const allowedFromDomains = uniqueDomains(value.allowedFromDomains);
       const createAddressToast = toast.promise(
         createMutation.mutateAsync({
@@ -488,9 +511,9 @@ export const CreateAddressForm = ({
                       const isInvalid =
                         field.state.meta.isTouched && !field.state.meta.isValid;
                       const selectedValue =
-                        field.state.value || domains[0] || "";
+                        getNormalizedSelectedDomain(field.state.value) || "";
                       const isDomainSelectDisabled =
-                        isDomainsLoading || domains.length === 0;
+                        isDomainsLoading || availableDomains.length === 0;
 
                       return (
                         <Field data-invalid={isInvalid}>
@@ -508,11 +531,11 @@ export const CreateAddressForm = ({
                                 <Skeleton className="h-4 w-2/3 rounded-sm" />
                               </SelectTrigger>
                             </Select>
-                          ) : domains.length <= 1 ? (
+                          ) : availableDomains.length <= 1 ? (
                             <Input
                               id="address-domain"
                               disabled
-                              value={domains[0] ?? ""}
+                              value={defaultDomain}
                               aria-invalid={isInvalid}
                             />
                           ) : (
@@ -520,7 +543,9 @@ export const CreateAddressForm = ({
                               disabled={isDomainSelectDisabled}
                               value={selectedValue}
                               onValueChange={value =>
-                                field.handleChange(value ?? "")
+                                field.handleChange(
+                                  normalizeDomainToken(value ?? "")
+                                )
                               }
                             >
                               <SelectTrigger
@@ -533,7 +558,7 @@ export const CreateAddressForm = ({
                                 <SelectValue placeholder="Select domain" />
                               </SelectTrigger>
                               <SelectContent align="start">
-                                {domains.map(domain => (
+                                {availableDomains.map(domain => (
                                   <SelectItem key={domain} value={domain}>
                                     {domain}
                                   </SelectItem>
@@ -541,7 +566,8 @@ export const CreateAddressForm = ({
                               </SelectContent>
                             </Select>
                           )}
-                          {domains.length === 0 && !isDomainsLoading ? (
+                          {availableDomains.length === 0 &&
+                          !isDomainsLoading ? (
                             <FieldDescription>
                               No domains configured on the backend.
                             </FieldDescription>
