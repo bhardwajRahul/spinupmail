@@ -1,21 +1,25 @@
-<hr />
+<img height="340" alt="SpinupMail Banner" src="https://github.com/user-attachments/assets/21890574-d2ce-426b-b5cd-c1087b8c45a7" />
 
 <h3 align="center">
-  <sub>
-    <p align="center">
-      <img src="./packages/frontend/public/logo.png" height="60" width="60" />
-    </p>
-  </sub>
   SpinupMail
 </h3>
 
 <p align="center">
-  Unlimited email addresses for shared workspaces, free on Cloudflare.
+  Self-host unlimited temporary emails with attachments on Cloudflare
 </p>
 
 <p align="center">
-  <a href="https://github.com/ridvan/spinupmail/actions/workflows/test.yml"><img alt="CI Test Pipeline" src="https://img.shields.io/github/actions/workflow/status/ridvan/spinupmail/test.yml?branch=main&label=CI" /></a>
-  <a href="https://github.com/ridvan/spinupmail/blob/main/LICENSE"><img alt="License: MIT" src="https://img.shields.io/github/license/ridvan/spinupmail?temp=true" /></a>
+  <a href="https://spinupmail.com"><img alt="SpinupMail Website" src="https://img.shields.io/badge/spinupmail.com-374151?labelColor=111827&logo=googlechrome&logoColor=white" /></a>
+  <a href="https://spinupmail.com/docs"><img alt="SpinupMail Docs" src="https://img.shields.io/badge/Docs-475569?labelColor=111827&logo=gitbook&logoColor=white" /></a>
+  <a href="https://github.com/ridvan/spinupmail/actions/workflows/test.yml"><img alt="CI Test Pipeline" src="https://img.shields.io/github/actions/workflow/status/ridvan/spinupmail/test.yml?branch=main&label=CI&labelColor=111827" /></a>
+  <a href="https://github.com/ridvan/spinupmail/blob/main/LICENSE"><img alt="License: MIT" src="https://img.shields.io/github/license/ridvan/spinupmail?labelColor=111827" /></a>
+  <a href="https://www.npmjs.com/package/spinupmail"><img alt="npm version" src="https://img.shields.io/npm/v/spinupmail?label=npm&labelColor=111827&color=7c2d12&logo=npm&logoColor=white" /></a>
+  <a href="https://www.npmjs.com/package/spinupmail">
+  <img
+    alt="npm downloads"
+    src="https://img.shields.io/npm/dm/spinupmail?label=downloads&labelColor=111827&color=57534e&logo=npm&logoColor=white"
+  />
+</a>
 </p>
 
 <hr />
