@@ -1,5 +1,3 @@
-import { Resend } from "resend";
-
 export const APP_NAME = "Spinupmail";
 
 const EMAIL_BG_COLOR = "#000000";
@@ -531,6 +529,11 @@ const buildResetPasswordEmailText = (resetUrl: string) =>
     "If you did not request this, you can safely ignore this email.",
   ].join("\n");
 
+const createResendClient = async (apiKey: string) => {
+  const { Resend } = await import("resend");
+  return new Resend(apiKey);
+};
+
 export const createResendVerificationEmailSender = (env?: EmailSenderEnv) => {
   return async (
     { user, url, token }: VerificationEmailData,
@@ -571,7 +574,6 @@ export const createResendVerificationEmailSender = (env?: EmailSenderEnv) => {
       }
     }
 
-    const resend = new Resend(env.RESEND_API_KEY);
     const logoUrl = getEmailLogoUrl(env);
     const flow: VerificationFlow = isChangeEmailVerification
       ? "change-email"
@@ -579,6 +581,7 @@ export const createResendVerificationEmailSender = (env?: EmailSenderEnv) => {
     const appVerificationUrl = buildAppVerificationUrl(url, flow, env);
 
     try {
+      const resend = await createResendClient(env.RESEND_API_KEY);
       await resend.emails.send({
         from: env.RESEND_FROM_EMAIL,
         to: user.email,
@@ -637,9 +640,9 @@ export const createResendResetPasswordEmailSender = (env?: EmailSenderEnv) => {
       return;
     }
 
-    const resend = new Resend(env.RESEND_API_KEY);
     const logoUrl = getEmailLogoUrl(env);
     try {
+      const resend = await createResendClient(env.RESEND_API_KEY);
       await resend.emails.send({
         from: env.RESEND_FROM_EMAIL,
         to: user.email,

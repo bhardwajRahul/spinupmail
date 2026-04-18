@@ -37,9 +37,6 @@ export function InboxPage() {
     setSelectedAddressForOrganization,
     toggleNotifications,
   } = usePopupSession();
-  const [selectedEmailId, setSelectedEmailId] = React.useState<string | null>(
-    null
-  );
 
   const addressActivityQuery = useQuery({
     enabled: Boolean(resolvedAuthState && resolvedOrganizationId),
@@ -59,6 +56,45 @@ export function InboxPage() {
       : null) ??
     addresses[0]?.id ??
     null;
+  const previousSelectedAddressIdRef = React.useRef<string | null>(
+    selectedAddressId
+  );
+  const [selectedEmailState, setSelectedEmailState] = React.useState<{
+    addressId: string | null;
+    emailId: string | null;
+  }>(() => ({
+    addressId: selectedAddressId,
+    emailId: focusedEmailId,
+  }));
+  const selectedEmailId =
+    focusedEmailId ??
+    (selectedEmailState.addressId === null ||
+    selectedEmailState.addressId === selectedAddressId
+      ? selectedEmailState.emailId
+      : null);
+
+  React.useEffect(() => {
+    setSelectedEmailState(currentState => {
+      const previousSelectedAddressId = previousSelectedAddressIdRef.current;
+      const shouldSyncAddressId =
+        currentState.addressId === null ||
+        currentState.addressId === previousSelectedAddressId;
+
+      if (
+        !shouldSyncAddressId ||
+        currentState.addressId === selectedAddressId
+      ) {
+        return currentState;
+      }
+
+      return {
+        ...currentState,
+        addressId: selectedAddressId,
+      };
+    });
+
+    previousSelectedAddressIdRef.current = selectedAddressId;
+  }, [selectedAddressId]);
 
   React.useEffect(() => {
     if (!resolvedOrganizationId || !selectedAddressId) {
@@ -79,19 +115,6 @@ export function InboxPage() {
     selectedAddressIds,
     setSelectedAddressForOrganization,
   ]);
-
-  React.useEffect(() => {
-    setSelectedEmailId(null);
-  }, [selectedAddressId]);
-
-  React.useEffect(() => {
-    if (!focusedEmailId) {
-      return;
-    }
-
-    setSelectedEmailId(focusedEmailId);
-    clearFocusedEmailId();
-  }, [clearFocusedEmailId, focusedEmailId]);
 
   const emailsQuery = useQuery({
     enabled: Boolean(
@@ -151,12 +174,21 @@ export function InboxPage() {
         <AddressSwitcher
           addresses={addresses}
           selectedAddressId={selectedAddressId}
-          onChange={value =>
+          onChange={value => {
+            if (focusedEmailId) {
+              clearFocusedEmailId();
+            }
+
+            setSelectedEmailState({
+              addressId: value,
+              emailId: null,
+            });
+
             void setSelectedAddressForOrganization(
               resolvedOrganizationId,
               value
-            )
-          }
+            );
+          }}
         />
         <CreateAddressDialog
           authState={resolvedAuthState}
@@ -169,6 +201,15 @@ export function InboxPage() {
               resolvedOrganizationId,
               addressId
             );
+
+            if (focusedEmailId) {
+              clearFocusedEmailId();
+            }
+
+            setSelectedEmailState({
+              addressId,
+              emailId: null,
+            });
           }}
         />
       </div>
@@ -199,7 +240,16 @@ export function InboxPage() {
               emails={emailsQuery.data?.items ?? []}
               seenEmailIds={seenEmailIds}
               selectedEmailId={selectedEmailId}
-              onSelect={emailId => setSelectedEmailId(emailId)}
+              onSelect={emailId => {
+                if (focusedEmailId) {
+                  clearFocusedEmailId();
+                }
+
+                setSelectedEmailState({
+                  addressId: selectedAddressId,
+                  emailId,
+                });
+              }}
             />
           </div>
         )}
@@ -210,7 +260,16 @@ export function InboxPage() {
           authState={resolvedAuthState}
           emailId={selectedEmailId}
           organizationId={resolvedOrganizationId}
-          onBack={() => setSelectedEmailId(null)}
+          onBack={() => {
+            if (focusedEmailId) {
+              clearFocusedEmailId();
+            }
+
+            setSelectedEmailState({
+              addressId: selectedAddressId,
+              emailId: null,
+            });
+          }}
           onSeen={markEmailSeen}
         />
       ) : null}
