@@ -12,6 +12,7 @@ import { createOrganizationsRouter } from "@/modules/organizations/router";
 import { createEmailAddressesRouter } from "@/modules/email-addresses/router";
 import { createEmailsRouter } from "@/modules/emails/router";
 import { createE2EAuthTestRouter } from "@/modules/e2e-auth/router";
+import { createExtensionRouter } from "@/modules/extension/router";
 import { InboundAbuseCounterDurableObject } from "@/modules/inbound-email/abuse-counter";
 import { handleIncomingEmail } from "@/modules/inbound-email/handler";
 
@@ -37,6 +38,8 @@ export const createApp = (options: AppFactoryOptions = {}) => {
 
   app.use("/api/domains", requireAuth);
   app.use("/api/organizations/stats/*", requireAuth);
+  app.use("/api/extension/bootstrap", requireAuth);
+  app.use("/api/extension/invitations/*", requireAuth);
   app.use("/api/organizations/stats/email-activity", requireOrganizationScope);
   app.use("/api/organizations/stats/email-summary", requireOrganizationScope);
   app.use("/api/email-addresses/*", requireAuth);
@@ -44,6 +47,7 @@ export const createApp = (options: AppFactoryOptions = {}) => {
   app.use("/api/email-addresses/*", requireOrganizationScope);
   app.use("/api/emails/*", requireOrganizationScope);
 
+  app.route("/api", createExtensionRouter());
   app.route("/api", createDomainsRouter());
   app.route("/api", createOrganizationsRouter());
   app.route("/api", createEmailAddressesRouter());
