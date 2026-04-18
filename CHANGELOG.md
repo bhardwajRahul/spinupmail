@@ -7,7 +7,15 @@ Versioning for tagged releases.
 
 ## [Unreleased]
 
-- Release notes for upcoming changes will go here.
+- No unreleased changes yet.
+
+## [0.1.0] - 2026-04-19
+
+- Initial public SpinupMail release.
+- Self-hosted temporary email platform on Cloudflare Workers, D1, KV, and R2.
+- React dashboard, browser extension, and public TypeScript SDK support.
+- Inbound email capture with organization-scoped inboxes, attachments, and API
+  access.
 
 ## Release Tracks
 
