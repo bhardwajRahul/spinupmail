@@ -9,6 +9,11 @@ Versioning for tagged releases.
 
 - No unreleased changes yet.
 
+## [0.1.1] - 2026-04-19
+
+- Fixed inbound email parsing in the backend Worker by replacing the broken
+  `sanitize-html` lazy-load path with a Worker-safe dynamic import.
+
 ## [0.1.0] - 2026-04-19
 
 - Initial public SpinupMail release.
