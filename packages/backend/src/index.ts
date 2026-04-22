@@ -11,10 +11,12 @@ import { createDomainsRouter } from "@/modules/domains/router";
 import { createOrganizationsRouter } from "@/modules/organizations/router";
 import { createEmailAddressesRouter } from "@/modules/email-addresses/router";
 import { createEmailsRouter } from "@/modules/emails/router";
+import { createIntegrationsRouter } from "@/modules/integrations/router";
 import { createE2EAuthTestRouter } from "@/modules/e2e-auth/router";
 import { createExtensionRouter } from "@/modules/extension/router";
 import { InboundAbuseCounterDurableObject } from "@/modules/inbound-email/abuse-counter";
 import { handleIncomingEmail } from "@/modules/inbound-email/handler";
+import { handleIntegrationDispatchQueueBatch } from "@/modules/integrations/queue";
 
 type AppFactoryOptions = {
   createAuthFactory?: typeof createAuth;
@@ -23,6 +25,7 @@ type AppFactoryOptions = {
 
 type WorkerHandlerOptions = AppFactoryOptions & {
   emailHandler?: typeof handleIncomingEmail;
+  queueHandler?: typeof handleIntegrationDispatchQueueBatch;
 };
 
 export const createApp = (options: AppFactoryOptions = {}) => {
@@ -44,14 +47,19 @@ export const createApp = (options: AppFactoryOptions = {}) => {
   app.use("/api/organizations/stats/email-summary", requireOrganizationScope);
   app.use("/api/email-addresses/*", requireAuth);
   app.use("/api/emails/*", requireAuth);
+  app.use("/api/integrations", requireAuth);
+  app.use("/api/integrations/*", requireAuth);
   app.use("/api/email-addresses/*", requireOrganizationScope);
   app.use("/api/emails/*", requireOrganizationScope);
+  app.use("/api/integrations", requireOrganizationScope);
+  app.use("/api/integrations/*", requireOrganizationScope);
 
   app.route("/api", createExtensionRouter());
   app.route("/api", createDomainsRouter());
   app.route("/api", createOrganizationsRouter());
   app.route("/api", createEmailAddressesRouter());
   app.route("/api", createEmailsRouter());
+  app.route("/api", createIntegrationsRouter());
 
   app.get("/", c => {
     return c.json({
@@ -70,9 +78,16 @@ export const createApp = (options: AppFactoryOptions = {}) => {
 
 export const createWorkerHandler = (options: WorkerHandlerOptions = {}) => {
   const app = createApp(options);
+  const queueHandler =
+    options.queueHandler ??
+    ((args: { batch: MessageBatch; env: CloudflareBindings }) =>
+      handleIntegrationDispatchQueueBatch(args));
+
   return {
     fetch: app.fetch,
     email: options.emailHandler ?? handleIncomingEmail,
+    queue: (batch: MessageBatch, env: CloudflareBindings) =>
+      queueHandler({ batch, env }),
   };
 };
 

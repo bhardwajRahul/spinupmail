@@ -1,5 +1,13 @@
 import { getDb } from "@/platform/db/client";
 import {
+  getAddressIntegrationsByAddressIds,
+  validateAddressIntegrationSubscriptions,
+} from "@/modules/integrations/service";
+import {
+  buildDeleteAddressSubscriptionsByAddressAndEventTypeStatement,
+  buildInsertAddressSubscriptionsStatements,
+} from "@/modules/integrations/repo";
+import {
   getAllowedDomains,
   getForcedMailPrefix,
   getMaxAddressesPerOrganization,
@@ -44,6 +52,8 @@ import {
   type UpdateEmailAddressBody,
 } from "./schemas";
 import {
+  buildInsertAddressStatement,
+  buildUpdateAddressByIdAndOrganizationStatement,
   countAddressesByOrganization,
   countRecentAddressActivity,
   deleteAddressByIdAndOrganization,
@@ -260,9 +270,19 @@ export const listEmailAddresses = async ({
     sortBy,
     sortDirection,
   });
+  const integrationsByAddressId = await getAddressIntegrationsByAddressIds({
+    db,
+    organizationId,
+    addressIds: rows.map(row => row.id),
+  });
 
   return {
-    items: rows.map(toEmailAddressListItem),
+    items: rows.map(row =>
+      toEmailAddressListItem({
+        ...row,
+        integrations: integrationsByAddressId.get(row.id) ?? [],
+      })
+    ),
     page: currentPage,
     pageSize,
     totalItems,
@@ -323,6 +343,11 @@ export const listRecentAddressActivity = async ({
 
   const hasNext = rows.length > limit;
   const pageRows = hasNext ? rows.slice(0, limit) : rows;
+  const integrationsByAddressId = await getAddressIntegrationsByAddressIds({
+    db,
+    organizationId,
+    addressIds: pageRows.map(row => row.id),
+  });
   const lastPageRow = pageRows.at(-1);
   const nextCursor =
     hasNext && lastPageRow
@@ -335,7 +360,12 @@ export const listRecentAddressActivity = async ({
   return {
     status: 200 as const,
     body: {
-      items: pageRows.map(toEmailAddressListItem),
+      items: pageRows.map(row =>
+        toEmailAddressListItem({
+          ...row,
+          integrations: integrationsByAddressId.get(row.id) ?? [],
+        })
+      ),
       nextCursor,
       totalItems: Number(totalRow?.count ?? 0),
     },
@@ -365,9 +395,18 @@ export const getEmailAddress = async ({
     };
   }
 
+  const integrationsByAddressId = await getAddressIntegrationsByAddressIds({
+    db,
+    organizationId,
+    addressIds: [addressRow.id],
+  });
+
   return {
     status: 200 as const,
-    body: toEmailAddressListItem(addressRow),
+    body: toEmailAddressListItem({
+      ...addressRow,
+      integrations: integrationsByAddressId.get(addressRow.id) ?? [],
+    }),
   };
 };
 
@@ -518,6 +557,16 @@ export const createEmailAddress = async ({
   const expiresAtMs =
     ttlMinutes && ttlMinutes > 0 ? now + ttlMinutes * 60 * 1000 : undefined;
   const expiresAt = expiresAtMs ? new Date(expiresAtMs) : undefined;
+  const integrationSubscriptionsValidation =
+    await validateAddressIntegrationSubscriptions({
+      env,
+      organizationId,
+      session,
+      subscriptions: body.integrationSubscriptions,
+    });
+  if (!integrationSubscriptionsValidation.ok) {
+    return integrationSubscriptionsValidation.response;
+  }
 
   const baseMeta = buildAddressMetaForStorage(body.meta, {
     allowedFromDomains,
@@ -555,21 +604,67 @@ export const createEmailAddress = async ({
   const id = crypto.randomUUID();
 
   try {
-    const inserted = await insertAddress(
-      db,
-      {
-        id,
-        organizationId,
-        userId: session.user.id,
-        address,
-        localPart,
-        domain,
-        meta: meta ?? undefined,
-        expiresAt,
-      },
-      addressLimit
-    );
-    if (!inserted) {
+    const created =
+      integrationSubscriptionsValidation.subscriptions === undefined
+        ? await insertAddress(
+            db,
+            {
+              id,
+              organizationId,
+              userId: session.user.id,
+              address,
+              localPart,
+              domain,
+              meta: meta ?? undefined,
+              expiresAt,
+            },
+            addressLimit
+          )
+        : await (async () => {
+            const subscriptionValues =
+              integrationSubscriptionsValidation.subscriptions.map(
+                subscription => ({
+                  id: crypto.randomUUID(),
+                  organizationId,
+                  addressId: id,
+                  integrationId: subscription.integrationId,
+                  eventType: subscription.eventType,
+                  enabled: true,
+                  createdAt: new Date(),
+                  updatedAt: new Date(),
+                })
+              );
+
+            const results = await db.$client.batch([
+              buildInsertAddressStatement({
+                db,
+                values: {
+                  id,
+                  organizationId,
+                  userId: session.user.id,
+                  address,
+                  localPart,
+                  domain,
+                  meta: meta ?? undefined,
+                  expiresAt,
+                },
+                maxAddressesPerOrganization: addressLimit,
+              }),
+              buildDeleteAddressSubscriptionsByAddressAndEventTypeStatement({
+                db,
+                organizationId,
+                addressId: id,
+                eventType: "email.received",
+              }),
+              ...buildInsertAddressSubscriptionsStatements({
+                db,
+                values: subscriptionValues,
+              }),
+            ]);
+
+            return Number(results[0]?.meta?.changes ?? 0) > 0;
+          })();
+    if (!created) {
       return {
         status: 409 as const,
         body: {
@@ -591,6 +686,12 @@ export const createEmailAddress = async ({
     };
   }
 
+  const integrationsByAddressId = await getAddressIntegrationsByAddressIds({
+    db,
+    organizationId,
+    addressIds: [id],
+  });
+
   return {
     status: 200 as const,
     body: toEmailAddressListItem({
@@ -602,6 +703,7 @@ export const createEmailAddress = async ({
         responseMeta === undefined
           ? null
           : JSON.stringify(responseMeta ?? null),
+      integrations: integrationsByAddressId.get(id) ?? [],
       emailCount: 0,
       createdAt: new Date(now),
       expiresAt: expiresAt ?? null,
@@ -673,11 +775,13 @@ export const deleteEmailAddress = async ({
 
 export const updateEmailAddress = async ({
   env,
+  session,
   organizationId,
   addressId,
   payload,
 }: {
   env: CloudflareBindings;
+  session: AppHonoEnv["Variables"]["session"];
   organizationId: string;
   addressId: string;
   payload: unknown;
@@ -848,6 +952,16 @@ export const updateEmailAddress = async ({
       : body.ttlMinutes === null
         ? null
         : new Date(Date.now() + body.ttlMinutes * 60 * 1000);
+  const integrationSubscriptionsValidation =
+    await validateAddressIntegrationSubscriptions({
+      env,
+      organizationId,
+      session,
+      subscriptions: body.integrationSubscriptions,
+    });
+  if (!integrationSubscriptionsValidation.ok) {
+    return integrationSubscriptionsValidation.response;
+  }
 
   let metaForStorage = existing.meta;
   const shouldUpdateMeta =
@@ -905,19 +1019,96 @@ export const updateEmailAddress = async ({
     }
   }
 
+  let refreshedNoChangeRow:
+    | Awaited<ReturnType<typeof findAddressByIdAndOrganization>>
+    | null
+    | undefined;
+
   try {
-    await updateAddressByIdAndOrganization({
-      db,
-      addressId: existing.id,
-      organizationId,
-      values: {
-        address,
-        localPart,
-        domain: domainFromBody,
-        meta: metaForStorage,
-        expiresAt,
-      },
-    });
+    if (integrationSubscriptionsValidation.subscriptions === undefined) {
+      const updateResult = await updateAddressByIdAndOrganization({
+        db,
+        addressId: existing.id,
+        organizationId,
+        values: {
+          address,
+          localPart,
+          domain: domainFromBody,
+          meta: metaForStorage,
+          expiresAt,
+        },
+      });
+
+      const updateChanges = Number(
+        (updateResult as { meta?: { changes?: number } } | undefined)?.meta
+          ?.changes ?? Number.NaN
+      );
+      if (Number.isFinite(updateChanges) && updateChanges === 0) {
+        refreshedNoChangeRow = await findAddressByIdAndOrganization(
+          db,
+          existing.id,
+          organizationId
+        );
+        if (!refreshedNoChangeRow) {
+          return {
+            status: 404 as const,
+            body: { error: "address not found" },
+          };
+        }
+      }
+    } else {
+      const subscriptionValues =
+        integrationSubscriptionsValidation.subscriptions.map(subscription => ({
+          id: crypto.randomUUID(),
+          organizationId,
+          addressId: existing.id,
+          integrationId: subscription.integrationId,
+          eventType: subscription.eventType,
+          enabled: true,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        }));
+
+      const results = await db.$client.batch([
+        buildUpdateAddressByIdAndOrganizationStatement({
+          db,
+          addressId: existing.id,
+          organizationId,
+          values: {
+            address,
+            localPart,
+            domain: domainFromBody,
+            meta: metaForStorage,
+            expiresAt,
+          },
+        }),
+        buildDeleteAddressSubscriptionsByAddressAndEventTypeStatement({
+          db,
+          organizationId,
+          addressId: existing.id,
+          eventType: "email.received",
+        }),
+        ...buildInsertAddressSubscriptionsStatements({
+          db,
+          values: subscriptionValues,
+        }),
+      ]);
+
+      const updated = Number(results[0]?.meta?.changes ?? 0) > 0;
+      if (!updated) {
+        refreshedNoChangeRow = await findAddressByIdAndOrganization(
+          db,
+          existing.id,
+          organizationId
+        );
+        if (!refreshedNoChangeRow) {
+          return {
+            status: 404 as const,
+            body: { error: "address not found" },
+          };
+        }
+      }
+    }
   } catch (error) {
     if (!isAddressConflictError(error)) throw error;
 
@@ -932,15 +1123,26 @@ export const updateEmailAddress = async ({
     };
   }
 
+  const integrationsByAddressId = await getAddressIntegrationsByAddressIds({
+    db,
+    organizationId,
+    addressIds: [existing.id],
+  });
+
+  const responseAddress = refreshedNoChangeRow ?? {
+    ...existing,
+    address,
+    localPart,
+    domain: domainFromBody,
+    meta: metaForStorage,
+    expiresAt,
+  };
+
   return {
     status: 200 as const,
     body: toEmailAddressListItem({
-      ...existing,
-      address,
-      localPart,
-      domain: domainFromBody,
-      meta: metaForStorage,
-      expiresAt,
+      ...responseAddress,
+      integrations: integrationsByAddressId.get(existing.id) ?? [],
     }),
   };
 };
