@@ -45,12 +45,22 @@ export type ValidateIntegrationConnectionResult = {
   validationSummary: unknown;
 };
 
+export type ValidateIntegrationConnectionContext = {
+  reason: "validate" | "create";
+};
+
 export type IntegrationAdapter = {
   provider: IntegrationProvider;
   supportsEventType: (eventType: IntegrationEventType) => boolean;
   validateConnection: (
-    input: unknown
+    input: unknown,
+    context?: ValidateIntegrationConnectionContext
   ) => Promise<ValidateIntegrationConnectionResult>;
+  sendSavedNotification?: (input: {
+    name: string;
+    publicConfig: unknown;
+    secretConfig: unknown;
+  }) => Promise<void>;
   deliver: (input: {
     env: CloudflareBindings;
     payload: EmailReceivedPayload;

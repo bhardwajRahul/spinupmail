@@ -11,6 +11,7 @@ import {
   type ValidateIntegrationConnectionRequest,
   validateIntegrationConnectionRequestSchema,
 } from "@spinupmail/contracts";
+import type { ExecutionContext } from "@cloudflare/workers-types";
 import { getDb } from "@/platform/db/client";
 import type { AppDb } from "@/platform/db/client";
 import {
@@ -533,7 +534,9 @@ export const validateIntegrationConnection = async ({
   const adapter = getIntegrationAdapter(body.provider);
 
   try {
-    const result = await adapter.validateConnection(body);
+    const result = await adapter.validateConnection(body, {
+      reason: "validate",
+    });
     return {
       status: 200 as const,
       body: {
@@ -560,11 +563,13 @@ export const createIntegration = async ({
   organizationId,
   session,
   payload,
+  executionContext,
 }: {
   env: CloudflareBindings;
   organizationId: string;
   session: AppHonoEnv["Variables"]["session"];
   payload: unknown;
+  executionContext?: ExecutionContext;
 }) => {
   const adminCheck = await requireOrganizationAdmin({
     env,
@@ -607,7 +612,9 @@ export const createIntegration = async ({
   const adapter = getIntegrationAdapter(body.provider);
 
   try {
-    const validated = await adapter.validateConnection(body);
+    const validated = await adapter.validateConnection(body, {
+      reason: "create",
+    });
     const createdId = crypto.randomUUID();
     const publicConfigJson = JSON.stringify(validated.publicConfig);
     const encryptedConfigJson = await encryptSecret({
@@ -651,6 +658,29 @@ export const createIntegration = async ({
     });
     if (!created) {
       throw new Error("Created integration not found");
+    }
+
+    if (adapter.sendSavedNotification) {
+      const notificationPromise = adapter
+        .sendSavedNotification({
+          name: body.name,
+          publicConfig: validated.publicConfig,
+          secretConfig: validated.secretConfig,
+        })
+        .catch(error => {
+          console.warn("[integrations] Failed to send post-save notification", {
+            organizationId,
+            provider: body.provider,
+            integrationName: body.name,
+            error: error instanceof Error ? error.message : String(error),
+          });
+        });
+
+      if (executionContext) {
+        executionContext.waitUntil(notificationPromise);
+      } else {
+        void notificationPromise;
+      }
     }
 
     return {

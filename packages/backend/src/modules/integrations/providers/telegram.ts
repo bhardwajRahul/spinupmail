@@ -15,6 +15,7 @@ import type {
   ClassifiedIntegrationFailure,
   EmailReceivedPayload,
   IntegrationAdapter,
+  ValidateIntegrationConnectionContext,
 } from "../types";
 
 const TELEGRAM_API_BASE_URL = "https://api.telegram.org";
@@ -55,6 +56,14 @@ type TelegramSendMessageResult = {
     first_name?: string;
     last_name?: string;
   };
+};
+
+type TelegramGetChatResult = {
+  id?: number | string;
+  title?: string;
+  username?: string;
+  first_name?: string;
+  last_name?: string;
 };
 
 const toNormalizedBaseUrl = (value: string | null | undefined) => {
@@ -330,7 +339,10 @@ const parseSecretConfig = (value: unknown) => {
 export const telegramIntegrationAdapter: IntegrationAdapter = {
   provider: "telegram",
   supportsEventType: eventType => eventType === "email.received",
-  validateConnection: async input => {
+  validateConnection: async (
+    input,
+    context?: ValidateIntegrationConnectionContext
+  ) => {
     const payload = parseTelegramValidateInput(input);
     const { name, config } = payload;
     const botToken = config.botToken.trim();
@@ -384,21 +396,32 @@ export const telegramIntegrationAdapter: IntegrationAdapter = {
       });
     }
 
-    const sentMessage = await callTelegramApi<TelegramSendMessageResult>({
-      botToken,
-      method: "sendMessage",
-      payload: {
-        chat_id: chatId,
-        text: `SpinupMail validation succeeded for "${name}".`,
-        disable_notification: true,
-      },
-    });
+    const resolvedChat =
+      context?.reason === "create"
+        ? await callTelegramApi<TelegramGetChatResult>({
+            botToken,
+            method: "getChat",
+            payload: {
+              chat_id: chatId,
+            },
+          })
+        : (
+            await callTelegramApi<TelegramSendMessageResult>({
+              botToken,
+              method: "sendMessage",
+              payload: {
+                chat_id: chatId,
+                text: `SpinupMail validation succeeded for "${name}".`,
+                disable_notification: true,
+              },
+            })
+          ).chat;
 
     const publicConfig: TelegramIntegrationPublicConfig = {
       telegramBotId: String(getMeResult.id),
       botUsername,
       chatId,
-      chatLabel: formatChatLabel(sentMessage.chat),
+      chatLabel: formatChatLabel(resolvedChat),
     };
     const validationSummary: TelegramIntegrationValidationSummary = {
       name,
@@ -415,6 +438,20 @@ export const telegramIntegrationAdapter: IntegrationAdapter = {
       secretConfig,
       validationSummary,
     };
+  },
+  sendSavedNotification: async ({ name, publicConfig, secretConfig }) => {
+    const parsedPublicConfig = parsePublicConfig(publicConfig);
+    const parsedSecretConfig = parseSecretConfig(secretConfig);
+
+    await callTelegramApi<TelegramSendMessageResult>({
+      botToken: parsedSecretConfig.botToken,
+      method: "sendMessage",
+      payload: {
+        chat_id: parsedPublicConfig.chatId || parsedSecretConfig.chatId,
+        text: `SpinupMail integration "${name}" has been saved.`,
+        disable_notification: true,
+      },
+    });
   },
   deliver: async ({ env, payload, publicConfig, secretConfig }) => {
     const parsedPublicConfig = parsePublicConfig(publicConfig);
