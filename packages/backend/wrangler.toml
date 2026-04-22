@@ -39,7 +39,7 @@ name = "EMAIL"
 
 [[queues.producers]]
 queue = "spinupmail-integration-dispatches"
-binding = "spinupmail_integration_dispatches"
+binding = "INTEGRATION_DISPATCH_QUEUE"
 
 [[queues.consumers]]
 queue = "spinupmail-integration-dispatches"
