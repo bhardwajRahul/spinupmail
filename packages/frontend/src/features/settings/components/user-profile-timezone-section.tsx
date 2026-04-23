@@ -1,8 +1,9 @@
 import * as React from "react";
-import { Clock3 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { FieldLabel } from "@/components/ui/field";
 import { type TimeZoneSource } from "@/features/timezone/lib/resolve-timezone";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { TimeZoneIcon } from "@hugeicons/core-free-icons";
 
 const describeSource = (source: TimeZoneSource) => {
   switch (source) {
@@ -19,41 +20,70 @@ const describeSource = (source: TimeZoneSource) => {
   }
 };
 
+const useLiveTime = (timeZone: string) => {
+  const getCurrentTime = React.useCallback(() => {
+    try {
+      return new Date().toLocaleString("en-US", {
+        timeZone,
+        dateStyle: "full",
+        timeStyle: "long",
+      });
+    } catch {
+      try {
+        return new Date().toLocaleString("en-US", {
+          dateStyle: "full",
+          timeStyle: "long",
+        });
+      } catch {
+        return new Date().toString();
+      }
+    }
+  }, [timeZone]);
+
+  const subscribe = React.useCallback((onStoreChange: () => void) => {
+    const intervalId = window.setInterval(onStoreChange, 1000);
+    return () => window.clearInterval(intervalId);
+  }, []);
+
+  return React.useSyncExternalStore(subscribe, getCurrentTime, () => "");
+};
+
 export const UserProfileTimezoneSection = ({
   effectiveTimeZone,
+  previewTimeZone,
   source,
-  previewValue,
   manualTimezoneField,
   timezoneField,
 }: {
   effectiveTimeZone: string;
+  previewTimeZone?: string;
   source: TimeZoneSource;
-  previewValue: string;
   manualTimezoneField: React.ReactNode;
   timezoneField: React.ReactNode;
 }) => {
+  const activeTimeZone = previewTimeZone ?? effectiveTimeZone;
+  const liveTime = useLiveTime(activeTimeZone);
+
   return (
-    <div className="space-y-3 rounded-lg border border-border/60 bg-background/40 p-4">
-      <FieldLabel className="flex items-center gap-1.5 text-muted-foreground">
-        <Clock3 aria-hidden="true" className="h-3.5 w-3.5 shrink-0" />
-        <span>Timezone</span>
-      </FieldLabel>
+    <div className="space-y-3 pt-1">
+      <FieldLabel className="flex items-center gap-1.5">Timezone</FieldLabel>
 
       <div className="flex flex-wrap items-center gap-2">
-        <span>Current:</span>{" "}
-        <Badge variant="secondary">{effectiveTimeZone}</Badge>
+        <Badge variant="secondary">{activeTimeZone}</Badge>
         <Badge variant="outline">{describeSource(source)}</Badge>
+      </div>
+      <div className="flex flex-row gap-2 max-w-102 text-sm text-muted-foreground">
+        <HugeiconsIcon
+          aria-hidden="true"
+          icon={TimeZoneIcon}
+          className="h-3.5 w-3.5 ml-0.5 mt-1"
+          strokeWidth={2}
+        />
+        <p className="font-medium">{liveTime}</p>
       </div>
 
       {manualTimezoneField}
       {timezoneField}
-
-      <div className="rounded-lg border border-border/70 bg-muted/30 px-3 py-2 text-sm">
-        <p className="text-xs text-muted-foreground">
-          Current time in selected timezone:
-        </p>
-        <p className="font-medium">{previewValue}</p>
-      </div>
     </div>
   );
 };

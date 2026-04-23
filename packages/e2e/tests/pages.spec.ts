@@ -7,6 +7,7 @@ import {
   signInWithOrganization,
 } from "./helpers/auth-fixture";
 import { e2eFrontendBaseUrl } from "./helpers/e2e-urls";
+import { settingsTab } from "./helpers/page-helpers";
 
 const cardTitle = (page: Page, text: string) =>
   page.locator('[data-slot="card-title"]').filter({ hasText: text }).first();
@@ -80,9 +81,10 @@ test.describe("spinupmail protected pages", () => {
 
     await expect(page).toHaveURL(`${e2eFrontendBaseUrl}/settings`);
     await expect(page.getByLabel("Name", { exact: true })).toBeVisible();
-    await expect(cardTitle(page, "Password")).toBeVisible();
-    await expect(cardTitle(page, "Two-Factor Authentication")).toBeVisible();
-    await expect(cardTitle(page, "API Keys")).toBeVisible();
+    await expect(settingsTab(page, "Profile")).toBeVisible();
+    await expect(settingsTab(page, "Password")).toBeVisible();
+    await expect(settingsTab(page, "Two-Factor")).toBeVisible();
+    await expect(settingsTab(page, "API Keys")).toBeVisible();
   });
 
   test("renders the organization settings page", async ({ authSeed, page }) => {

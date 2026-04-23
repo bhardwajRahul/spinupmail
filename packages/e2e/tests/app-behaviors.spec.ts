@@ -7,6 +7,7 @@ import {
   signInWithOrganization,
 } from "./helpers/auth-fixture";
 import { e2eBackendBaseUrl, e2eFrontendBaseUrl } from "./helpers/e2e-urls";
+import { settingsTab } from "./helpers/page-helpers";
 
 const navButton = (page: Page, text: string) =>
   page
@@ -92,7 +93,15 @@ test.describe("spinupmail app behaviors", () => {
     await passwordOption.click();
 
     await expect(page).toHaveURL(`${e2eFrontendBaseUrl}/settings#password`);
-    await expect(cardTitle(page, "Password")).toBeVisible();
+    await expect(settingsTab(page, "Password")).toHaveAttribute(
+      "aria-selected",
+      "true"
+    );
+    await expect(
+      page
+        .getByRole("button", { name: "Update password" })
+        .or(page.getByRole("button", { name: "Email password setup link" }))
+    ).toBeVisible();
     await expect(dialog).toBeHidden();
   });
 
