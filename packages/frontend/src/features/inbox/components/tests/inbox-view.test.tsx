@@ -1,8 +1,9 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { MemoryRouter } from "react-router";
 import { InboxView } from "@/features/inbox/components/inbox-view";
 import { INBOX_EMAIL_SEARCH_MAX_LENGTH } from "@/features/inbox/constants";
+import { renderWithAct } from "@/test/render-with-act";
 
 vi.mock("@/features/timezone/hooks/use-timezone", () => ({
   useTimezone: () => ({
@@ -11,8 +12,8 @@ vi.mock("@/features/timezone/hooks/use-timezone", () => ({
 }));
 
 describe("InboxView", () => {
-  it("shows the sender label in the email list instead of the raw from address", () => {
-    render(
+  it("shows the sender label in the email list instead of the raw from address", async () => {
+    await renderWithAct(
       <MemoryRouter>
         <InboxView
           addresses={[
@@ -72,11 +73,11 @@ describe("InboxView", () => {
     expect(screen.queryByText("sender@example.com")).toBeNull();
   });
 
-  it("renders an email search input above the email list", () => {
+  it("renders an email search input above the email list", async () => {
     const onEmailSearchChange = vi.fn();
     const onClearEmailSearch = vi.fn();
 
-    render(
+    await renderWithAct(
       <MemoryRouter>
         <InboxView
           addresses={[
@@ -129,8 +130,8 @@ describe("InboxView", () => {
     expect(onClearEmailSearch).toHaveBeenCalledTimes(1);
   });
 
-  it("renders a sample badge for generated onboarding emails", () => {
-    render(
+  it("renders a sample badge for generated onboarding emails", async () => {
+    await renderWithAct(
       <MemoryRouter>
         <InboxView
           addresses={[
@@ -189,11 +190,11 @@ describe("InboxView", () => {
     expect(screen.getByText("Sample")).toBeTruthy();
   });
 
-  it("shows received count and last received timing in the address selector", () => {
+  it("shows received count and last received timing in the address selector", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-03-09T14:30:00.000Z"));
     try {
-      render(
+      await renderWithAct(
         <MemoryRouter>
           <InboxView
             addresses={[

@@ -1,14 +1,9 @@
-import {
-  act,
-  fireEvent,
-  render,
-  screen,
-  waitFor,
-} from "@testing-library/react";
+import { act, fireEvent, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { toast } from "sonner";
 import { EditAddressSheet } from "@/features/addresses/components/edit-address-sheet";
 import { useUpdateAddressMutation } from "@/features/addresses/hooks/use-addresses";
+import { renderWithAct, rerenderWithAct } from "@/test/render-with-act";
 
 vi.mock("@/features/addresses/hooks/use-addresses", () => ({
   useUpdateAddressMutation: vi.fn(),
@@ -111,7 +106,7 @@ const renderEditAddressSheet = (
   onOpenChange = vi.fn(),
   props?: Partial<React.ComponentProps<typeof EditAddressSheet>>
 ) =>
-  render(
+  renderWithAct(
     <EditAddressSheet
       address={baseAddress as never}
       domains={["example.com"]}
@@ -136,12 +131,12 @@ describe("EditAddressSheet", () => {
     })) as typeof toast.promise);
   });
 
-  it("only shows the username change warning when the username is edited", () => {
+  it("only shows the username change warning when the username is edited", async () => {
     mockedUseUpdateAddressMutation.mockReturnValue(
       updateMutation as unknown as ReturnType<typeof useUpdateAddressMutation>
     );
 
-    renderEditAddressSheet();
+    await renderEditAddressSheet();
 
     expect(
       screen.queryByText("Changing the username replaces this address")
@@ -174,12 +169,12 @@ describe("EditAddressSheet", () => {
     ).toBeNull();
   });
 
-  it("prefills the default inbox limit for addresses that do not have one yet", () => {
+  it("prefills the default inbox limit for addresses that do not have one yet", async () => {
     mockedUseUpdateAddressMutation.mockReturnValue(
       updateMutation as unknown as ReturnType<typeof useUpdateAddressMutation>
     );
 
-    renderEditAddressSheet();
+    await renderEditAddressSheet();
 
     expect(
       (screen.getByLabelText("Max emails") as HTMLInputElement).value
@@ -193,12 +188,12 @@ describe("EditAddressSheet", () => {
     ).toBe("true");
   });
 
-  it("refreshes the inherited inbox limit when the parent default changes", () => {
+  it("refreshes the inherited inbox limit when the parent default changes", async () => {
     mockedUseUpdateAddressMutation.mockReturnValue(
       updateMutation as unknown as ReturnType<typeof useUpdateAddressMutation>
     );
 
-    const { rerender } = render(
+    const view = await renderWithAct(
       <EditAddressSheet
         address={baseAddress as never}
         domains={["example.com"]}
@@ -212,7 +207,8 @@ describe("EditAddressSheet", () => {
       (screen.getByLabelText("Max emails") as HTMLInputElement).value
     ).toBe("100");
 
-    rerender(
+    await rerenderWithAct(
+      view,
       <EditAddressSheet
         address={baseAddress as never}
         domains={["example.com"]}
@@ -233,7 +229,7 @@ describe("EditAddressSheet", () => {
       updateMutation as unknown as ReturnType<typeof useUpdateAddressMutation>
     );
 
-    renderEditAddressSheet();
+    await renderEditAddressSheet();
 
     fireEvent.change(screen.getByLabelText("Username"), {
       target: { value: "hello-2" },
@@ -257,7 +253,7 @@ describe("EditAddressSheet", () => {
     mockedUseUpdateAddressMutation.mockReturnValue(
       updateMutation as unknown as ReturnType<typeof useUpdateAddressMutation>
     );
-    renderEditAddressSheet(onOpenChange);
+    await renderEditAddressSheet(onOpenChange);
 
     fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
 
@@ -284,7 +280,7 @@ describe("EditAddressSheet", () => {
     mockedUseUpdateAddressMutation.mockReturnValue(
       updateMutation as unknown as ReturnType<typeof useUpdateAddressMutation>
     );
-    renderEditAddressSheet(onOpenChange);
+    await renderEditAddressSheet(onOpenChange);
 
     fireEvent.click(screen.getByRole("radio", { name: "Delete all" }));
     fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
@@ -312,7 +308,7 @@ describe("EditAddressSheet", () => {
     mockedUseUpdateAddressMutation.mockReturnValue(
       updateMutation as unknown as ReturnType<typeof useUpdateAddressMutation>
     );
-    renderEditAddressSheet(onOpenChange);
+    await renderEditAddressSheet(onOpenChange);
 
     fireEvent.change(screen.getByLabelText("Username"), {
       target: { value: "hello-2" },
@@ -341,12 +337,12 @@ describe("EditAddressSheet", () => {
     expect(onOpenChange).toHaveBeenCalledWith(false);
   });
 
-  it("shows provider radios only after integrations are enabled", () => {
+  it("shows provider radios only after integrations are enabled", async () => {
     mockedUseUpdateAddressMutation.mockReturnValue(
       updateMutation as unknown as ReturnType<typeof useUpdateAddressMutation>
     );
 
-    renderEditAddressSheet(vi.fn(), {
+    await renderEditAddressSheet(vi.fn(), {
       canManageIntegrations: true,
       integrations: [telegramIntegration],
     });
@@ -354,11 +350,13 @@ describe("EditAddressSheet", () => {
     expect(screen.queryByRole("radio", { name: "Telegram" })).toBeNull();
     expect(screen.queryByText("Ops alerts")).toBeNull();
 
-    fireEvent.click(
-      screen.getByRole("switch", {
-        name: "Enable integrations",
-      })
-    );
+    await act(async () => {
+      fireEvent.click(
+        screen.getByRole("switch", {
+          name: "Enable integrations",
+        })
+      );
+    });
 
     expect(screen.getByRole("radio", { name: "Telegram" })).toBeTruthy();
     expect(screen.getByText("Ops alerts")).toBeTruthy();
@@ -375,16 +373,18 @@ describe("EditAddressSheet", () => {
       updateMutation as unknown as ReturnType<typeof useUpdateAddressMutation>
     );
 
-    renderEditAddressSheet(onOpenChange, {
+    await renderEditAddressSheet(onOpenChange, {
       canManageIntegrations: true,
       integrations: [telegramIntegration],
     });
 
-    fireEvent.click(
-      screen.getByRole("switch", {
-        name: "Enable integrations",
-      })
-    );
+    await act(async () => {
+      fireEvent.click(
+        screen.getByRole("switch", {
+          name: "Enable integrations",
+        })
+      );
+    });
     fireEvent.click(screen.getByRole("checkbox", { name: "Ops alerts" }));
     fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
 
@@ -418,21 +418,17 @@ describe("EditAddressSheet", () => {
       updateMutation as unknown as ReturnType<typeof useUpdateAddressMutation>
     );
 
-    let view: ReturnType<typeof render> | undefined;
-
-    await act(async () => {
-      view = render(
-        <EditAddressSheet
-          address={addressWithTelegramIntegration as never}
-          domains={["example.com"]}
-          maxReceivedEmailsPerAddress={100}
-          integrations={[]}
-          canManageIntegrations
-          open
-          onOpenChange={onOpenChange}
-        />
-      );
-    });
+    const view = await renderWithAct(
+      <EditAddressSheet
+        address={addressWithTelegramIntegration as never}
+        domains={["example.com"]}
+        maxReceivedEmailsPerAddress={100}
+        integrations={[]}
+        canManageIntegrations
+        open
+        onOpenChange={onOpenChange}
+      />
+    );
 
     expect(
       screen
@@ -440,19 +436,18 @@ describe("EditAddressSheet", () => {
         .getAttribute("aria-checked")
     ).toBe("false");
 
-    await act(async () => {
-      view?.rerender(
-        <EditAddressSheet
-          address={addressWithTelegramIntegration as never}
-          domains={["example.com"]}
-          maxReceivedEmailsPerAddress={100}
-          integrations={[telegramIntegration]}
-          canManageIntegrations
-          open
-          onOpenChange={onOpenChange}
-        />
-      );
-    });
+    await rerenderWithAct(
+      view,
+      <EditAddressSheet
+        address={addressWithTelegramIntegration as never}
+        domains={["example.com"]}
+        maxReceivedEmailsPerAddress={100}
+        integrations={[telegramIntegration]}
+        canManageIntegrations
+        open
+        onOpenChange={onOpenChange}
+      />
+    );
 
     await waitFor(() =>
       expect(
@@ -497,7 +492,7 @@ describe("EditAddressSheet", () => {
       updateMutation as unknown as ReturnType<typeof useUpdateAddressMutation>
     );
 
-    renderEditAddressSheet(onOpenChange, {
+    await renderEditAddressSheet(onOpenChange, {
       address: addressWithTelegramIntegration as never,
       canManageIntegrations: true,
       integrations: [telegramIntegration],
@@ -537,17 +532,19 @@ describe("EditAddressSheet", () => {
       updateMutation as unknown as ReturnType<typeof useUpdateAddressMutation>
     );
 
-    renderEditAddressSheet(onOpenChange, {
+    await renderEditAddressSheet(onOpenChange, {
       address: addressWithTelegramIntegration as never,
       canManageIntegrations: true,
       integrations: [telegramIntegration],
     });
 
-    fireEvent.click(
-      screen.getByRole("switch", {
-        name: "Enable integrations",
-      })
-    );
+    await act(async () => {
+      fireEvent.click(
+        screen.getByRole("switch", {
+          name: "Enable integrations",
+        })
+      );
+    });
 
     await waitFor(() =>
       expect(

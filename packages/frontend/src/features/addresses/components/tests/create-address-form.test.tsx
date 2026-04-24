@@ -1,9 +1,10 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, screen, waitFor } from "@testing-library/react";
 import type { AnchorHTMLAttributes } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { toast } from "sonner";
 import { CreateAddressForm } from "@/features/addresses/components/create-address-form";
 import { useCreateAddressMutation } from "@/features/addresses/hooks/use-addresses";
+import { renderWithAct, rerenderWithAct } from "@/test/render-with-act";
 
 vi.mock("react-router", () => ({
   Link: ({ children, ...props }: AnchorHTMLAttributes<HTMLAnchorElement>) => (
@@ -70,7 +71,7 @@ describe("CreateAddressForm", () => {
   });
 
   it("prefills max stored emails and updates it when the configured default arrives", async () => {
-    const { rerender } = render(
+    const view = await renderWithAct(
       <CreateAddressForm domains={["example.com"]} />
     );
 
@@ -79,7 +80,8 @@ describe("CreateAddressForm", () => {
     ).toBe("100");
     expect(screen.getByText("Required")).toBeTruthy();
 
-    rerender(
+    await rerenderWithAct(
+      view,
       <CreateAddressForm
         domains={["example.com"]}
         maxReceivedEmailsPerAddress={250}
@@ -98,7 +100,7 @@ describe("CreateAddressForm", () => {
       createMutation as unknown as ReturnType<typeof useCreateAddressMutation>
     );
 
-    render(<CreateAddressForm domains={["example.com"]} />);
+    await renderWithAct(<CreateAddressForm domains={["example.com"]} />);
 
     fireEvent.change(screen.getByLabelText("Username"), {
       target: { value: "ops-team" },
@@ -119,11 +121,12 @@ describe("CreateAddressForm", () => {
       address: "mailbox01@spinupmail.dev",
     });
 
-    const { rerender } = render(
+    const view = await renderWithAct(
       <CreateAddressForm domains={[]} isDomainsLoading />
     );
 
-    rerender(
+    await rerenderWithAct(
+      view,
       <CreateAddressForm
         domains={["spinupmail.dev"]}
         isDomainsLoading={false}
@@ -158,7 +161,7 @@ describe("CreateAddressForm", () => {
   });
 
   it("shows provider radios only after integrations are enabled", async () => {
-    render(
+    await renderWithAct(
       <CreateAddressForm
         domains={["example.com"]}
         canManageIntegrations
@@ -173,11 +176,13 @@ describe("CreateAddressForm", () => {
     ).toBeNull();
     expect(screen.queryByText("Ops alerts")).toBeNull();
 
-    fireEvent.click(
-      screen.getByRole("switch", {
-        name: "Enable integrations",
-      })
-    );
+    await act(async () => {
+      fireEvent.click(
+        screen.getByRole("switch", {
+          name: "Enable integrations",
+        })
+      );
+    });
 
     expect(screen.getByRole("radio", { name: "Telegram" })).toBeTruthy();
     expect(screen.getByText("Ops alerts")).toBeTruthy();
@@ -187,7 +192,7 @@ describe("CreateAddressForm", () => {
   });
 
   it("updates the provider badge when a connection is selected", async () => {
-    render(
+    await renderWithAct(
       <CreateAddressForm
         domains={["example.com"]}
         canManageIntegrations
@@ -195,11 +200,13 @@ describe("CreateAddressForm", () => {
       />
     );
 
-    fireEvent.click(
-      screen.getByRole("switch", {
-        name: "Enable integrations",
-      })
-    );
+    await act(async () => {
+      fireEvent.click(
+        screen.getByRole("switch", {
+          name: "Enable integrations",
+        })
+      );
+    });
 
     expect(screen.getAllByText("0/1")).toHaveLength(2);
 
