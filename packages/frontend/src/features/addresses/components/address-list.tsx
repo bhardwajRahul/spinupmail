@@ -123,41 +123,57 @@ const AddressRowActions = ({
   const deleteIconRef = React.useRef<DeleteIconHandle>(null);
 
   return (
-    <TableCell className="space-x-2 text-right">
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        disabled={disabled}
-        className="cursor-pointer disabled:cursor-not-allowed"
-        onMouseEnter={() => {
-          editIconRef.current?.startAnimation();
-        }}
-        onMouseLeave={() => {
-          editIconRef.current?.stopAnimation();
-        }}
-        onClick={() => onEdit(address)}
-      >
-        <SquarePenIcon ref={editIconRef} size={16} aria-hidden="true" />
-        Edit
-      </Button>
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        disabled={disabled || isDeletePending}
-        className="cursor-pointer disabled:cursor-not-allowed"
-        onMouseEnter={() => {
-          deleteIconRef.current?.startAnimation();
-        }}
-        onMouseLeave={() => {
-          deleteIconRef.current?.stopAnimation();
-        }}
-        onClick={() => onDelete(address)}
-      >
-        <DeleteIcon ref={deleteIconRef} size={16} aria-hidden="true" />
-        Delete
-      </Button>
+    <TableCell className="text-right">
+      <div className="flex items-center justify-end gap-1">
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <Button
+                type="button"
+                variant="outline"
+                size="icon-sm"
+                disabled={disabled}
+                className="cursor-pointer disabled:cursor-not-allowed"
+                aria-label={`Edit ${address.address}`}
+                onMouseEnter={() => {
+                  editIconRef.current?.startAnimation();
+                }}
+                onMouseLeave={() => {
+                  editIconRef.current?.stopAnimation();
+                }}
+                onClick={() => onEdit(address)}
+              />
+            }
+          >
+            <SquarePenIcon ref={editIconRef} size={16} aria-hidden="true" />
+          </TooltipTrigger>
+          <TooltipContent side="top">Edit</TooltipContent>
+        </Tooltip>
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <Button
+                type="button"
+                variant="outline"
+                size="icon-sm"
+                disabled={disabled || isDeletePending}
+                className="cursor-pointer disabled:cursor-not-allowed"
+                aria-label={`Delete ${address.address}`}
+                onMouseEnter={() => {
+                  deleteIconRef.current?.startAnimation();
+                }}
+                onMouseLeave={() => {
+                  deleteIconRef.current?.stopAnimation();
+                }}
+                onClick={() => onDelete(address)}
+              />
+            }
+          >
+            <DeleteIcon ref={deleteIconRef} size={16} aria-hidden="true" />
+          </TooltipTrigger>
+          <TooltipContent side="top">Delete</TooltipContent>
+        </Tooltip>
+      </div>
     </TableCell>
   );
 };
@@ -1253,7 +1269,7 @@ const AddressListContent = ({
               )}
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
+          <AlertDialogFooter className="[&_button]:cursor-pointer">
             <AlertDialogCancel disabled={deleteMutation.isPending}>
               Cancel
             </AlertDialogCancel>
