@@ -6,7 +6,7 @@ import {
   Mailbox01Icon,
   PlusSignIcon,
   UserMultiple02Icon,
-} from "@hugeicons/core-free-icons";
+} from "@/lib/hugeicons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";

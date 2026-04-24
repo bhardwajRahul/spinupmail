@@ -1,6 +1,6 @@
 import * as React from "react";
 import { useForm } from "@tanstack/react-form";
-import { ConnectIcon, TelegramIcon } from "@hugeicons/core-free-icons";
+import { ConnectIcon, TelegramIcon } from "@/lib/hugeicons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { z } from "zod";
 import { toast } from "sonner";

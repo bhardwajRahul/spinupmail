@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { FieldLabel } from "@/components/ui/field";
 import { type TimeZoneSource } from "@/features/timezone/lib/resolve-timezone";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { TimeZoneIcon } from "@hugeicons/core-free-icons";
+import { TimeZoneIcon } from "@/lib/hugeicons";
 
 const describeSource = (source: TimeZoneSource) => {
   switch (source) {

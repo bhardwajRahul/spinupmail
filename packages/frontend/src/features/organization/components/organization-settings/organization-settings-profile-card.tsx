@@ -1,5 +1,5 @@
 import { useForm } from "@tanstack/react-form";
-import { Copy01Icon } from "@hugeicons/core-free-icons";
+import { Copy01Icon } from "@/lib/hugeicons";
 import { z } from "zod";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";

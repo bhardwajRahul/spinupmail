@@ -24,7 +24,7 @@ import {
   CreditCardIcon,
   NotificationIcon,
   LogoutIcon,
-} from "@hugeicons/core-free-icons";
+} from "@/lib/hugeicons";
 
 export function NavUser({
   user,

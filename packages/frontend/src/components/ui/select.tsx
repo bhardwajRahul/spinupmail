@@ -8,7 +8,7 @@ import {
   Tick02Icon,
   ArrowUp01Icon,
   ArrowDown01Icon,
-} from "@hugeicons/core-free-icons";
+} from "@/lib/hugeicons";
 
 const Select = SelectPrimitive.Root;
 

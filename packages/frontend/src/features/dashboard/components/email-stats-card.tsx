@@ -1,6 +1,6 @@
 import * as React from "react";
 import NumberFlow from "@number-flow/react";
-import { ChartAnalysisIcon } from "@hugeicons/core-free-icons";
+import { ChartAnalysisIcon } from "@/lib/hugeicons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";

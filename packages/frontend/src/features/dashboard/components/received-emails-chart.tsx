@@ -1,6 +1,6 @@
 import { Bar, BarChart, XAxis } from "recharts";
 import NumberFlow from "@number-flow/react";
-import { Mail01Icon } from "@hugeicons/core-free-icons";
+import { Mail01Icon } from "@/lib/hugeicons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";

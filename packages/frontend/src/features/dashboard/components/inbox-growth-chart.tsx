@@ -1,7 +1,7 @@
 import * as React from "react";
 import { Area, AreaChart, XAxis } from "recharts";
 import NumberFlow from "@number-flow/react";
-import { BorderFullIcon } from "@hugeicons/core-free-icons";
+import { BorderFullIcon } from "@/lib/hugeicons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";

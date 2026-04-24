@@ -4,7 +4,7 @@ import {
   Mail01Icon,
   Settings02Icon,
   UserMultiple02Icon,
-} from "@hugeicons/core-free-icons";
+} from "@/lib/hugeicons";
 import { toast } from "sonner";
 import { HashTabsPage } from "@/components/layout/hash-tabs-page";
 import {

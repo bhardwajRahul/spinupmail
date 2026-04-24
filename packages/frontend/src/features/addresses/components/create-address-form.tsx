@@ -6,7 +6,7 @@ import {
   Delete02Icon,
   ShuffleIcon,
   TelegramIcon,
-} from "@hugeicons/core-free-icons";
+} from "@/lib/hugeicons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { z } from "zod";
 import { Link } from "react-router";

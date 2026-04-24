@@ -4,7 +4,7 @@ import {
   Calendar05Icon,
   Clock03Icon,
   Tick02Icon,
-} from "@hugeicons/core-free-icons";
+} from "@/lib/hugeicons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { parseAsString, parseAsStringLiteral, useQueryState } from "nuqs";
 import { NuqsAdapter } from "nuqs/adapters/react-router/v7";

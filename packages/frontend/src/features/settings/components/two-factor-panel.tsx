@@ -4,7 +4,7 @@ import {
   Key01Icon,
   QrCodeIcon,
   SmartPhone01Icon,
-} from "@hugeicons/core-free-icons";
+} from "@/lib/hugeicons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { useForm } from "@tanstack/react-form";
 import { useMutation } from "@tanstack/react-query";

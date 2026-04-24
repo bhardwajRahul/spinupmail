@@ -20,7 +20,7 @@ import {
   FolderIcon,
   ArrowRightIcon,
   Delete02Icon,
-} from "@hugeicons/core-free-icons";
+} from "@/lib/hugeicons";
 
 export function NavProjects({
   projects,

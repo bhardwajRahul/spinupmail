@@ -41,7 +41,7 @@ import {
   InputGroupButton,
   InputGroupInput,
 } from "@/components/ui/input-group";
-import { Copy01Icon } from "@hugeicons/core-free-icons";
+import { Copy01Icon } from "@/lib/hugeicons";
 import { HugeiconsIcon } from "@hugeicons/react";
 
 const createApiKeySchema = z.object({

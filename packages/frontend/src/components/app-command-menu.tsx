@@ -18,7 +18,7 @@ import {
   Sun01Icon,
   UserIcon,
   UserMultiple02Icon,
-} from "@hugeicons/core-free-icons";
+} from "@/lib/hugeicons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { useLocation, useNavigate } from "react-router";
 import { useTheme } from "@/components/theme-provider";

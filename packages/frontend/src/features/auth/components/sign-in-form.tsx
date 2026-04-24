@@ -1,6 +1,6 @@
 import * as React from "react";
 import { useForm } from "@tanstack/react-form";
-import { InformationCircleIcon } from "@hugeicons/core-free-icons";
+import { InformationCircleIcon } from "@/lib/hugeicons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";

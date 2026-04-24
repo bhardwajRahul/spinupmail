@@ -6,7 +6,7 @@ import {
   MailOpen01Icon,
   MailOpenIcon,
   Mailbox01Icon,
-} from "@hugeicons/core-free-icons";
+} from "@/lib/hugeicons";
 import { Badge } from "@/components/ui/badge";
 import {
   Command,

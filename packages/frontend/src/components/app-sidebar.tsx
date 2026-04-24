@@ -7,7 +7,7 @@ import {
   LogoutIcon,
   UserMultiple02Icon,
   DashboardSquare01Icon,
-} from "@hugeicons/core-free-icons";
+} from "@/lib/hugeicons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AppLogo } from "@/components/app-logo";
 import { OrganizationSwitcher } from "@/components/organization-switcher";

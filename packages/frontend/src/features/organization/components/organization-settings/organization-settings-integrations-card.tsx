@@ -1,6 +1,6 @@
 import * as React from "react";
 import { Eye, EyeOff } from "lucide-react";
-import { TelegramIcon } from "@hugeicons/core-free-icons";
+import { TelegramIcon } from "@/lib/hugeicons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   INTEGRATION_MAX_PER_ORGANIZATION,

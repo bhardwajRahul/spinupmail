@@ -17,7 +17,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { UnfoldMoreIcon, PlusSignIcon } from "@hugeicons/core-free-icons";
+import { UnfoldMoreIcon, PlusSignIcon } from "@/lib/hugeicons";
 
 export function TeamSwitcher({
   teams,

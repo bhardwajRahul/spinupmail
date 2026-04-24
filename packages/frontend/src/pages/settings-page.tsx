@@ -3,7 +3,7 @@ import {
   LockIcon,
   SmartPhone01Icon,
   UserIcon,
-} from "@hugeicons/core-free-icons";
+} from "@/lib/hugeicons";
 import { HashTabsPage } from "@/components/layout/hash-tabs-page";
 import { ApiKeysPanel } from "@/features/settings/components/api-keys-panel";
 import { ChangePasswordPanel } from "@/features/settings/components/change-password-panel";

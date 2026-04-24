@@ -2,7 +2,7 @@ import * as React from "react";
 import { useForm } from "@tanstack/react-form";
 import { z } from "zod";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Copy01Icon } from "@hugeicons/core-free-icons";
+import { Copy01Icon } from "@/lib/hugeicons";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";

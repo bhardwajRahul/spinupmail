@@ -1,6 +1,6 @@
 import * as React from "react";
 import { useMemo } from "react";
-import { LogoutIcon, Mail01Icon } from "@hugeicons/core-free-icons";
+import { LogoutIcon, Mail01Icon } from "@/lib/hugeicons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Link, useNavigate, useSearchParams } from "react-router";
 import { AppLogo } from "@/components/app-logo";

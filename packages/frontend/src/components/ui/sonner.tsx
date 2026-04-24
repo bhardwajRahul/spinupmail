@@ -7,7 +7,7 @@ import {
   Alert02Icon,
   MultiplicationSignCircleIcon,
   Loading03Icon,
-} from "@hugeicons/core-free-icons";
+} from "@/lib/hugeicons";
 
 const Toaster = ({ ...props }: ToasterProps) => {
   const { theme = "system" } = useTheme();
