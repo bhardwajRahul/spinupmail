@@ -1,7 +1,11 @@
 import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { RouteErrorPage } from "@/pages/route-error-page";
-import { isRouteErrorResponse, useRouteError } from "react-router";
+import {
+  isRouteErrorResponse,
+  useRouteError,
+  MemoryRouter,
+} from "react-router";
 
 vi.mock("react-router", async importOriginal => {
   const actual = await importOriginal<typeof import("react-router")>();
@@ -27,9 +31,14 @@ describe("RouteErrorPage", () => {
     } as ReturnType<typeof useRouteError>);
     mockedIsRouteErrorResponse.mockReturnValue(true);
 
-    render(<RouteErrorPage />);
+    render(
+      <MemoryRouter>
+        <RouteErrorPage />
+      </MemoryRouter>
+    );
 
-    expect(screen.getByText("404 Not Found")).toBeTruthy();
+    expect(screen.getByText("Error 404")).toBeTruthy();
+    expect(screen.getByText("Not Found")).toBeTruthy();
   });
 
   it("renders message from Error instances", () => {
@@ -38,7 +47,11 @@ describe("RouteErrorPage", () => {
     );
     mockedIsRouteErrorResponse.mockReturnValue(false);
 
-    render(<RouteErrorPage />);
+    render(
+      <MemoryRouter>
+        <RouteErrorPage />
+      </MemoryRouter>
+    );
 
     expect(screen.getByText("Loader crashed")).toBeTruthy();
   });
@@ -47,10 +60,14 @@ describe("RouteErrorPage", () => {
     mockedUseRouteError.mockReturnValue({ foo: "bar" } as never);
     mockedIsRouteErrorResponse.mockReturnValue(false);
 
-    render(<RouteErrorPage />);
+    render(
+      <MemoryRouter>
+        <RouteErrorPage />
+      </MemoryRouter>
+    );
 
-    expect(
-      screen.getByText("Something went wrong while loading this route.")
-    ).toBeTruthy();
+    expect(screen.getAllByText("Something went wrong").length).toBeGreaterThan(
+      0
+    );
   });
 });
