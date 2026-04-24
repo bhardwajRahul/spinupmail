@@ -1,4 +1,10 @@
-import { useMemo, type ComponentProps, type ReactNode } from "react";
+import {
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  type ComponentProps,
+  type ReactNode,
+} from "react";
 import type { IconSvgElement } from "@hugeicons/react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { useLocation, useNavigate } from "react-router";
@@ -44,6 +50,7 @@ export const HashTabsPage = ({
 }: HashTabsPageProps) => {
   const location = useLocation();
   const navigate = useNavigate();
+  const tabsScrollerRef = useRef<HTMLDivElement>(null);
   const sectionIds = useMemo(
     () => new Set(sections.map(section => section.id)),
     [sections]
@@ -53,6 +60,17 @@ export const HashTabsPage = ({
     defaultSection,
     sectionIds,
   });
+
+  useLayoutEffect(() => {
+    const activeTab = tabsScrollerRef.current?.querySelector<HTMLElement>(
+      `[data-section-tab="${activeSection}"]`
+    );
+
+    activeTab?.scrollIntoView({
+      block: "nearest",
+      inline: "nearest",
+    });
+  }, [activeSection]);
 
   return (
     <Tabs
@@ -81,28 +99,34 @@ export const HashTabsPage = ({
       }}
       {...tabsProps}
     >
-      <div>
-        <TabsList
-          aria-label={ariaLabel}
-          variant="line"
-          className={cn(
-            "min-w-max gap-6 border-b border-border/70 p-0",
-            listClassName
-          )}
+      <div className="min-w-0 max-w-full overflow-hidden border-b border-border/70">
+        <div
+          ref={tabsScrollerRef}
+          className="max-w-full overflow-x-auto overflow-y-hidden [scrollbar-color:var(--color-border)_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border [&::-webkit-scrollbar-thumb:hover]:bg-border/80"
         >
-          {sections.map(section => (
-            <TabsTrigger key={section.id} value={section.id}>
-              {section.icon ? (
-                <HugeiconsIcon
-                  data-icon="inline-start"
-                  icon={section.icon}
-                  strokeWidth={2}
-                />
-              ) : null}
-              {section.label}
-            </TabsTrigger>
-          ))}
-        </TabsList>
+          <TabsList
+            aria-label={ariaLabel}
+            variant="line"
+            className={cn("min-w-max gap-6 p-0", listClassName)}
+          >
+            {sections.map(section => (
+              <TabsTrigger
+                key={section.id}
+                value={section.id}
+                data-section-tab={section.id}
+              >
+                {section.icon ? (
+                  <HugeiconsIcon
+                    data-icon="inline-start"
+                    icon={section.icon}
+                    strokeWidth={2}
+                  />
+                ) : null}
+                {section.label}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </div>
       </div>
 
       {sections.map(section => (

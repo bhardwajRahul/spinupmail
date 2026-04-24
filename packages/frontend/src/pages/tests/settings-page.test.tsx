@@ -74,4 +74,31 @@ describe("SettingsPage", () => {
       "/settings#two-factor"
     );
   });
+
+  it("keeps overflow tabs reachable on narrow screens", () => {
+    const scrollIntoView = vi.fn();
+
+    Object.defineProperty(HTMLElement.prototype, "scrollIntoView", {
+      configurable: true,
+      value: scrollIntoView,
+    });
+
+    render(
+      <MemoryRouter initialEntries={["/settings#api-keys"]}>
+        <SettingsPage />
+      </MemoryRouter>
+    );
+
+    const activeTab = screen.getByRole("tab", {
+      name: "API Keys",
+      selected: true,
+    });
+    const scroller = activeTab.closest("[class*='overflow-x-auto']");
+
+    expect(scroller?.className).toContain("overflow-x-auto");
+    expect(scrollIntoView).toHaveBeenCalledWith({
+      block: "nearest",
+      inline: "nearest",
+    });
+  });
 });
