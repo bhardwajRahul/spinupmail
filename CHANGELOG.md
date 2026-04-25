@@ -9,6 +9,45 @@ Versioning for tagged releases.
 
 - No unreleased changes yet.
 
+## [0.3.0](https://github.com/ridvan/spinupmail/releases/tag/v0.3.0) - 2026-04-25
+
+### Added
+
+- Added a delete-organization flow with backend access checks,
+  rate-limiting, organization-switching safeguards, and settings-page UI.
+  [`47d0958`](https://github.com/ridvan/spinupmail/commit/47d0958)
+- Added paginated inbox loading across the backend API, contracts, SDK tests,
+  and inbox UI, including a clearer empty-selection state.
+  [`f8e791c`](https://github.com/ridvan/spinupmail/commit/f8e791c)
+
+### Changed
+
+- Refactored address management into hash-linked tabs and refreshed the create
+  address form layout, address list actions, and related route tests.
+  [`bdf5ec4`](https://github.com/ridvan/spinupmail/commit/bdf5ec4),
+  [`512b809`](https://github.com/ridvan/spinupmail/commit/512b809)
+- Renamed the max-received-email overflow action from `rejectNew` to `dropNew`
+  across backend validation, contracts, frontend forms, and docs.
+  [`fe6c06b`](https://github.com/ridvan/spinupmail/commit/fe6c06b)
+- Refined the dashboard overview with a cleaner no-card layout, updated chart
+  surfaces, and matching app background colors.
+  [`8deb5ac`](https://github.com/ridvan/spinupmail/commit/8deb5ac),
+  [`0fa5a07`](https://github.com/ridvan/spinupmail/commit/0fa5a07)
+- Improved the route error view to better match the product UI.
+  [`c4a68a8`](https://github.com/ridvan/spinupmail/commit/c4a68a8)
+
+### Fixed
+
+- Fixed settings hash tabs on smaller screens by making the shared tab shell
+  horizontally scrollable without breaking desktop layout.
+  [`4f61b4c`](https://github.com/ridvan/spinupmail/commit/4f61b4c)
+- Fixed frontend component tests by avoiding Hugeicons barrel imports and
+  wrapping ScrollArea interactions in the test act helper.
+  [`647185d`](https://github.com/ridvan/spinupmail/commit/647185d),
+  [`a1734fc`](https://github.com/ridvan/spinupmail/commit/a1734fc)
+- Fixed the route error page test after the route error UI refresh.
+  [`009cfa7`](https://github.com/ridvan/spinupmail/commit/009cfa7)
+
 ## [0.2.0](https://github.com/ridvan/spinupmail/releases/tag/v0.2.0) - 2026-04-24
 
 ### Added
