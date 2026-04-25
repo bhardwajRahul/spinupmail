@@ -38,7 +38,7 @@ describe("starter inbox provisioning", () => {
     mocks.updateAddressLastReceivedAt.mockResolvedValue(undefined);
   });
 
-  it("creates one auto-created address and seeds three sample emails", async () => {
+  it("creates one auto-created address and seeds two sample emails", async () => {
     const randomSpy = vi.spyOn(Math, "random").mockReturnValue(0);
     const uuidSpy = vi
       .spyOn(crypto, "randomUUID")
@@ -65,7 +65,7 @@ describe("starter inbox provisioning", () => {
       }),
       100
     );
-    expect(mocks.insertInboundEmail).toHaveBeenCalledTimes(3);
+    expect(mocks.insertInboundEmail).toHaveBeenCalledTimes(2);
     expect(mocks.insertInboundEmail).toHaveBeenNthCalledWith(
       1,
       {},
@@ -86,7 +86,7 @@ describe("starter inbox provisioning", () => {
     );
     expect(mocks.updateAddressLastReceivedAt).toHaveBeenCalledTimes(1);
     expect(result.starterAddressId).toBe("addr-uuid");
-    expect(result.seededSampleEmailCount).toBe(3);
+    expect(result.seededSampleEmailCount).toBe(2);
     expect(result.createdStarterAddress).toBe(true);
 
     randomSpy.mockRestore();
@@ -156,26 +156,12 @@ describe("starter inbox provisioning", () => {
     uuidSpy.mockRestore();
   });
 
-  it("reuses fully seeded auto-created addresses without inserting duplicates", async () => {
+  it("returns existing auto-created address without reseeding samples", async () => {
     const latestReceivedAt = new Date("2026-01-01T00:02:00.000Z");
     mocks.findAutoCreatedAddressByOrganization.mockResolvedValue({
       id: "address-1",
       address: "starter@spinupmail.com",
     });
-    mocks.listSampleEmailsForAddress.mockResolvedValue([
-      {
-        subject: "Welcome to Spinupmail",
-        receivedAt: new Date("2026-01-01T00:00:00.000Z"),
-      },
-      {
-        subject: "Send your first test email",
-        receivedAt: latestReceivedAt,
-      },
-      {
-        subject: "What to explore next",
-        receivedAt: new Date("2026-01-01T00:01:00.000Z"),
-      },
-    ]);
 
     const result = await seedStarterInbox({
       env: { EMAIL_DOMAINS: "spinupmail.com" } as CloudflareBindings,
@@ -186,55 +172,14 @@ describe("starter inbox provisioning", () => {
 
     expect(mocks.insertAddress).not.toHaveBeenCalled();
     expect(mocks.insertInboundEmail).not.toHaveBeenCalled();
-    expect(mocks.updateAddressLastReceivedAt).toHaveBeenCalledWith(
-      {},
-      "address-1",
-      latestReceivedAt
-    );
+    expect(mocks.listSampleEmailsForAddress).not.toHaveBeenCalled();
+    expect(mocks.updateAddressLastReceivedAt).not.toHaveBeenCalled();
     expect(result).toEqual({
       starterAddressId: "address-1",
       starterAddress: "starter@spinupmail.com",
       seededSampleEmailCount: 0,
       createdStarterAddress: false,
     });
-  });
-
-  it("backfills missing sample emails for an existing auto-created address", async () => {
-    const uuidSpy = vi
-      .spyOn(crypto, "randomUUID")
-      .mockReturnValueOnce("sample-2")
-      .mockReturnValueOnce("sample-3");
-    const existingReceivedAt = new Date("2026-01-01T00:00:00.000Z");
-
-    mocks.findAutoCreatedAddressByOrganization.mockResolvedValue({
-      id: "address-1",
-      address: "starter@spinupmail.com",
-    });
-    mocks.listSampleEmailsForAddress.mockResolvedValue([
-      {
-        subject: "Welcome to Spinupmail",
-        receivedAt: existingReceivedAt,
-      },
-    ]);
-
-    const result = await seedStarterInbox({
-      env: { EMAIL_DOMAINS: "spinupmail.com" } as CloudflareBindings,
-      organizationId: "org-1",
-      userId: "user-1",
-      organizationName: "Acme Org",
-    });
-
-    expect(mocks.insertAddress).not.toHaveBeenCalled();
-    expect(mocks.insertInboundEmail).toHaveBeenCalledTimes(2);
-    expect(mocks.updateAddressLastReceivedAt).toHaveBeenCalledTimes(1);
-    expect(result).toEqual({
-      starterAddressId: "address-1",
-      starterAddress: "starter@spinupmail.com",
-      seededSampleEmailCount: 2,
-      createdStarterAddress: false,
-    });
-
-    uuidSpy.mockRestore();
   });
 
   it("fails cleanly when EMAIL_DOMAINS is missing", async () => {
