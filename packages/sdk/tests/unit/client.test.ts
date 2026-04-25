@@ -136,6 +136,39 @@ describe("SpinupMail SDK client", () => {
     expect(String(url)).toContain("after=2026-04-11T10%3A00%3A00.000Z");
   });
 
+  it("serializes pagination values for email lists", async () => {
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          address: "sdk@spinupmail.dev",
+          addressId: "addr-1",
+          items: [],
+          page: 2,
+          pageSize: 25,
+          totalItems: 0,
+          totalPages: 1,
+        }),
+        {
+          status: 200,
+          headers: {
+            "content-type": "application/json",
+          },
+        }
+      )
+    );
+    const client = buildClient(fetchMock);
+
+    await client.emails.list({
+      addressId: "addr-1",
+      page: 2,
+      pageSize: 25,
+    });
+
+    const [url] = fetchMock.mock.calls[0]!;
+    expect(String(url)).toContain("page=2");
+    expect(String(url)).toContain("pageSize=25");
+  });
+
   it("rejects non-finite and invalid Date timestamp filters", async () => {
     const fetchMock = vi.fn<typeof fetch>();
     const client = buildClient(fetchMock);
@@ -399,5 +432,141 @@ describe("SpinupMail SDK client", () => {
 
     expect(body.acceptedRiskNotice).toBe(true);
     expect(body.localPart).toMatch(/^sum-[a-z0-9]{12}$/);
+  });
+
+  it("exposes integration management endpoints", async () => {
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            items: [
+              {
+                id: "int-1",
+                provider: "telegram",
+                name: "Alerts",
+                status: "active",
+                supportedEventTypes: ["email.received"],
+                mailboxCount: 1,
+                lastValidatedAt: "2026-04-24T10:00:00.000Z",
+                lastValidatedAtMs: 1777024800000,
+                createdAt: "2026-04-24T10:00:00.000Z",
+                createdAtMs: 1777024800000,
+                updatedAt: "2026-04-24T10:00:00.000Z",
+                updatedAtMs: 1777024800000,
+                publicConfig: {
+                  telegramBotId: "123456",
+                  botUsername: "spinupmail_bot",
+                  chatId: "-1001234567890",
+                  chatLabel: "Alerts",
+                },
+              },
+            ],
+          }),
+          {
+            status: 200,
+            headers: {
+              "content-type": "application/json",
+            },
+          }
+        )
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            items: [],
+            page: 2,
+            pageSize: 10,
+            totalItems: 0,
+            totalPages: 1,
+          }),
+          {
+            status: 200,
+            headers: {
+              "content-type": "application/json",
+            },
+          }
+        )
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            id: "dispatch-1",
+            status: "pending",
+            replayed: true,
+          }),
+          {
+            status: 200,
+            headers: {
+              "content-type": "application/json",
+            },
+          }
+        )
+      );
+    const client = buildClient(fetchMock);
+
+    const integrations = await client.integrations.list();
+    const dispatches = await client.integrations.listDispatches(
+      integrations.items[0]!.id,
+      {
+        page: 2,
+        pageSize: 10,
+      }
+    );
+    const replay = await client.integrations.replayDispatch(
+      integrations.items[0]!.id,
+      "dispatch-1"
+    );
+
+    expect(integrations.items[0]!.name).toBe("Alerts");
+    expect(dispatches.page).toBe(2);
+    expect(replay.replayed).toBe(true);
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(fetchMock.mock.calls[0]![0]).toBe(
+      "https://api.spinupmail.com/api/integrations"
+    );
+    expect(fetchMock.mock.calls[1]![0]).toBe(
+      "https://api.spinupmail.com/api/integrations/int-1/dispatches?page=2&pageSize=10"
+    );
+    expect(fetchMock.mock.calls[2]![0]).toBe(
+      "https://api.spinupmail.com/api/integrations/int-1/dispatches/dispatch-1/replay"
+    );
+    expect(
+      new Headers(fetchMock.mock.calls[0]![1]?.headers).get("x-org-id")
+    ).toBe("org-1");
+  });
+
+  it("validates integration payloads before sending requests", () => {
+    const fetchMock = vi.fn<typeof fetch>();
+    const client = buildClient(fetchMock);
+
+    expect(() =>
+      client.integrations.create({
+        provider: "telegram",
+        name: "Alerts",
+        config: {
+          botToken: "invalid",
+          chatId: "-1001234567890",
+        },
+      })
+    ).toThrow(SpinupMailValidationError);
+
+    try {
+      client.integrations.create({
+        provider: "telegram",
+        name: "Alerts",
+        config: {
+          botToken: "invalid",
+          chatId: "-1001234567890",
+        },
+      });
+    } catch (error) {
+      expect(error).toMatchObject({
+        name: "SpinupMailValidationError",
+        source: "request",
+      });
+    }
+
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });

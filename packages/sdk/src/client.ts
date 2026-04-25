@@ -5,6 +5,7 @@ import {
   createEmailAddressResponseSchema,
   deleteEmailAddressResponseSchema,
   deleteEmailResponseSchema,
+  deleteIntegrationResponseSchema,
   domainConfigSchema,
   emailActivityResponseSchema,
   emailDetailSchema,
@@ -12,15 +13,24 @@ import {
   emailSummaryResponseSchema,
   listEmailAddressesParamsSchema,
   listEmailsParamsSchema,
+  listIntegrationDispatchesParamsSchema,
+  listIntegrationDispatchesResponseSchema,
+  listIntegrationsResponseSchema,
   listRecentAddressActivityParamsSchema,
   recentAddressActivityResponseSchema,
+  replayIntegrationDispatchResponseSchema,
   updateEmailAddressRequestSchema,
+  validateIntegrationConnectionRequestSchema,
+  validateIntegrationConnectionResponseSchema,
+  organizationIntegrationSchema,
   emailAddressListResponseSchema,
   emailAddressSchema,
   type CreateEmailAddressRequest,
   type CreateEmailAddressResponse,
+  type CreateIntegrationRequest,
   type DeleteEmailAddressResponse,
   type DeleteEmailResponse,
+  type DeleteIntegrationResponse,
   type DomainConfig,
   type EmailActivityResponse,
   type EmailAddress,
@@ -29,11 +39,19 @@ import {
   type EmailListItem,
   type EmailListResponse,
   type EmailSummaryResponse,
+  type ListIntegrationDispatchesParams,
+  type ListIntegrationDispatchesResponse,
+  type ListIntegrationsResponse,
   type ListEmailAddressesParams,
   type ListEmailsParams,
   type ListRecentAddressActivityParams,
+  type OrganizationIntegration,
   type RecentAddressActivityResponse,
+  type ReplayIntegrationDispatchResponse,
   type UpdateEmailAddressRequest,
+  createIntegrationRequestSchema,
+  type ValidateIntegrationConnectionRequest,
+  type ValidateIntegrationConnectionResponse,
 } from "@/contracts";
 import {
   SpinupMailApiError,
@@ -142,6 +160,13 @@ export type GetEmailActivityOptions = OrganizationScopedOptions & {
 
 /** Fetches organization email summary stats. */
 export type GetEmailSummaryOptions = OrganizationScopedOptions;
+
+/** Per-call options for organization integration endpoints. */
+export type IntegrationOptions = OrganizationScopedOptions;
+
+/** Per-call options for paginated integration dispatch listing. */
+export type ListIntegrationDispatchesOptions = ListIntegrationDispatchesParams &
+  OrganizationScopedOptions;
 
 /** Timestamp filter accepted by inbox listing and polling helpers. */
 export type EmailTimestampFilter = string | number | Date;
@@ -277,6 +302,37 @@ export interface SpinupMailStatsApi {
   ): Promise<EmailSummaryResponse>;
 }
 
+export interface SpinupMailIntegrationsApi {
+  /** Lists integrations in the active organization. */
+  list(options?: IntegrationOptions): Promise<ListIntegrationsResponse>;
+  /** Validates provider credentials without saving the integration. */
+  validate(
+    payload: ValidateIntegrationConnectionRequest,
+    options?: IntegrationOptions
+  ): Promise<ValidateIntegrationConnectionResponse>;
+  /** Creates an integration in the active organization. */
+  create(
+    payload: CreateIntegrationRequest,
+    options?: IntegrationOptions
+  ): Promise<OrganizationIntegration>;
+  /** Deletes an integration and clears mailbox subscriptions. */
+  delete(
+    integrationId: string,
+    options?: IntegrationOptions
+  ): Promise<DeleteIntegrationResponse>;
+  /** Lists dispatch attempts for an integration. */
+  listDispatches(
+    integrationId: string,
+    options?: ListIntegrationDispatchesOptions
+  ): Promise<ListIntegrationDispatchesResponse>;
+  /** Replays a failed integration dispatch. */
+  replayDispatch(
+    integrationId: string,
+    dispatchId: string,
+    options?: IntegrationOptions
+  ): Promise<ReplayIntegrationDispatchResponse>;
+}
+
 export interface SpinupMailInboxesApi {
   /** Polls an inbox and returns the latest response plus polling metadata. */
   poll(options: InboxPollOptions): Promise<InboxPollResult>;
@@ -293,6 +349,8 @@ export interface SpinupMailClient {
   emails: SpinupMailEmailsApi;
   /** Organization-level reporting endpoints. */
   stats: SpinupMailStatsApi;
+  /** Organization integration management endpoints. */
+  integrations: SpinupMailIntegrationsApi;
   /** High-level inbox polling helpers. */
   inboxes: SpinupMailInboxesApi;
 }
@@ -1086,6 +1144,8 @@ const createSpinupMailClient = (
           addressId: options.addressId,
           search: options.search,
           limit: options.limit,
+          page: options.page,
+          pageSize: options.pageSize,
           order: options.order,
           after: normalizeTimestamp(options.after),
           before: normalizeTimestamp(options.before),
@@ -1165,6 +1225,105 @@ const createSpinupMailClient = (
       }),
   };
 
+  const integrations: SpinupMailIntegrationsApi = {
+    list: (options: IntegrationOptions = {}) =>
+      requestJson(context, {
+        path: "/api/integrations",
+        responseSchema: listIntegrationsResponseSchema,
+        organizationId: options.organizationId,
+        orgScoped: true,
+        signal: options.signal,
+      }),
+    validate: (
+      payload: ValidateIntegrationConnectionRequest,
+      options: IntegrationOptions = {}
+    ) =>
+      requestJson(context, {
+        method: "POST",
+        path: "/api/integrations/validate",
+        responseSchema: validateIntegrationConnectionResponseSchema,
+        body: validateWithSchema(
+          validateIntegrationConnectionRequestSchema,
+          payload,
+          "request",
+          "Invalid validateIntegration payload."
+        ),
+        organizationId: options.organizationId,
+        orgScoped: true,
+        signal: options.signal,
+      }),
+    create: (
+      payload: CreateIntegrationRequest,
+      options: IntegrationOptions = {}
+    ) =>
+      requestJson(context, {
+        method: "POST",
+        path: "/api/integrations",
+        responseSchema: organizationIntegrationSchema,
+        body: validateWithSchema(
+          createIntegrationRequestSchema,
+          payload,
+          "request",
+          "Invalid createIntegration payload."
+        ),
+        organizationId: options.organizationId,
+        orgScoped: true,
+        signal: options.signal,
+      }),
+    delete: (integrationId: string, options: IntegrationOptions = {}) =>
+      requestJson(context, {
+        method: "DELETE",
+        path: `/api/integrations/${encodeURIComponent(
+          normalizeString(integrationId, "integrationId")
+        )}`,
+        responseSchema: deleteIntegrationResponseSchema,
+        organizationId: options.organizationId,
+        orgScoped: true,
+        signal: options.signal,
+      }),
+    listDispatches: async (
+      integrationId: string,
+      options: ListIntegrationDispatchesOptions = {}
+    ) => {
+      const validated = validateWithSchema(
+        listIntegrationDispatchesParamsSchema,
+        options,
+        "request",
+        "Invalid listIntegrationDispatches options."
+      );
+
+      return requestJson(context, {
+        path: `/api/integrations/${encodeURIComponent(
+          normalizeString(integrationId, "integrationId")
+        )}/dispatches${createQueryString({
+          page: validated.page,
+          pageSize: validated.pageSize,
+        })}`,
+        responseSchema: listIntegrationDispatchesResponseSchema,
+        organizationId: options.organizationId,
+        orgScoped: true,
+        signal: options.signal,
+      });
+    },
+    replayDispatch: (
+      integrationId: string,
+      dispatchId: string,
+      options: IntegrationOptions = {}
+    ) =>
+      requestJson(context, {
+        method: "POST",
+        path: `/api/integrations/${encodeURIComponent(
+          normalizeString(integrationId, "integrationId")
+        )}/dispatches/${encodeURIComponent(
+          normalizeString(dispatchId, "dispatchId")
+        )}/replay`,
+        responseSchema: replayIntegrationDispatchResponseSchema,
+        organizationId: options.organizationId,
+        orgScoped: true,
+        signal: options.signal,
+      }),
+  };
+
   const inboxes: SpinupMailInboxesApi = {
     poll: (options: InboxPollOptions) =>
       runPollingLoop(emails, options, {
@@ -1186,6 +1345,7 @@ const createSpinupMailClient = (
     addresses,
     emails,
     stats,
+    integrations,
     inboxes,
   };
 };
@@ -1206,6 +1366,7 @@ export class SpinupMail {
   readonly addresses: SpinupMailClient["addresses"];
   readonly emails: SpinupMailClient["emails"];
   readonly stats: SpinupMailClient["stats"];
+  readonly integrations: SpinupMailClient["integrations"];
   readonly inboxes: SpinupMailClient["inboxes"];
 
   /** Creates a new SDK client using constructor options or environment defaults. */
@@ -1234,14 +1395,17 @@ export class SpinupMail {
     this.addresses = client.addresses;
     this.emails = client.emails;
     this.stats = client.stats;
+    this.integrations = client.integrations;
     this.inboxes = client.inboxes;
   }
 }
 export type {
   CreateEmailAddressRequest,
   CreateEmailAddressResponse,
+  CreateIntegrationRequest,
   DeleteEmailAddressResponse,
   DeleteEmailResponse,
+  DeleteIntegrationResponse,
   DomainConfig,
   EmailActivityResponse,
   EmailAddress,
@@ -1250,9 +1414,16 @@ export type {
   EmailListItem,
   EmailListResponse,
   EmailSummaryResponse,
+  ListIntegrationDispatchesParams,
+  ListIntegrationDispatchesResponse,
+  ListIntegrationsResponse,
   ListEmailAddressesParams,
   ListEmailsParams,
   ListRecentAddressActivityParams,
+  OrganizationIntegration,
   RecentAddressActivityResponse,
+  ReplayIntegrationDispatchResponse,
   UpdateEmailAddressRequest,
+  ValidateIntegrationConnectionRequest,
+  ValidateIntegrationConnectionResponse,
 };

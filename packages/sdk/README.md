@@ -63,6 +63,16 @@ const emails = await spinupmail.emails.list({
 });
 ```
 
+List inbox emails with pagination:
+
+```ts
+const page = await spinupmail.emails.list({
+  addressId: address.id,
+  page: 1,
+  pageSize: 25,
+});
+```
+
 Use `after` with local filters to wait for a specific email after a timestamp:
 
 ```ts
@@ -77,4 +87,15 @@ const email = await spinupmail.inboxes.waitForEmail({
 });
 
 console.log(email.text);
+```
+
+Manage organization integrations:
+
+```ts
+const integrations = await spinupmail.integrations.list();
+
+const dispatches = await spinupmail.integrations.listDispatches(
+  integrations.items[0].id,
+  { page: 1, pageSize: 20 }
+);
 ```
