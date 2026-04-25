@@ -1,4 +1,4 @@
-<img height="340" alt="SpinupMail Banner" src="https://github.com/user-attachments/assets/21890574-d2ce-426b-b5cd-c1087b8c45a7" />
+<img height="340" alt="SpinupMail Banner" src="https://github.com/user-attachments/assets/7e88bf41-068b-4861-8d72-2e289f13a34f" />
 
 <h3 align="center">
   SpinupMail
@@ -42,10 +42,10 @@ attachments), and manage everything through a secure Better Auth + Hono API and 
 
 ## Screenshots
 
-<img width="200" alt="Image of SpinupMail Dashboard - Overview page" src="https://github.com/user-attachments/assets/53de357b-e4e5-472c-8350-f3455352ab6c" />
-<img width="200" alt="Image of SpinupMail Dashboard - Inbox page" src="https://github.com/user-attachments/assets/31d5b16f-c86f-4ea4-ad80-f8ae8b9b922b" />
-<img width="200" alt="Image of SpinupMail Dashboard - Addresses page" src="https://github.com/user-attachments/assets/26425c77-c8e9-4600-90ee-410720a16b71" />
-<img width="200" alt="Image of SpinupMail Dashboard - Organization page" src="https://github.com/user-attachments/assets/ed9bbe19-96bd-4175-ad6c-51b73b50d54f" />
+<img width="200" alt="Image of SpinupMail Dashboard - Overview page" src="https://github.com/user-attachments/assets/e24c3860-b24e-44a7-9a82-d0004e3e09db" />
+<img width="200" alt="Image of SpinupMail Dashboard - Inbox page" src="https://github.com/user-attachments/assets/0f5d503d-1e58-4743-bd33-b14e2b56b11b" />
+<img width="200" alt="Image of SpinupMail Dashboard - Addresses page" src="https://github.com/user-attachments/assets/9cd5c44c-2890-425a-a1ff-19ad976ed8a2" />
+<img width="200" alt="Image of SpinupMail Dashboard - Organization page" src="https://github.com/user-attachments/assets/10316158-22af-4764-81b8-8c99b6509cbc" />
 
 ## Prerequisites
 
@@ -512,7 +512,7 @@ Generate an API key from the UI. Then use it to access the API:
 Or use the SDK:
 
 ```bash
-npm install spinupmail
+pnpm install spinupmail
 ```
 
 ```ts
