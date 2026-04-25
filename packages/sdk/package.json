@@ -23,6 +23,11 @@
   "publishConfig": {
     "access": "public"
   },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ridvan/spinupmail",
+    "directory": "packages/sdk"
+  },
   "scripts": {
     "build": "tsdown --config tsdown.config.ts",
     "typecheck": "tsgo --noEmit -p tsconfig.test.json && tsgo --noEmit -p tests/tsconfig.json",
