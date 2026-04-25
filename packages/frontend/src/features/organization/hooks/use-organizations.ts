@@ -1,8 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/features/auth/hooks/use-auth";
-import { setLastActiveOrganizationId } from "@/features/organization/utils/active-organization-storage";
+import {
+  clearLastActiveOrganizationId,
+  getLastActiveOrganizationId,
+  setLastActiveOrganizationId,
+} from "@/features/organization/utils/active-organization-storage";
 import { createOrganizationWithGeneratedSlug } from "@/features/organization/utils/create-organization";
-import { listOrganizationStats } from "@/lib/api";
+import { deleteOrganization, listOrganizationStats } from "@/lib/api";
 import { authClient } from "@/lib/auth";
 import { queryKeys } from "@/lib/query-keys";
 
@@ -288,6 +292,129 @@ export const useUpdateOrganizationMutation = () => {
     },
     onSuccess: async () => {
       await invalidateOrganizationQueries(queryClient);
+    },
+  });
+};
+
+export const useDeleteOrganizationMutation = () => {
+  const queryClient = useQueryClient();
+  const {
+    activeOrganizationId,
+    user,
+    refreshSession,
+    cancelOrganizationSwitch,
+  } = useAuth();
+
+  return useMutation({
+    mutationFn: async (payload: {
+      organizationId: string;
+      confirmationName: string;
+    }) => {
+      const result = await deleteOrganization(payload.organizationId, {
+        confirmationName: payload.confirmationName,
+      });
+      const deletedActiveOrganization =
+        activeOrganizationId === payload.organizationId;
+
+      if (getLastActiveOrganizationId(user?.id) === payload.organizationId) {
+        clearLastActiveOrganizationId(user?.id);
+      }
+
+      if (deletedActiveOrganization) {
+        cancelOrganizationSwitch(null);
+      }
+
+      let fallbackOrganizationId: string | undefined;
+      let fallbackSelectionFailed = false;
+      if (deletedActiveOrganization) {
+        try {
+          const organizationsResult = await authClient.organization.list();
+          if (organizationsResult.error) {
+            fallbackSelectionFailed = true;
+            console.warn(
+              "[organization] Failed to list fallback organizations",
+              {
+                organizationId: payload.organizationId,
+                error: organizationsResult.error,
+              }
+            );
+          }
+
+          const fallbackOrganization = organizationsResult.error
+            ? null
+            : ((organizationsResult.data ?? []).find(
+                organization => organization.id !== payload.organizationId
+              ) ?? null);
+
+          if (fallbackOrganization) {
+            const setActiveResult = await authClient.organization.setActive({
+              organizationId: fallbackOrganization.id,
+            });
+
+            if (setActiveResult.error) {
+              fallbackSelectionFailed = true;
+              console.warn(
+                "[organization] Failed to select fallback organization",
+                {
+                  organizationId: payload.organizationId,
+                  fallbackOrganizationId: fallbackOrganization.id,
+                  error: setActiveResult.error,
+                }
+              );
+            } else {
+              try {
+                await refreshSession();
+                fallbackOrganizationId = fallbackOrganization.id;
+                setLastActiveOrganizationId(user?.id, fallbackOrganization.id);
+              } catch (error) {
+                fallbackSelectionFailed = true;
+                console.warn(
+                  "[organization] Failed to refresh fallback session",
+                  {
+                    organizationId: payload.organizationId,
+                    fallbackOrganizationId: fallbackOrganization.id,
+                    error,
+                  }
+                );
+              }
+            }
+          }
+        } catch (error) {
+          fallbackSelectionFailed = true;
+          console.warn(
+            "[organization] Failed to select fallback organization",
+            {
+              organizationId: payload.organizationId,
+              error,
+            }
+          );
+        }
+      }
+
+      void (async () => {
+        try {
+          await queryClient.cancelQueries({ queryKey: ["app"] });
+          queryClient.removeQueries({ queryKey: ["app"] });
+          await refreshSession();
+          await invalidateOrganizationQueries(queryClient);
+          await queryClient.invalidateQueries({
+            queryKey: queryKeys.organizationStats,
+          });
+          await queryClient.invalidateQueries({ queryKey: ["app"] });
+        } catch (error) {
+          console.warn("[organization] Failed to refresh after delete", {
+            organizationId: payload.organizationId,
+            error,
+          });
+        }
+      })();
+
+      return {
+        ...result,
+        deletedActiveOrganization,
+        fallbackOrganizationId,
+        fallbackSelectionFailed,
+      };
     },
   });
 };

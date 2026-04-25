@@ -2,20 +2,32 @@ import {
   getMaxTotalAttachmentStoragePerOrganization,
   isEmailAttachmentsEnabled,
 } from "@/shared/env";
-import { createOrganizationBodySchema } from "./schemas";
+import {
+  createOrganizationBodySchema,
+  deleteOrganizationBodySchema,
+} from "./schemas";
 import { clampNumber } from "@/shared/utils/dates";
 import { getDb } from "@/platform/db/client";
 import { getAllowedDomains } from "@/shared/env";
 import {
+  clearActiveOrganizationSessions,
   findEmailActivity,
   findEmailSummary,
+  findOrganizationById,
   findOrganizationCounts,
   findOrganizationIdsForUser,
 } from "./repo";
+import { getOrganizationMemberRole, isOrganizationOwnerRole } from "./access";
 import { seedStarterInbox } from "./starter-inbox";
+import { deleteR2ObjectsByPrefix } from "@/shared/utils/r2";
+import { consumeFixedWindowRateLimit } from "@/shared/rate-limiter";
+import { hashForRateLimitKey } from "@/shared/utils/crypto";
 import type { AuthInstance, AuthSession } from "@/app/types";
 
 const MAX_ORGANIZATION_CREATE_ATTEMPTS = 6;
+const ORGANIZATION_DELETE_RATE_LIMIT_MAX = 5;
+const ORGANIZATION_DELETE_RATE_LIMIT_WINDOW_SECONDS = 60 * 60;
+const ORGANIZATION_DELETE_RATE_LIMITER_KEY_PREFIX = "organizations:delete:user";
 
 const DEFAULT_TIMEZONE = "UTC";
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -230,6 +242,137 @@ export const createOrganization = async ({
   return {
     status: 409 as const,
     body: { error: "Unable to create organization. Please try again." },
+  };
+};
+
+export const deleteOrganization = async ({
+  env,
+  auth,
+  headers,
+  session,
+  organizationId,
+  payload,
+}: {
+  env: CloudflareBindings;
+  auth: AuthInstance;
+  headers: Headers;
+  session: AuthSession;
+  organizationId: string;
+  payload: unknown;
+}) => {
+  const parsed = deleteOrganizationBodySchema.safeParse(payload);
+  if (!parsed.success) {
+    return {
+      status: 400 as const,
+      body: { error: "confirmation name is required" },
+    };
+  }
+
+  const db = getDb(env);
+  const organization = await findOrganizationById(db, organizationId);
+  if (!organization) {
+    return {
+      status: 404 as const,
+      body: { error: "organization not found" },
+    };
+  }
+
+  const role = await getOrganizationMemberRole({
+    db,
+    organizationId,
+    userId: session.user.id,
+  });
+  if (!isOrganizationOwnerRole(role)) {
+    return {
+      status: 403 as const,
+      body: { error: "forbidden" },
+    };
+  }
+
+  const userHash = await hashForRateLimitKey(session.user.id);
+  const rateLimit = await consumeFixedWindowRateLimit({
+    namespace: env.FIXED_WINDOW_RATE_LIMITERS,
+    key: `${ORGANIZATION_DELETE_RATE_LIMITER_KEY_PREFIX}:${userHash}`,
+    windowSeconds: ORGANIZATION_DELETE_RATE_LIMIT_WINDOW_SECONDS,
+    maxAttempts: ORGANIZATION_DELETE_RATE_LIMIT_MAX,
+  });
+  if (!rateLimit.allowed) {
+    return {
+      status: 429 as const,
+      headers: { "Retry-After": String(rateLimit.retryAfterSeconds) },
+      body: {
+        error: "too many organization deletion attempts",
+        retryAfterSeconds: rateLimit.retryAfterSeconds,
+      },
+    };
+  }
+
+  if (parsed.data.confirmationName !== organization.name) {
+    return {
+      status: 400 as const,
+      body: { error: "organization name confirmation does not match" },
+    };
+  }
+
+  try {
+    const authApi = auth.api as typeof auth.api & {
+      deleteOrganization: (args: {
+        body: { organizationId: string };
+        headers: Headers;
+      }) => Promise<unknown>;
+    };
+
+    await authApi.deleteOrganization({
+      body: { organizationId },
+      headers,
+    });
+  } catch (error) {
+    console.error("[organization] Failed to delete organization", {
+      organizationId,
+      error,
+    });
+    return {
+      status: getErrorStatus(error, 500) as 400 | 401 | 403 | 404 | 500,
+      body: { error: "Unable to delete organization" },
+    };
+  }
+
+  try {
+    await clearActiveOrganizationSessions(db, organizationId);
+  } catch (error) {
+    console.warn(
+      "[organization] Failed to clear active organization sessions",
+      {
+        organizationId,
+        error,
+      }
+    );
+  }
+
+  if (env.R2_BUCKET) {
+    void Promise.all([
+      deleteR2ObjectsByPrefix({
+        bucket: env.R2_BUCKET,
+        prefix: `email-attachments/${organizationId}/`,
+      }),
+      deleteR2ObjectsByPrefix({
+        bucket: env.R2_BUCKET,
+        prefix: `email-raw/${organizationId}/`,
+      }),
+    ]).catch(error => {
+      console.error("[organization] Failed to delete R2 objects", {
+        organizationId,
+        error,
+      });
+    });
+  }
+
+  return {
+    status: 200 as const,
+    body: {
+      id: organizationId,
+      deleted: true,
+    },
   };
 };
 
