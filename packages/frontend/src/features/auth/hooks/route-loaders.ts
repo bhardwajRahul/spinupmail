@@ -1,4 +1,5 @@
 import { redirect, type LoaderFunctionArgs } from "react-router";
+import { isPlatformAdminRole } from "@spinupmail/contracts";
 import {
   getLastActiveOrganizationId,
   setLastActiveOrganizationId,
@@ -73,6 +74,24 @@ const tryRestoreActiveOrganization = async (userId: string) => {
 
 export const requireAuthLoader = async ({ request }: LoaderFunctionArgs) => {
   await getSessionOrRedirect(request);
+  return null;
+};
+
+export const requirePlatformAdminLoader = async ({
+  request,
+}: LoaderFunctionArgs) => {
+  const session = await getSessionOrRedirect(request);
+  const freshSession = await authClient.getSession({
+    query: {
+      disableCookieCache: true,
+    },
+  });
+  const user = freshSession.data?.user ?? session.user;
+
+  if (!isPlatformAdminRole((user as { role?: unknown }).role)) {
+    throw redirect("/");
+  }
+
   return null;
 };
 

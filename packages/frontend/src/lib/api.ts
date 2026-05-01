@@ -1,4 +1,15 @@
 import type {
+  AdminActivityResponse,
+  AdminApiKeysResponse,
+  AdminOperationalEventSeverity,
+  AdminOperationalEventType,
+  AdminOperationalEventsResponse,
+  AdminOrganizationDetailResponse,
+  AdminOrganizationsResponse,
+  AdminOverviewResponse,
+  AdminRecordAuditEventRequest,
+  AdminUserActionRequest,
+  AdminUserDetailResponse,
   AddressIntegration,
   CreateIntegrationRequest,
   DeleteIntegrationResponse,
@@ -128,6 +139,16 @@ const buildQueryString = (query: URLSearchParams) =>
   query.size > 0 ? `?${query.toString()}` : "";
 
 export type {
+  AdminActivityResponse,
+  AdminApiKeysResponse,
+  AdminOperationalEventSeverity,
+  AdminOperationalEventType,
+  AdminOperationalEventsResponse,
+  AdminOrganizationDetailResponse,
+  AdminOrganizationsResponse,
+  AdminOverviewResponse,
+  AdminRecordAuditEventRequest,
+  AdminUserDetailResponse,
   AddressIntegration,
   DeleteIntegrationResponse,
   IntegrationDispatch,
@@ -140,6 +161,111 @@ export type {
   OrganizationIntegrationSummary,
   TelegramIntegrationPublicConfig,
 };
+
+export const getAdminOverview = async (options?: { signal?: AbortSignal }) =>
+  apiFetch<AdminOverviewResponse>("/api/admin/overview", {
+    signal: options?.signal,
+  });
+
+export const getAdminActivity = async (options?: {
+  days?: number;
+  timezone?: string;
+  signal?: AbortSignal;
+}) => {
+  const query = new URLSearchParams();
+  if (options?.days) query.set("days", String(options.days));
+  if (options?.timezone) query.set("timezone", options.timezone);
+  return apiFetch<AdminActivityResponse>(
+    `/api/admin/activity${buildQueryString(query)}`,
+    { signal: options?.signal }
+  );
+};
+
+export const listAdminOrganizations = async (options?: {
+  page?: number;
+  pageSize?: number;
+  signal?: AbortSignal;
+}) => {
+  const query = new URLSearchParams();
+  if (options?.page) query.set("page", String(options.page));
+  if (options?.pageSize) query.set("pageSize", String(options.pageSize));
+  return apiFetch<AdminOrganizationsResponse>(
+    `/api/admin/organizations${buildQueryString(query)}`,
+    { signal: options?.signal }
+  );
+};
+
+export const getAdminUserDetail = async (
+  userId: string,
+  options?: { signal?: AbortSignal }
+) =>
+  apiFetch<AdminUserDetailResponse>(
+    `/api/admin/users/${encodeURIComponent(userId)}`,
+    { signal: options?.signal }
+  );
+
+export const getAdminOrganizationDetail = async (
+  organizationId: string,
+  options?: { signal?: AbortSignal }
+) =>
+  apiFetch<AdminOrganizationDetailResponse>(
+    `/api/admin/organizations/${encodeURIComponent(organizationId)}`,
+    { signal: options?.signal }
+  );
+
+export const listAdminApiKeys = async (options?: {
+  page?: number;
+  pageSize?: number;
+  signal?: AbortSignal;
+}) => {
+  const query = new URLSearchParams();
+  if (options?.page) query.set("page", String(options.page));
+  if (options?.pageSize) query.set("pageSize", String(options.pageSize));
+  return apiFetch<AdminApiKeysResponse>(
+    `/api/admin/api-keys${buildQueryString(query)}`,
+    { signal: options?.signal }
+  );
+};
+
+export const listAdminAnomalies = async (options?: {
+  page?: number;
+  pageSize?: number;
+  severity?: AdminOperationalEventSeverity;
+  type?: AdminOperationalEventType;
+  organizationId?: string;
+  from?: string;
+  to?: string;
+  signal?: AbortSignal;
+}) => {
+  const query = new URLSearchParams();
+  if (options?.page) query.set("page", String(options.page));
+  if (options?.pageSize) query.set("pageSize", String(options.pageSize));
+  if (options?.severity) query.set("severity", options.severity);
+  if (options?.type) query.set("type", options.type);
+  if (options?.organizationId) {
+    query.set("organizationId", options.organizationId);
+  }
+  if (options?.from) query.set("from", options.from);
+  if (options?.to) query.set("to", options.to);
+  return apiFetch<AdminOperationalEventsResponse>(
+    `/api/admin/anomalies${buildQueryString(query)}`,
+    { signal: options?.signal }
+  );
+};
+
+export const recordAdminAuditEvent = async (
+  body: AdminRecordAuditEventRequest
+) =>
+  apiFetch<{ ok: true }>("/api/admin/audit-events", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+
+export const performAdminUserAction = async (body: AdminUserActionRequest) =>
+  apiFetch<{ ok: true }>("/api/admin/user-actions", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
 
 export type EmailAddress = {
   id: string;

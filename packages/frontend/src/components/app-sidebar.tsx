@@ -7,6 +7,7 @@ import {
   LogoutIcon,
   UserMultiple02Icon,
   DashboardSquare01Icon,
+  Key01Icon,
 } from "@/lib/hugeicons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AppLogo } from "@/components/app-logo";
@@ -39,10 +40,12 @@ import {
 } from "@/components/ui/chevrons-up-down";
 import { MemberAvatar } from "@/features/organization/components/members/member-avatar";
 import type { AuthUser } from "@/lib/auth";
+import { isPlatformAdminRole } from "@spinupmail/contracts";
 
 type AppSidebarProps = React.ComponentProps<typeof Sidebar> & {
   user: AuthUser | null;
   onSignOut: () => Promise<void> | void;
+  onRefreshSession?: () => Promise<void>;
 };
 
 type NavItem = {
@@ -81,10 +84,17 @@ const navItems: NavItem[] = [
   },
 ];
 
-export const AppSidebar = ({ user, onSignOut, ...props }: AppSidebarProps) => {
+export const AppSidebar = ({
+  user,
+  onSignOut,
+  onRefreshSession,
+  ...props
+}: AppSidebarProps) => {
   const { isMobile, state } = useSidebar();
   const location = useLocation();
   const navigate = useNavigate();
+  const [hasRefreshedSession, setHasRefreshedSession] =
+    React.useState(!onRefreshSession);
   const navigateIfNeeded = React.useCallback(
     (to: string) => {
       if (location.pathname === to) return;
@@ -93,6 +103,35 @@ export const AppSidebar = ({ user, onSignOut, ...props }: AppSidebarProps) => {
     [location.pathname, navigate]
   );
   const userAvatarSeed = user?.id ?? user?.email ?? user?.name ?? "guest";
+
+  React.useEffect(() => {
+    if (!onRefreshSession) return;
+    let isMounted = true;
+
+    void onRefreshSession().finally(() => {
+      if (isMounted) setHasRefreshedSession(true);
+    });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [onRefreshSession]);
+
+  const visibleNavItems = React.useMemo(
+    () =>
+      hasRefreshedSession &&
+      isPlatformAdminRole((user as { role?: unknown } | null)?.role)
+        ? [
+            ...navItems,
+            {
+              title: "Admin",
+              to: "/admin",
+              icon: Key01Icon,
+            },
+          ]
+        : navItems,
+    [hasRefreshedSession, user]
+  );
   const [isUserDropdownOpen, setIsUserDropdownOpen] = React.useState(false);
   const userChevronsRef = React.useRef<ChevronsUpDownIconHandle | null>(null);
 
@@ -139,7 +178,7 @@ export const AppSidebar = ({ user, onSignOut, ...props }: AppSidebarProps) => {
           <OrganizationSwitcher />
           <SidebarGroupContent className="pt-2">
             <SidebarMenu className="gap-1">
-              {navItems.map(item => {
+              {visibleNavItems.map(item => {
                 const isActive = item.end
                   ? location.pathname === item.to
                   : location.pathname.startsWith(item.to);

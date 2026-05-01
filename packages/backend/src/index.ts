@@ -3,9 +3,11 @@ import type { AppHonoEnv } from "@/app/types";
 import { registerCorsMiddleware } from "@/app/middleware/cors";
 import { registerAuthInitializationMiddleware } from "@/app/middleware/init-auth";
 import { requireAuth } from "@/app/middleware/require-auth";
+import { requirePlatformAdmin } from "@/app/middleware/require-platform-admin";
 import { requireOrganizationScope } from "@/app/middleware/require-organization-scope";
 import { registerErrorHandling } from "@/app/middleware/error-handler";
 import { createAuth } from "@/platform/auth/create-auth";
+import { createAdminRouter } from "@/modules/admin/router";
 import { createAuthHttpRouter } from "@/modules/auth-http/router";
 import { createDomainsRouter } from "@/modules/domains/router";
 import { createOrganizationsRouter } from "@/modules/organizations/router";
@@ -16,6 +18,7 @@ import { createE2EAuthTestRouter } from "@/modules/e2e-auth/router";
 import { createExtensionRouter } from "@/modules/extension/router";
 import { InboundAbuseCounterDurableObject } from "@/modules/inbound-email/abuse-counter";
 import { FixedWindowRateLimiterDurableObject } from "@/shared/rate-limiter";
+import { pruneOperationalEvents } from "@/modules/admin/operational-events";
 import { handleIncomingEmail } from "@/modules/inbound-email/handler";
 import { handleIntegrationDispatchQueueBatch } from "@/modules/integrations/queue";
 
@@ -41,6 +44,8 @@ export const createApp = (options: AppFactoryOptions = {}) => {
   app.route("/api", createAuthHttpRouter());
 
   app.use("/api/domains", requireAuth);
+  app.use("/api/admin/*", requireAuth);
+  app.use("/api/admin/*", requirePlatformAdmin);
   app.use("/api/organizations/stats/*", requireAuth);
   app.use("/api/extension/bootstrap", requireAuth);
   app.use("/api/extension/invitations/*", requireAuth);
@@ -56,6 +61,7 @@ export const createApp = (options: AppFactoryOptions = {}) => {
   app.use("/api/integrations/*", requireOrganizationScope);
 
   app.route("/api", createExtensionRouter());
+  app.route("/api", createAdminRouter());
   app.route("/api", createDomainsRouter());
   app.route("/api", createOrganizationsRouter());
   app.route("/api", createEmailAddressesRouter());
@@ -89,6 +95,19 @@ export const createWorkerHandler = (options: WorkerHandlerOptions = {}) => {
     email: options.emailHandler ?? handleIncomingEmail,
     queue: (batch: MessageBatch, env: CloudflareBindings) =>
       queueHandler({ batch, env }),
+    scheduled: (
+      _controller: ScheduledController,
+      env: CloudflareBindings,
+      ctx: ExecutionContext
+    ) => {
+      ctx.waitUntil(
+        pruneOperationalEvents(env).catch(error => {
+          console.error("[admin] Failed to prune operational events", {
+            error,
+          });
+        })
+      );
+    },
   };
 };
 
