@@ -11,7 +11,9 @@ export const NotFoundPage = () => {
       <p className="max-w-md text-sm text-muted-foreground">
         The page you requested does not exist or may have moved.
       </p>
-      <Button render={<Link to="/" />}>Back to overview</Button>
+      <Button nativeButton={false} render={<Link to="/" />}>
+        Back to overview
+      </Button>
     </div>
   );
 };

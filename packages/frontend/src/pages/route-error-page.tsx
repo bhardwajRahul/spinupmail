@@ -59,7 +59,9 @@ export const RouteErrorPage = () => {
 
         {/* Actions */}
         <div className="flex items-center gap-2">
-          <Button render={<Link to="/" />}>Back to overview</Button>
+          <Button nativeButton={false} render={<Link to="/" />}>
+            Back to overview
+          </Button>
           <Button
             className="cursor-pointer"
             variant="outline"
