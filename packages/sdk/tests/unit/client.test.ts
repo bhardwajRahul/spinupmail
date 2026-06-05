@@ -24,6 +24,7 @@ describe("SpinupMail SDK client", () => {
 
   afterEach(() => {
     process.env = originalEnv;
+    vi.unstubAllGlobals();
   });
 
   it("injects API key headers for unscoped requests", async () => {
@@ -56,6 +57,37 @@ describe("SpinupMail SDK client", () => {
     expect(headers.get("x-api-key")).toBe("spin_test_key");
     expect(headers.get("x-org-id")).toBeNull();
     expect(headers.get("x-trace-id")).toBe("trace-1");
+  });
+
+  it("normalizes repeated trailing slashes in baseUrl without regex matching", async () => {
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          items: ["spinupmail.dev"],
+          default: "spinupmail.dev",
+          forcedLocalPartPrefix: null,
+          maxReceivedEmailsPerOrganization: 1000,
+          maxReceivedEmailsPerAddress: 100,
+        }),
+        {
+          status: 200,
+          headers: {
+            "content-type": "application/json",
+          },
+        }
+      )
+    );
+    const client = new SpinupMail({
+      baseUrl: `https://api.spinupmail.com${"/".repeat(512)}`,
+      apiKey: "spin_test_key",
+      fetch: fetchMock,
+    });
+
+    await client.domains.get();
+
+    expect(fetchMock.mock.calls[0]![0]).toBe(
+      "https://api.spinupmail.com/api/domains"
+    );
   });
 
   it("fails fast for organization-scoped methods without an organization id", async () => {
@@ -432,6 +464,64 @@ describe("SpinupMail SDK client", () => {
 
     expect(body.acceptedRiskNotice).toBe(true);
     expect(body.localPart).toMatch(/^sum-[a-z0-9]{12}$/);
+  });
+
+  it("rejects out-of-range random bytes when generating localPart suffixes", async () => {
+    const randomByteChunks = [
+      [252, 253, 254, 255, 0, 7, 14, 21, 28, 35, 42, 49],
+      [245, 246, 247, 251],
+    ];
+    const getRandomValues = vi.fn((array: Uint8Array) => {
+      const chunk = randomByteChunks.shift() ?? [0];
+      array.forEach((_, index) => {
+        array[index] = chunk[index] ?? 0;
+      });
+      return array;
+    });
+    vi.stubGlobal("crypto", { getRandomValues });
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          id: "addr-1",
+          address: "sum-abcdefgh9999@spinupmail.dev",
+          localPart: "sum-abcdefgh9999",
+          domain: "spinupmail.dev",
+          meta: {},
+          integrations: [],
+          emailCount: 0,
+          allowedFromDomains: [],
+          blockedSenderDomains: [],
+          inboundRatePolicy: null,
+          maxReceivedEmailCount: 100,
+          maxReceivedEmailAction: "cleanAll",
+          createdAt: "2026-04-11T12:00:00.000Z",
+          createdAtMs: 1775908800000,
+          expiresAt: null,
+          expiresAtMs: null,
+          lastReceivedAt: null,
+          lastReceivedAtMs: null,
+        }),
+        {
+          status: 200,
+          headers: {
+            "content-type": "application/json",
+          },
+        }
+      )
+    );
+    const client = buildClient(fetchMock);
+
+    await client.addresses.create({
+      acceptedRiskNotice: true,
+    });
+
+    const [, init] = fetchMock.mock.calls[0]!;
+    const body = JSON.parse(String(init?.body)) as {
+      localPart: string;
+    };
+
+    expect(body.localPart).toBe("sum-abcdefgh9999");
+    expect(getRandomValues).toHaveBeenCalledTimes(2);
   });
 
   it("exposes integration management endpoints", async () => {

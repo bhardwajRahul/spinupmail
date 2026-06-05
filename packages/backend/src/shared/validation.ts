@@ -14,6 +14,46 @@ const stripWrappingQuotes = (value: string) => {
 const cleanAddressValue = (value: string) =>
   stripWrappingQuotes(value.trim().replace(/^mailto:/i, ""));
 
+const findAngleAddress = (value: string) => {
+  let searchFrom = 0;
+
+  while (searchFrom < value.length) {
+    const openIndex = value.indexOf("<", searchFrom);
+    if (openIndex === -1) return null;
+
+    let contentStart = openIndex + 1;
+    while (
+      contentStart < value.length &&
+      (value[contentStart] === " " ||
+        value[contentStart] === "\t" ||
+        value[contentStart] === "\n" ||
+        value[contentStart] === "\r")
+    ) {
+      contentStart += 1;
+    }
+    if (contentStart >= value.length) return null;
+
+    for (let index = contentStart; index < value.length; index += 1) {
+      const character = value[index];
+      if (character === "<") {
+        searchFrom = index;
+        break;
+      }
+
+      if (character === ">") {
+        return {
+          index: openIndex,
+          address: value.slice(contentStart, index),
+        };
+      }
+
+      if (index === value.length - 1) return null;
+    }
+  }
+
+  return null;
+};
+
 export type ParsedSenderIdentity = {
   raw: string;
   name: string | null;
@@ -408,17 +448,17 @@ export const parseSenderIdentity = (
   const raw = value.trim();
   if (!raw) return null;
 
-  const angleAddressMatch = raw.match(/<\s*([^<>]+)\s*>/);
+  const angleAddress = findAngleAddress(raw);
   const addressCandidate = cleanAddressValue(
-    angleAddressMatch?.[1] ?? raw.split(",")[0]?.trim() ?? ""
+    angleAddress?.address ?? raw.split(",")[0]?.trim() ?? ""
   );
   const address =
     addressCandidate.length > 0 && addressCandidate.includes("@")
       ? addressCandidate
       : null;
 
-  const nameCandidate = angleAddressMatch
-    ? cleanAddressValue(raw.slice(0, angleAddressMatch.index).trim())
+  const nameCandidate = angleAddress
+    ? cleanAddressValue(raw.slice(0, angleAddress.index).trim())
     : "";
   const normalizedName =
     nameCandidate.length > 0 && nameCandidate !== address

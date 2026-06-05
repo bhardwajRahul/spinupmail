@@ -47,6 +47,24 @@ describe("shared validation helpers", () => {
     });
   });
 
+  it("parses angle addresses with repeated whitespace without regex matching", () => {
+    const sender = parseSenderIdentity(
+      `Sender <${" ".repeat(512)}sender@example.com${" ".repeat(512)}>`
+    );
+
+    expect(sender).toMatchObject({
+      name: "Sender",
+      address: "sender@example.com",
+      label: "Sender",
+      formatted: "Sender <sender@example.com>",
+    });
+
+    expect(parseSenderIdentity(`<;${" ".repeat(512)}`)).toMatchObject({
+      address: null,
+      label: "<;",
+    });
+  });
+
   it("normalizes allow-lists and validates subdomain matches", () => {
     const domains = normalizeAllowedFromDomains([
       " Foo.COM",

@@ -1,7 +1,26 @@
 import { EMAIL_ATTACHMENT_MAX_TOTAL_BYTES_PER_ORGANIZATION_DEFAULT } from "@/shared/constants";
 
+const trimLeadingCharacters = (value: string, character: string) => {
+  let start = 0;
+  while (start < value.length && value[start] === character) {
+    start += 1;
+  }
+  return start === 0 ? value : value.slice(start);
+};
+
+const trimTrailingCharacters = (value: string, character: string) => {
+  let end = value.length;
+  while (end > 0 && value[end - 1] === character) {
+    end -= 1;
+  }
+  return end === value.length ? value : value.slice(0, end);
+};
+
 export const normalizeDomain = (value: string) =>
-  value.trim().toLowerCase().replace(/^@+/, "").replace(/\.+$/, "");
+  trimTrailingCharacters(
+    trimLeadingCharacters(value.trim().toLowerCase(), "@"),
+    "."
+  );
 
 export const normalizeOrigin = (value: string) => {
   const trimmed = value.trim();

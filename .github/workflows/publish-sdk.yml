@@ -6,6 +6,9 @@ on:
       - "sdk-v*"
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   sdk-typecheck:
     runs-on: ubuntu-latest

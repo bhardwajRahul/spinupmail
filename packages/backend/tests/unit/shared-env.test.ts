@@ -25,6 +25,12 @@ describe("shared env helpers", () => {
     expect(normalizeDomain(" @Example.COM. ")).toBe("example.com");
   });
 
+  it("normalizes domains with repeated decorators without regex matching", () => {
+    expect(
+      normalizeDomain(`${"@".repeat(512)}Example.COM${".".repeat(512)}`)
+    ).toBe("example.com");
+  });
+
   it("normalizes EMAIL_DOMAINS values and deduplicates them", () => {
     const env = {
       EMAIL_DOMAINS: "Example.com,foo.test,@bar.io.,foo.test",

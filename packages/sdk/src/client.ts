@@ -362,6 +362,12 @@ const DEFAULT_POLL_INTERVAL_MS = 1_000;
 const DEFAULT_SPINUPMAIL_BASE_URL = "https://api.spinupmail.com";
 const RANDOM_LOCAL_PART_PREFIX = "sum";
 const RANDOM_LOCAL_PART_SIZE = 12;
+const RANDOM_LOCAL_PART_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789";
+const RANDOM_LOCAL_PART_BUCKET_SIZE = Math.floor(
+  256 / RANDOM_LOCAL_PART_ALPHABET.length
+);
+const RANDOM_LOCAL_PART_BYTE_LIMIT =
+  RANDOM_LOCAL_PART_BUCKET_SIZE * RANDOM_LOCAL_PART_ALPHABET.length;
 
 const issuePathToString = (path: PropertyKey[]) =>
   path.length === 0 ? "<root>" : path.map(String).join(".");
@@ -400,6 +406,14 @@ const normalizeString = (value: string, label: string) => {
   return normalized;
 };
 
+const trimTrailingSlashes = (value: string) => {
+  let end = value.length;
+  while (end > 0 && value.charCodeAt(end - 1) === 47) {
+    end -= 1;
+  }
+  return end === value.length ? value : value.slice(0, end);
+};
+
 const resolveFetch = (candidate?: FetchLike) => {
   if (candidate) return candidate;
   if (typeof globalThis.fetch === "function") {
@@ -413,7 +427,7 @@ const resolveFetch = (candidate?: FetchLike) => {
 };
 
 const normalizeBaseUrl = (baseUrl: string) =>
-  normalizeString(baseUrl, "baseUrl").replace(/\/+$/, "");
+  trimTrailingSlashes(normalizeString(baseUrl, "baseUrl"));
 
 const getProcessEnv = () => {
   if (
@@ -453,12 +467,18 @@ const createRandomBytes = (size: number) => {
 };
 
 const generateRandomLocalPart = () => {
-  const alphabet = "abcdefghijklmnopqrstuvwxyz0123456789";
-  const bytes = createRandomBytes(RANDOM_LOCAL_PART_SIZE);
   let suffix = "";
 
-  for (const byte of bytes) {
-    suffix += alphabet[byte % alphabet.length];
+  while (suffix.length < RANDOM_LOCAL_PART_SIZE) {
+    const bytes = createRandomBytes(RANDOM_LOCAL_PART_SIZE - suffix.length);
+
+    for (const byte of bytes) {
+      if (byte >= RANDOM_LOCAL_PART_BYTE_LIMIT) continue;
+
+      const alphabetIndex = Math.floor(byte / RANDOM_LOCAL_PART_BUCKET_SIZE);
+      suffix += RANDOM_LOCAL_PART_ALPHABET[alphabetIndex];
+      if (suffix.length === RANDOM_LOCAL_PART_SIZE) break;
+    }
   }
 
   return `${RANDOM_LOCAL_PART_PREFIX}-${suffix}`;
