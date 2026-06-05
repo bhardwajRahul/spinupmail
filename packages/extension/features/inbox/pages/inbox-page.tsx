@@ -116,6 +116,14 @@ export function InboxPage() {
     setSelectedAddressForOrganization,
   ]);
 
+  React.useEffect(() => {
+    if (!focusedEmailId) {
+      return;
+    }
+
+    void markEmailSeen(focusedEmailId);
+  }, [focusedEmailId, markEmailSeen]);
+
   const emailsQuery = useQuery({
     enabled: Boolean(
       resolvedAuthState && resolvedOrganizationId && selectedAddressId
@@ -245,6 +253,8 @@ export function InboxPage() {
                   clearFocusedEmailId();
                 }
 
+                void markEmailSeen(emailId);
+
                 setSelectedEmailState({
                   addressId: selectedAddressId,
                   emailId,
@@ -270,7 +280,6 @@ export function InboxPage() {
               emailId: null,
             });
           }}
-          onSeen={markEmailSeen}
         />
       ) : null}
     </div>

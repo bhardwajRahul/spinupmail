@@ -17,13 +17,11 @@ export function EmailDetailView({
   authState,
   emailId,
   onBack,
-  onSeen,
   organizationId,
 }: {
   authState: AuthState;
   emailId: string;
   onBack: () => void;
-  onSeen: (emailId: string) => Promise<void>;
   organizationId: string;
 }) {
   const detailQuery = useQuery({
@@ -35,14 +33,6 @@ export function EmailDetailView({
         organizationId,
       }),
   });
-
-  React.useEffect(() => {
-    if (!emailId) {
-      return;
-    }
-
-    void onSeen(emailId);
-  }, [emailId, onSeen]);
 
   return (
     <div className="absolute inset-0 z-20 flex flex-col bg-background">

@@ -45,6 +45,23 @@ let turnstileScriptPromise: Promise<void> | null = null;
 
 const getTurnstileApi = () => (window as TurnstileWindow).turnstile;
 
+function createValueStore<T>(initialValue: T) {
+  let value = initialValue;
+  const listeners = new Set<() => void>();
+
+  return {
+    getSnapshot: () => value,
+    setValue: (nextValue: T) => {
+      value = nextValue;
+      listeners.forEach(listener => listener());
+    },
+    subscribe: (listener: () => void) => {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
+    },
+  };
+}
+
 const ensureTurnstileScript = (): Promise<void> => {
   if (typeof window === "undefined") {
     return Promise.reject(new Error("Turnstile requires a browser context."));
@@ -121,10 +138,19 @@ export const TurnstileWidget = React.forwardRef<
   const containerRef = React.useRef<HTMLDivElement | null>(null);
   const widgetIdRef = React.useRef<string | null>(null);
   const onTokenChangeRef = React.useRef(onTokenChange);
-  const [error, setError] = React.useState<string | null>(null);
+  const errorStoreRef = React.useRef(createValueStore<string | null>(null));
+  const error = React.useSyncExternalStore(
+    errorStoreRef.current.subscribe,
+    errorStoreRef.current.getSnapshot,
+    () => null
+  );
   const isDarkMode =
     typeof document !== "undefined" &&
     document.documentElement.classList.contains("dark");
+
+  const setError = React.useCallback((nextError: string | null) => {
+    errorStoreRef.current.setValue(nextError);
+  }, []);
 
   React.useEffect(() => {
     onTokenChangeRef.current = onTokenChange;
@@ -138,7 +164,7 @@ export const TurnstileWidget = React.forwardRef<
     }
     onTokenChangeRef.current(null);
     setError(null);
-  }, []);
+  }, [setError]);
 
   React.useImperativeHandle(
     ref,
@@ -204,7 +230,7 @@ export const TurnstileWidget = React.forwardRef<
       removeWidget();
       onTokenChangeRef.current(null);
     };
-  }, [action, isDarkMode, siteKey]);
+  }, [action, isDarkMode, setError, siteKey]);
 
   return (
     <div className={cn("space-y-2", className)}>

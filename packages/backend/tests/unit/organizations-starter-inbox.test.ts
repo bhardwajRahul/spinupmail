@@ -157,7 +157,6 @@ describe("starter inbox provisioning", () => {
   });
 
   it("returns existing auto-created address without reseeding samples", async () => {
-    const latestReceivedAt = new Date("2026-01-01T00:02:00.000Z");
     mocks.findAutoCreatedAddressByOrganization.mockResolvedValue({
       id: "address-1",
       address: "starter@spinupmail.com",

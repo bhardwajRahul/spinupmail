@@ -874,7 +874,8 @@ export const downloadEmailAttachment = async (params: {
     params.fallbackFilename ||
     "attachment";
 
-  const url = window.URL.createObjectURL(blob);
+  const objectUrlApi = window.URL;
+  const url = objectUrlApi.createObjectURL(blob);
   const anchor = document.createElement("a");
   anchor.href = url;
   anchor.download = filename;
@@ -884,6 +885,6 @@ export const downloadEmailAttachment = async (params: {
   anchor.click();
   document.body.removeChild(anchor);
   setTimeout(() => {
-    window.URL.revokeObjectURL(url);
+    objectUrlApi.revokeObjectURL(url);
   }, 100);
 };
