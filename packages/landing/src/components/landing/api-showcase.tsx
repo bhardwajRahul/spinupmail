@@ -3,7 +3,6 @@ import { ArrowRight01Icon, Tick02Icon } from "@hugeicons/core-free-icons";
 import { Link } from "@tanstack/react-router";
 import { motion, useReducedMotion } from "motion/react";
 import { useState } from "react";
-import type { AnimatedTerminalLine } from "@/components/landing/animated-terminal-code";
 import { AnimatedTerminalCode } from "@/components/landing/animated-terminal-code";
 import { Button } from "@/components/ui/button";
 import { landingLinks } from "@/lib/links";
@@ -441,9 +440,7 @@ export function ApiShowcase() {
 
               <AnimatedTerminalCode
                 sequenceKey={activeExample.id}
-                lines={
-                  activeExample.lines as ReadonlyArray<AnimatedTerminalLine>
-                }
+                lines={activeExample.lines}
                 reduceMotion={!!reduceMotion}
                 getToneClassName={tone =>
                   toneClassName[(tone as TokenTone | undefined) ?? "base"]

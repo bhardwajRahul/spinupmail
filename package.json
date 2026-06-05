@@ -46,20 +46,20 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
-    "@vitest/coverage-v8": "^4.1.4",
-    "eslint": "^10.2.1",
+    "@vitest/coverage-v8": "^4.1.8",
+    "eslint": "^10.4.1",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.2",
-    "eslint-plugin-react-you-might-not-need-an-effect": "^0.9.3",
-    "globals": "^17.5.0",
+    "eslint-plugin-react-you-might-not-need-an-effect": "^1.0.0",
+    "globals": "^17.6.0",
     "husky": "^9.1.7",
-    "jsdom": "^29.0.2",
-    "lint-staged": "^16.4.0",
+    "jsdom": "^29.1.1",
+    "lint-staged": "^17.0.7",
     "prettier": "^3.8.3",
-    "typescript-eslint": "^8.58.2",
-    "vitest": "^4.1.4"
+    "typescript-eslint": "^8.60.1",
+    "vitest": "^4.1.8"
   },
   "lint-staged": {
     "packages/{backend,frontend,extension,sdk}/**/*.{js,mjs,cjs,ts,tsx}": [
@@ -78,7 +78,8 @@
   "pnpm": {
     "overrides": {
       "drizzle-orm": "^0.45.2",
-      "hono": "4.12.21"
+      "hono": "4.12.23",
+      "kysely": "0.28.17"
     }
   }
 }
