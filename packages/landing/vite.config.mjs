@@ -5,7 +5,6 @@ import { defineConfig } from "vite";
 import { devtools } from "@tanstack/devtools-vite";
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 import viteReact from "@vitejs/plugin-react";
-import viteTsConfigPaths from "vite-tsconfig-paths";
 import mdx from "@mdx-js/rollup";
 import rehypePrettyCode from "rehype-pretty-code";
 import remarkFrontmatter from "remark-frontmatter";
@@ -96,13 +95,13 @@ const mdxPlugin = mdx({
 mdxPlugin.enforce = "pre";
 
 const config = defineConfig({
+  resolve: {
+    tsconfigPaths: true,
+  },
   plugins: [
     docsMarkdownPlugin(),
     cloudflare({ viteEnvironment: { name: "ssr" } }),
     devtools(),
-    viteTsConfigPaths({
-      projects: ["./tsconfig.json"],
-    }),
     tailwindcss(),
     mdxPlugin,
     tanstackStart(),

@@ -8,7 +8,6 @@ import remarkFrontmatter from "remark-frontmatter";
 import remarkGfm from "remark-gfm";
 import remarkMdxFrontmatter from "remark-mdx-frontmatter";
 import rehypeSlug from "rehype-slug";
-import viteTsConfigPaths from "vite-tsconfig-paths";
 import { getDocsHighlighter } from "./shiki-docs.mjs";
 
 const DOCS_DIR = join(fileURLToPath(import.meta.url), "../src/content/docs");
@@ -88,13 +87,10 @@ const mdxPlugin = mdx({
 mdxPlugin.enforce = "pre";
 
 export default defineConfig({
-  plugins: [
-    docsMarkdownPlugin(),
-    viteTsConfigPaths({
-      projects: ["./tsconfig.json"],
-    }),
-    mdxPlugin,
-  ],
+  resolve: {
+    tsconfigPaths: true,
+  },
+  plugins: [docsMarkdownPlugin(), mdxPlugin],
   test: {
     environment: "jsdom",
     globals: true,
