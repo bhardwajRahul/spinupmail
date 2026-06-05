@@ -25,7 +25,7 @@
 
 <hr />
 
-Spinupmail is an open-source temporary email platform for teams, built on
+SpinupMail is an open-source temporary email platform for teams, built on
 Cloudflare Email Routing and Workers. It lets organizations create unlimited
 mailboxes on their own domains, capture inbound messages (including
 attachments), and manage everything through a secure Better Auth + Hono API and a modern React + Shadcn dashboard.
@@ -56,6 +56,13 @@ attachments), and manage everything through a secure Better Auth + Hono API and 
 
 - `packages/backend` — Cloudflare Worker (Hono + Better Auth + D1 + KV + R2)
 - `packages/frontend` — React + shadcn UI (Vite)
+- `packages/extension` — browser extension for creating and viewing inboxes
+- `packages/landing` — documentation and marketing site (Tanstack Start)
+- `packages/sdk` — public TypeScript SDK published as `spinupmail`
+- `packages/contracts` — shared API schemas and contract types
+- `packages/e2e` — Playwright end-to-end tests
+- `packages/lite-router` — A minimal Cloudflare Email Routing Worker that
+  forwards inbound email to signed JSON webhooks for external runtimes.
 
 ### Backend Source Structure
 
@@ -642,6 +649,18 @@ Limits:
 - `EMAIL_STORE_HEADERS_IN_DB`: persist full header JSON in D1 (`false` by default).
 - `EMAIL_STORE_RAW_IN_DB`: persist full raw MIME in D1 (`false` by default).
 - `EMAIL_STORE_RAW_IN_R2`: persist full raw MIME in private R2 (`false` by default).
+
+## Lite Router Package
+
+`packages/lite-router` is a minimal Cloudflare Email Routing Worker for sending
+inbound mail to signed JSON webhooks. It is intended for users who want to use
+Cloudflare only as the email ingress layer and handle storage or processing in
+another service.
+
+Lite Router does not store emails and does not support attachment file
+downloads. It forwards email metadata and bodies only. Use the full SpinupMail
+backend when you need D1/R2-backed inboxes, attachment storage, authenticated
+downloads, UI access, or replayable integration delivery.
 
 ## Local Development
 

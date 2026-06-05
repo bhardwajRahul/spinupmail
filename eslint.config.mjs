@@ -11,6 +11,7 @@ import path from "node:path";
 const rootDir = path.dirname(fileURLToPath(import.meta.url));
 const backendFiles = [
   "packages/backend/**/*.{js,mjs,cjs,ts}",
+  "packages/lite-router/**/*.{js,mjs,cjs,ts}",
   "packages/sdk/**/*.{js,mjs,cjs,ts}",
 ];
 const frontendFiles = [

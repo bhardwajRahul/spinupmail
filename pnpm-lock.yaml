@@ -579,6 +579,34 @@ importers:
         specifier: ^4.98.0
         version: 4.98.0(@cloudflare/workers-types@4.20260605.1)
 
+  packages/lite-router:
+    dependencies:
+      '@cloudflare/workers-types':
+        specifier: 4.20260605.1
+        version: 4.20260605.1
+      postal-mime:
+        specifier: ^2.7.4
+        version: 2.7.4
+    devDependencies:
+      '@types/node':
+        specifier: ^25.9.1
+        version: 25.9.1
+      '@typescript/native-preview':
+        specifier: 7.0.0-dev.20260605.1
+        version: 7.0.0-dev.20260605.1
+      tsdown:
+        specifier: ^0.22.2
+        version: 0.22.2(@typescript/native-preview@7.0.0-dev.20260605.1)(tsx@4.22.4)(typescript@6.0.3)(unrun@0.2.36)
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
+      vitest:
+        specifier: ^4.1.8
+        version: 4.1.8(@opentelemetry/api@1.9.1)(@types/node@25.9.1)(@vitest/coverage-v8@4.1.8)(jsdom@29.1.1(@noble/hashes@2.2.0))(msw@2.14.6(@types/node@25.9.1)(typescript@6.0.3))(vite@8.0.16(@types/node@25.9.1)(esbuild@0.28.0)(jiti@2.7.0)(tsx@4.22.4)(yaml@2.9.0))
+      wrangler:
+        specifier: ^4.98.0
+        version: 4.98.0(@cloudflare/workers-types@4.20260605.1)
+
   packages/sdk:
     dependencies:
       zod:

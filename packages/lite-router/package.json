@@ -1,0 +1,51 @@
+{
+  "name": "@spinupmail/lite-router",
+  "version": "0.1.0",
+  "description": "Minimal Cloudflare Email Routing worker that forwards inbound mail to a signed webhook.",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "files": [
+    "dist",
+    "README.md",
+    "wrangler.toml.example"
+  ],
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.mts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.mts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.cjs",
+      "default": "./dist/index.mjs"
+    }
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ridvan/spinupmail",
+    "directory": "packages/lite-router"
+  },
+  "scripts": {
+    "build": "tsdown --config tsdown.config.ts",
+    "deploy": "pnpm exec wrangler deploy --minify",
+    "typecheck": "tsgo --noEmit -p tsconfig.json",
+    "test": "vitest run --config vitest.config.ts",
+    "test:package": "node ./scripts/smoke-package.mjs"
+  },
+  "dependencies": {
+    "@cloudflare/workers-types": "4.20260605.1",
+    "postal-mime": "^2.7.4"
+  },
+  "devDependencies": {
+    "@types/node": "^25.9.1",
+    "@typescript/native-preview": "7.0.0-dev.20260605.1",
+    "tsdown": "^0.22.2",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.8",
+    "wrangler": "^4.98.0"
+  }
+}

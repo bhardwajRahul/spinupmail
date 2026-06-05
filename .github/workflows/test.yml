@@ -55,6 +55,12 @@ jobs:
       - name: SDK typecheck
         run: pnpm run typecheck:sdk
 
+      - name: Lite Router build
+        run: pnpm run build:lite-router
+
+      - name: Lite Router typecheck
+        run: pnpm run typecheck:lite-router
+
       - name: Landing typecheck
         run: pnpm run typecheck:landing
 
@@ -66,6 +72,12 @@ jobs:
 
       - name: SDK package smoke
         run: pnpm run test:package:sdk
+
+      - name: Lite Router tests
+        run: pnpm run test:lite-router
+
+      - name: Lite Router package smoke
+        run: pnpm -C packages/lite-router test:package
 
       - name: Landing tests
         run: pnpm run test:landing
