@@ -520,7 +520,7 @@ describe("SpinupMail SDK client", () => {
       localPart: string;
     };
 
-    expect(body.localPart).toBe("sum-abcdefgh9999");
+    expect(body.localPart).toBe("sum-ahov29gn3459");
     expect(getRandomValues).toHaveBeenCalledTimes(2);
   });
 

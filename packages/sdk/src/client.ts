@@ -363,11 +363,8 @@ const DEFAULT_SPINUPMAIL_BASE_URL = "https://api.spinupmail.com";
 const RANDOM_LOCAL_PART_PREFIX = "sum";
 const RANDOM_LOCAL_PART_SIZE = 12;
 const RANDOM_LOCAL_PART_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789";
-const RANDOM_LOCAL_PART_BUCKET_SIZE = Math.floor(
-  256 / RANDOM_LOCAL_PART_ALPHABET.length
-);
 const RANDOM_LOCAL_PART_BYTE_LIMIT =
-  RANDOM_LOCAL_PART_BUCKET_SIZE * RANDOM_LOCAL_PART_ALPHABET.length;
+  256 - (256 % RANDOM_LOCAL_PART_ALPHABET.length);
 
 const issuePathToString = (path: PropertyKey[]) =>
   path.length === 0 ? "<root>" : path.map(String).join(".");
@@ -475,7 +472,7 @@ const generateRandomLocalPart = () => {
     for (const byte of bytes) {
       if (byte >= RANDOM_LOCAL_PART_BYTE_LIMIT) continue;
 
-      const alphabetIndex = Math.floor(byte / RANDOM_LOCAL_PART_BUCKET_SIZE);
+      const alphabetIndex = byte % RANDOM_LOCAL_PART_ALPHABET.length;
       suffix += RANDOM_LOCAL_PART_ALPHABET[alphabetIndex];
       if (suffix.length === RANDOM_LOCAL_PART_SIZE) break;
     }
